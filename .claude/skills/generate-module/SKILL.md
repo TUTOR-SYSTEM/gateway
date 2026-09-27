@@ -23,9 +23,9 @@ import { FooController } from './foo.controller';
 })
 export class FooModule {}
 ```
-No `providers` array is needed for the RPC client: `RmqClientsModule` (`src/features/rmq-clients/`)
-is `@Global()` and exports `ClientsModule`, so `@Inject(USER_SERVICE|TUTOR_SERVICE|THIRD_SERVICE)`
-works in any controller without listing it in `imports`. Only add `imports`/`providers` here if
+No `providers` array is needed for the RPC client: `RmqModule` (`src/features/rabbitmq/`) is
+`@Global()` and exports `RmqProducer`, so it can be injected in any controller without listing it
+in `imports`. Only add `imports`/`providers` here if
 the feature genuinely needs something feature-local (rare — check with the user first).
 
 ## Wiring `src/app.module.ts` (required)
@@ -36,5 +36,5 @@ the feature genuinely needs something feature-local (rare — check with the use
 Run `bun run build` (or `bunx tsc --noEmit`) to confirm the module resolves and DI compiles.
 
 ## Not for infra modules
-This scaffold is for domain feature modules. `RmqClientsModule` and `RabbitMQModule` are
-`@Global()` infra modules with no controller — don't regenerate those from this skill.
+This scaffold is for domain feature modules. `RmqModule` is a
+`@Global()` infra module with no controller — don't regenerate those from this skill.

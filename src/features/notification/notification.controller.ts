@@ -18,17 +18,17 @@ import {
   type GetNotificationsQueryDto,
 } from '@packages/entities/notification';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `notifications`: validation/guards/Swagger stay, every handler
- * forwards to the owning service over Kafka via `KafkaProducer.send()`.
+ * forwards to the owning service over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Notifications')
 @ApiBearerAuth('access-token')
 @Controller('notifications')
 export class NotificationController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -54,7 +54,7 @@ export class NotificationController {
     dto: CreateNotificationDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('notification.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('notification.create', { userId: user.id, ...dto });
   }
 
   @Get()
@@ -71,7 +71,7 @@ export class NotificationController {
     query: GetNotificationsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('notification.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('notification.getAll', { userId: user.id, ...query });
   }
 
   @Patch('read-all')
@@ -79,7 +79,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark all as read', description: 'Mark all notifications as read for the current user' })
   @SwaggerResponse({ status: 200, description: 'All marked as read' })
   markAllAsRead(@CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('notification.markAllAsRead', { userId: user.id });
+    return this.rmqProducer.send('notification.markAllAsRead', { userId: user.id });
   }
 
   @Get(':id')
@@ -88,7 +88,7 @@ export class NotificationController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification detail' })
   getById(@Param('id') id: string) {
-    return this.kafkaProducer.send('notification.getById', { id });
+    return this.rmqProducer.send('notification.getById', { id });
   }
 
   @Patch(':id/read')
@@ -97,7 +97,7 @@ export class NotificationController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Marked as read' })
   markAsRead(@Param('id') id: string) {
-    return this.kafkaProducer.send('notification.markAsRead', { id });
+    return this.rmqProducer.send('notification.markAsRead', { id });
   }
 
   @Delete(':id')
@@ -106,6 +106,6 @@ export class NotificationController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification deleted' })
   delete(@Param('id') id: string) {
-    return this.kafkaProducer.send('notification.delete', { id });
+    return this.rmqProducer.send('notification.delete', { id });
   }
 }

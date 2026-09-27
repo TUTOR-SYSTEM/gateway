@@ -56,7 +56,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       : rawErrors;
 
     // Which downstream service actually threw, if the RPC error payload carried one through
-    // (see RpcExceptionFilter in the owning service's repo, and [[kafka-rpc-plumbing]] memory).
+    // (see RpcExceptionFilter in the owning service's repo, and [[rmq-rpc-plumbing]] memory).
     const serviceName = (exceptionResponse as { serviceName?: string } | null)?.serviceName;
 
     response.status(status).json({

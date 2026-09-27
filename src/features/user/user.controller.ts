@@ -37,17 +37,17 @@ import {
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { USER_SWAGGER_MESSAGES } from 'src/data/swaggers/messages';
 import { USER_SWAGGERS_DATA } from 'src/data/swaggers/data/user.swagger';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge here: validation/guards/Swagger stay, every handler forwards to
- * the `user` service over Kafka via `KafkaProducer.send()` — no local business logic or DB access.
+ * the `user` service over RabbitMQ via `RmqProducer.send()` — no local business logic or DB access.
  */
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
 @Controller('users')
 export class UserController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get()
   @HttpCode(StatusCodes.OK)
@@ -69,7 +69,7 @@ export class UserController {
     @Query(new ZodValidationPipe<GetUsersQueryDto>(getUsersQuerySchema))
     _query: GetUsersQueryDto,
   ) {
-    return this.kafkaProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', _query);
   }
 
   @Get('/detail-user')
@@ -83,7 +83,7 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.GET_USER_SUCCESSFULLY,
   })
   getDetailUserController(@CurrentUser() _user: Record<string, string>) {
-    return this.kafkaProducer.send('user.getDetailUser', { userId: _user.id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _user.id });
   }
 
   @Get('/get-by-field')
@@ -102,7 +102,7 @@ export class UserController {
     @Query(new ZodValidationPipe(dataFieldSchema))
     _dataFieldDto: UserDataFieldDto,
   ): Promise<unknown> {
-    return this.kafkaProducer.send('user.getUserByField', _dataFieldDto);
+    return this.rmqProducer.send('user.getUserByField', _dataFieldDto);
   }
 
   @Post()
@@ -120,7 +120,7 @@ export class UserController {
     @Body(new ZodValidationPipe(createUserSchema))
     _createUserDto: CreateUserDto,
   ): Promise<CreateUserResponseDto> {
-    return this.kafkaProducer.send('user.createUser', _createUserDto);
+    return this.rmqProducer.send('user.createUser', _createUserDto);
   }
 
   @Put('')
@@ -139,7 +139,7 @@ export class UserController {
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.kafkaProducer.send('user.updateUser', { userId: _user.id, ..._updateUserDto });
+    return this.rmqProducer.send('user.updateUser', { userId: _user.id, ..._updateUserDto });
   }
 
   @Put('/:id')
@@ -159,7 +159,7 @@ export class UserController {
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.kafkaProducer.send('user.updateUserByAdmin', { id: _id, ..._updateUserDto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._updateUserDto });
   }
 
   @Put('/:id/status')
@@ -174,7 +174,7 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
   })
   updateStatusUserController(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.updateStatusUser', { id: _id });
+    return this.rmqProducer.send('user.updateStatusUser', { id: _id });
   }
 
   @Delete('/:id')
@@ -189,7 +189,7 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
   })
   deleteUserByAdminController(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
   }
 
   @Post('change-password')
@@ -208,6 +208,6 @@ export class UserController {
     @Body(new ZodValidationPipe(changePasswordSchema))
     _changePasswordDto: ChangePasswordValues,
   ) {
-    return this.kafkaProducer.send('user.changePassword', { userId: _user.id, ..._changePasswordDto });
+    return this.rmqProducer.send('user.changePassword', { userId: _user.id, ..._changePasswordDto });
   }
 }

@@ -1,3 +1,9 @@
+// Must load env vars before any other import — `AppModule` transitively imports
+// `rmq.constants.ts`, which reads `process.env.RABBITMQ_URL` at module top-level
+// (evaluated during this static import chain, before `ConfigModule.forRoot()` ever
+// runs inside `NestFactory.create()` below). Without this, RmqProducer's ClientProxy
+// silently falls back to `amqp://guest:guest@localhost:5672` instead of the real URL.
+import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -5,28 +11,27 @@ import { AppModule } from './app.module';
 import { ResponseInterceptor } from '@packages/interceptor/response.interceptor';
 import { ErrorInterceptor, LoggerInterceptor } from '@packages/interceptor';
 import { HttpExceptionFilter } from '@packages/filters';
-import { ensureKafkaTopics } from './features/kafka/kafka.admin';
-import { ALL_KAFKA_TOPICS } from './features/kafka/kafka.constants';
 import { requestContextMiddleware } from '@packages/context/request-context.middleware';
+import { setLogSink } from '@packages/context/log-sink';
+import { RmqProducer } from './features/rabbitmq/rmq.producer';
 
 async function bootstrap() {
-  // Must run before `NestFactory.create()`: `KafkaModule`'s `KafkaProducer.onModuleInit()`
-  // connects and subscribes as soon as the module tree is instantiated, so topics have to exist
-  // before that point or the client races the broker's own auto-create.
-  await ensureKafkaTopics(ALL_KAFKA_TOPICS);
-
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   // First in the chain: opens the AsyncLocalStorage context (correlationId/traceId/serviceName)
-  // that every interceptor, guard, controller, and `KafkaProducer.send()` call below reads from.
+  // that every interceptor, guard, controller, and `RmqProducer.send()` call below reads from.
   app.use(requestContextMiddleware);
 
   app.enableCors({ origin: true, credentials: true });
   app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector)));
   app.useGlobalInterceptors(new ErrorInterceptor(), new LoggerInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Ships every HTTP request row to third-service's `request_logs` table, fire-and-forget.
+  const rmqProducer = app.get(RmqProducer);
+  setLogSink((entry) => rmqProducer.emit('log.create', entry));
 
   const config = new DocumentBuilder()
     .setTitle('Backends API')

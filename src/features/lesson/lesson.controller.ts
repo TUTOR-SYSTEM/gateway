@@ -18,17 +18,17 @@ import {
   type GetLessonsQueryDto,
   type UpdateLessonDto,
 } from '@packages/entities/curriculum';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `lesson`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Lesson')
 @ApiBearerAuth('access-token')
 @Controller('curriculum/lessons')
 export class LessonController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -43,7 +43,7 @@ export class LessonController {
     @Body(new ZodValidationPipe<CreateLessonBodyDto>(createLessonBodySchema))
     _data: CreateLessonBodyDto,
   ) {
-    return this.kafkaProducer.send('lesson.create', { curriculumId: _curriculumId, chapterId: _chapterId, data: _data });
+    return this.rmqProducer.send('lesson.create', { curriculumId: _curriculumId, chapterId: _chapterId, data: _data });
   }
 
   @Get()
@@ -57,7 +57,7 @@ export class LessonController {
     @Query(new ZodValidationPipe<GetLessonsQueryDto>(getLessonsQuerySchema))
     _query: GetLessonsQueryDto,
   ) {
-    return this.kafkaProducer.send('lesson.getAll', { query: _query });
+    return this.rmqProducer.send('lesson.getAll', { query: _query });
   }
 
   @Get(':id')
@@ -66,7 +66,7 @@ export class LessonController {
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson fetched' })
   getById(@Param('id') _id: string) {
-    return this.kafkaProducer.send('lesson.getById', { id: _id });
+    return this.rmqProducer.send('lesson.getById', { id: _id });
   }
 
   @Put(':id')
@@ -79,7 +79,7 @@ export class LessonController {
     @Body(new ZodValidationPipe<UpdateLessonDto>(updateLessonSchema))
     _data: UpdateLessonDto,
   ) {
-    return this.kafkaProducer.send('lesson.update', { id: _id, data: _data });
+    return this.rmqProducer.send('lesson.update', { id: _id, data: _data });
   }
 
   @Delete(':id')
@@ -88,6 +88,6 @@ export class LessonController {
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson deleted' })
   delete(@Param('id') _id: string) {
-    return this.kafkaProducer.send('lesson.delete', { id: _id });
+    return this.rmqProducer.send('lesson.delete', { id: _id });
   }
 }

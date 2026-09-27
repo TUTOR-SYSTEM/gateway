@@ -33,7 +33,7 @@ import {
   type UpdateManagedStudentDto,
   type ListManagedUsersQueryDto,
 } from '@packages/entities/admin';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 const CREATE_ACCOUNT_BODY_SCHEMA = {
   type: 'object',
@@ -102,7 +102,7 @@ const UPDATE_STUDENT_BODY_SCHEMA = {
  * Every route is protected by the global `JwtAuthGuard` (authentication) plus a
  * controller-level `RolesGuard` + `@Roles('ADMIN')` (authorization) — only users
  * whose JWT carries `role: ADMIN` may reach any handler here. Gateway forwards every
- * request to the `user` service over Kafka; no local business logic or DB access.
+ * request to the `user` service over RabbitMQ; no local business logic or DB access.
  */
 @ApiTags('Admin')
 @ApiBearerAuth('access-token')
@@ -110,7 +110,7 @@ const UPDATE_STUDENT_BODY_SCHEMA = {
 @Roles('ADMIN')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   // ─── Tutors ────────────────────────────────────────────────────────
   @Post('tutors')
@@ -119,7 +119,7 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Tutor created' })
   createTutor(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
-    return this.kafkaProducer.send('user.createUser', _dto);
+    return this.rmqProducer.send('user.createUser', _dto);
   }
 
   @Get('tutors')
@@ -139,7 +139,7 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     _query: ListManagedUsersQueryDto,
   ) {
-    return this.kafkaProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', _query);
   }
 
   @Get('tutors/:id')
@@ -149,7 +149,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Tutor detail' })
   @SwaggerResponse({ status: 404, description: 'Tutor not found' })
   getTutor(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getUserByField', { id: _id });
   }
 
   @Put('tutors/:id')
@@ -162,7 +162,7 @@ export class AdminController {
     @Param('id') _id: string,
     @Body(new ZodValidationPipe(updateManagedUserSchema)) _dto: UpdateManagedUserDto,
   ) {
-    return this.kafkaProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
   }
 
   @Delete('tutors/:id')
@@ -171,7 +171,7 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tutor deleted' })
   deleteTutor(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
   }
 
   // ─── Students ──────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Student created' })
   createStudent(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
-    return this.kafkaProducer.send('user.createUser', _dto);
+    return this.rmqProducer.send('user.createUser', _dto);
   }
 
   @Get('students')
@@ -207,7 +207,7 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     _query: ListManagedUsersQueryDto,
   ) {
-    return this.kafkaProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', _query);
   }
 
   @Get('students/:id')
@@ -217,7 +217,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Student detail' })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   getStudent(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getUserByField', { id: _id });
   }
 
   @Put('students/:id')
@@ -233,7 +233,7 @@ export class AdminController {
     @Param('id') _id: string,
     @Body(new ZodValidationPipe(updateManagedStudentSchema)) _dto: UpdateManagedStudentDto,
   ) {
-    return this.kafkaProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
   }
 
   @Delete('students/:id')
@@ -242,6 +242,6 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
   deleteStudent(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
   }
 }

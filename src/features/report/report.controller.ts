@@ -14,11 +14,11 @@ import {
   getLearningClassReportsQuerySchema,
   type GetLearningClassReportsQueryDto,
 } from '@packages/entities/report';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `reports/learning` (admin only): guards/Swagger stay, every
- * handler forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * handler forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Reports')
 @ApiBearerAuth('access-token')
@@ -26,7 +26,7 @@ import { KafkaProducer } from '../kafka/kafka.producer';
 @Roles('ADMIN')
 @Controller('reports/learning')
 export class ReportController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('summary')
   @HttpCode(StatusCodes.OK)
@@ -36,7 +36,7 @@ export class ReportController {
   })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
   getSummary() {
-    return this.kafkaProducer.send('report.summary', {});
+    return this.rmqProducer.send('report.summary', {});
   }
 
   @Get('attendance-trend')
@@ -47,7 +47,7 @@ export class ReportController {
   })
   @SwaggerResponse({ status: 200, description: 'Attendance trend fetched' })
   getAttendanceTrend() {
-    return this.kafkaProducer.send('report.attendanceTrend', {});
+    return this.rmqProducer.send('report.attendanceTrend', {});
   }
 
   @Get('classes')
@@ -66,6 +66,6 @@ export class ReportController {
     )
     query: GetLearningClassReportsQueryDto,
   ) {
-    return this.kafkaProducer.send('report.classList', { query });
+    return this.rmqProducer.send('report.classList', { query });
   }
 }

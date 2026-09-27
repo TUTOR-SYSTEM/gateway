@@ -20,17 +20,17 @@ import {
   type UpdateTuitionDto,
 } from '@packages/entities/tuition';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `tuitions`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Tuitions')
 @ApiBearerAuth('access-token')
 @Controller('tuitions')
 export class TuitionController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -42,7 +42,7 @@ export class TuitionController {
     dto: CreateTuitionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('tuition.create', { userId: user.id, data: dto });
+    return this.rmqProducer.send('tuition.create', { userId: user.id, data: dto });
   }
 
   @Get('summary')
@@ -54,7 +54,7 @@ export class TuitionController {
   @ApiQuery({ name: 'classId', required: false, type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
   getSummary(@Query('classId') classId?: string) {
-    return this.kafkaProducer.send('tuition.getSummary', { classId });
+    return this.rmqProducer.send('tuition.getSummary', { classId });
   }
 
   @Get()
@@ -70,7 +70,7 @@ export class TuitionController {
     @Query(new ZodValidationPipe<GetTuitionsQueryDto>(getTuitionsQuerySchema))
     query: GetTuitionsQueryDto,
   ) {
-    return this.kafkaProducer.send('tuition.getAll', { query });
+    return this.rmqProducer.send('tuition.getAll', { query });
   }
 
   @Get(':id')
@@ -79,7 +79,7 @@ export class TuitionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition detail' })
   getById(@Param('id') id: string) {
-    return this.kafkaProducer.send('tuition.getById', { id });
+    return this.rmqProducer.send('tuition.getById', { id });
   }
 
   @Put(':id')
@@ -93,7 +93,7 @@ export class TuitionController {
     dto: UpdateTuitionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('tuition.update', { userId: user.id, id, data: dto });
+    return this.rmqProducer.send('tuition.update', { userId: user.id, id, data: dto });
   }
 
   @Delete(':id')
@@ -102,6 +102,6 @@ export class TuitionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition deleted' })
   delete(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('tuition.delete', { userId: user.id, id });
+    return this.rmqProducer.send('tuition.delete', { userId: user.id, id });
   }
 }

@@ -20,24 +20,24 @@ import {
   type UpdateCurriculumDto,
 } from '@packages/entities/curriculum';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `curriculum`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Curriculum')
 @ApiBearerAuth('access-token')
 @Controller('curriculum')
 export class CurriculumController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('generate-code')
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Generate curriculum code' })
   @SwaggerResponse({ status: 201, description: 'Curriculum code generated' })
   generateCode() {
-    return this.kafkaProducer.send('curriculum.generateCode', {});
+    return this.rmqProducer.send('curriculum.generateCode', {});
   }
 
   @Post()
@@ -63,7 +63,7 @@ export class CurriculumController {
     _dto: CreateCurriculumDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('curriculum.create', { userId: _user.id, ..._dto });
+    return this.rmqProducer.send('curriculum.create', { userId: _user.id, ..._dto });
   }
 
   @Get()
@@ -78,7 +78,7 @@ export class CurriculumController {
     _query: GetCurriculumsQueryDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('curriculum.getAll', { userId: _user.id, ..._query });
+    return this.rmqProducer.send('curriculum.getAll', { userId: _user.id, ..._query });
   }
 
   @Get(':id')
@@ -87,7 +87,7 @@ export class CurriculumController {
   @ApiParam({ name: 'id', description: 'Curriculum ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum detail fetched' })
   getById(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.kafkaProducer.send('curriculum.getById', { userId: _user.id, id: _id });
+    return this.rmqProducer.send('curriculum.getById', { userId: _user.id, id: _id });
   }
 
   @Put(':id')
@@ -112,7 +112,7 @@ export class CurriculumController {
     _dto: UpdateCurriculumDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('curriculum.update', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('curriculum.update', { userId: _user.id, id: _id, data: _dto });
   }
 
   @Delete(':id')
@@ -121,6 +121,6 @@ export class CurriculumController {
   @ApiParam({ name: 'id', description: 'Curriculum ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum deleted' })
   delete(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.kafkaProducer.send('curriculum.delete', { userId: _user.id, id: _id });
+    return this.rmqProducer.send('curriculum.delete', { userId: _user.id, id: _id });
   }
 }

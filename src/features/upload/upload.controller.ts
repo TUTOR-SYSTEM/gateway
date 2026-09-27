@@ -25,18 +25,18 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { StatusCodes } from 'http-status-codes';
 import { Public } from '@packages/decorators';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for file uploads (Cloudflare R2): the multipart body is parsed
- * here, the file payload is forwarded to the owning service over Kafka via `KafkaProducer.send()`,
+ * here, the file payload is forwarded to the owning service over RabbitMQ via `RmqProducer.send()`,
  * and binary download streams are reconstructed from the response. No storage logic lives here.
  */
 @ApiTags('Upload')
 @ApiBearerAuth('access-token')
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Public()
   @Post()
@@ -53,7 +53,7 @@ export class UploadController {
   })
   @SwaggerResponse({ status: 201, description: 'File uploaded' })
   upload(@UploadedFile() file: Express.Multer.File) {
-    return this.kafkaProducer.send('upload.upload', {
+    return this.rmqProducer.send('upload.upload', {
       file: {
         originalname: file.originalname,
         mimetype: file.mimetype,
@@ -80,7 +80,7 @@ export class UploadController {
   })
   @SwaggerResponse({ status: 201, description: 'Files uploaded' })
   uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {
-    return this.kafkaProducer.send('upload.uploadMultiple', {
+    return this.rmqProducer.send('upload.uploadMultiple', {
       files: files.map((file) => ({
         originalname: file.originalname,
         mimetype: file.mimetype,
@@ -98,7 +98,7 @@ export class UploadController {
   @SwaggerResponse({ status: 400, description: 'key query param missing' })
   @SwaggerResponse({ status: 404, description: 'File not found in R2' })
   async download(@Query('key') key: string, @Res() res: Response): Promise<void> {
-    const result = await this.kafkaProducer.send<{ buffer: string }, { key: string }>('upload.download', { key });
+    const result = await this.rmqProducer.send<{ buffer: string }, { key: string }>('upload.download', { key });
     const fileBuffer = Buffer.from(result.buffer, 'base64');
     res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${key}"` });
     res.send(fileBuffer);
@@ -111,6 +111,6 @@ export class UploadController {
   @ApiParam({ name: 'key', type: String, description: 'R2 object key' })
   @SwaggerResponse({ status: 200, description: 'File deleted' })
   delete(@Param('key') key: string) {
-    return this.kafkaProducer.send('upload.delete', { key });
+    return this.rmqProducer.send('upload.delete', { key });
   }
 }

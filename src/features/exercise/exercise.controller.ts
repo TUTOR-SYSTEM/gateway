@@ -21,17 +21,17 @@ import {
   type SubmitExerciseDto,
 } from '@packages/entities/exercise';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `exercises`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Exercises')
 @ApiBearerAuth('access-token')
 @Controller('exercises')
 export class ExerciseController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -42,7 +42,7 @@ export class ExerciseController {
     _dto: CreateExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('exercise.create', { userId: _user.id, ..._dto });
+    return this.rmqProducer.send('exercise.create', { userId: _user.id, ..._dto });
   }
 
   @Get()
@@ -63,7 +63,7 @@ export class ExerciseController {
     _query: getExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('exercise.getAll', { userId: _user.id, ..._query });
+    return this.rmqProducer.send('exercise.getAll', { userId: _user.id, ..._query });
   }
 
   @Get(':id')
@@ -72,7 +72,7 @@ export class ExerciseController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise fetched' })
   getById(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.kafkaProducer.send('exercise.getById', { userId: _user.id, id: _id });
+    return this.rmqProducer.send('exercise.getById', { userId: _user.id, id: _id });
   }
 
   @Patch(':id/submit')
@@ -86,7 +86,7 @@ export class ExerciseController {
     _dto: SubmitExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('exercise.submit', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('exercise.submit', { userId: _user.id, id: _id, data: _dto });
   }
 
   @Patch(':id/grade')
@@ -100,6 +100,6 @@ export class ExerciseController {
     _dto: GradeExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('exercise.grade', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('exercise.grade', { userId: _user.id, id: _id, data: _dto });
   }
 }

@@ -14,17 +14,17 @@ import {
   type UpsertAttendanceDto,
 } from '@packages/entities/attendance';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `attendance`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Attendance')
 @ApiBearerAuth('access-token')
 @Controller('attendances')
 export class AttendanceController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('session/:sessionId')
   @HttpCode(StatusCodes.OK)
@@ -35,7 +35,7 @@ export class AttendanceController {
   @ApiParam({ name: 'sessionId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Attendance fetched' })
   getBySession(@Param('sessionId') sessionId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('attendance.getBySession', { userId: user.id, sessionId });
+    return this.rmqProducer.send('attendance.getBySession', { userId: user.id, sessionId });
   }
 
   @Put()
@@ -50,6 +50,6 @@ export class AttendanceController {
     dto: UpsertAttendanceDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('attendance.upsert', { userId: user.id, ...dto });
+    return this.rmqProducer.send('attendance.upsert', { userId: user.id, ...dto });
   }
 }

@@ -2,7 +2,7 @@ import { Controller, Get, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { Public } from '@packages/decorators';
-import { KafkaProducer } from './features/kafka/kafka.producer';
+import { RmqProducer } from './features/rabbitmq/rmq.producer';
 
 @ApiTags('Health')
 @Controller()
@@ -10,7 +10,7 @@ export class AppController {
   private readonly logger = new Logger(AppController.name);
   constructor(
     private readonly appService: AppService,
-    private readonly kafkaProducer: KafkaProducer,
+    private readonly rmqProducer: RmqProducer,
   ) {}
 
   @Get()
@@ -27,8 +27,8 @@ export class AppController {
   @Public()
   @Get('kafka/emit')
   @ApiOperation({
-    summary: 'Kafka emit health check',
-    description: 'Fire-and-forget ping to the user service over Kafka — no reply is awaited',
+    summary: 'RabbitMQ emit health check',
+    description: 'Fire-and-forget ping to the user service over RabbitMQ — no reply is awaited',
   })
   @SwaggerResponse({
     status: 200,
@@ -37,14 +37,14 @@ export class AppController {
   })
   async pingMsgFromKafkaController(): Promise<unknown> {
     this.logger.log(`[EMIT] kafka.emit -> user, payload=123`);
-    return await this.kafkaProducer.emit<unknown, number>('kafka.ping', 123);
+    return await this.rmqProducer.emit<unknown, number>('kafka.ping', 123);
   }
 
   @Public()
   @Get('kafka/send')
   @ApiOperation({
-    summary: 'Kafka send user data with response',
-    description: 'Send user data to user service over Kafka and receive response',
+    summary: 'RabbitMQ send user data with response',
+    description: 'Send user data to user service over RabbitMQ and receive response',
   })
   @SwaggerResponse({
     status: 200,
@@ -53,13 +53,19 @@ export class AppController {
       type: 'object',
       example: {
         statusCode: 200,
-        message: 'User data processed successfully',
+        message: 'Success',
         data: {
           userId: 'uuid',
           email: 'test@example.com',
           fullName: 'Test User',
           role: 'STUDENT',
+          requestId: '1790476104884-tye8k',
+          duration: 3,
         },
+        timestamp: '2026-09-27T02:28:24.887Z',
+        method: 'GET',
+        path: '/kafka/send',
+        correlationId: 'f9f4c634-219e-4903-8e17-552e130a5faf',
       },
     },
   })
@@ -79,23 +85,21 @@ export class AppController {
     );
     try {
       // Per-attempt timeout: 10s, with 2 retries = 30s total max
-      const response = await this.kafkaProducer.send<unknown, typeof payload>(
-        'kafka.send',
-        payload,
-        10000, // Shorter timeout per attempt
-        2, // Max 2 retries = 3 total attempts
-      );
+      const response = await this.rmqProducer.send<
+        { statusCode: number; message: string; data: Record<string, unknown> },
+        typeof payload
+      >('kafka.send', payload, 10000, 2);
       const duration = Date.now() - startTime;
       this.logger.log(
         `[SEND-SUCCESS] requestId=${requestId} kafka.send <- user, duration=${duration}ms, response=${JSON.stringify(response)}`,
       );
+      // `response` already carries the RPC responder's own `{statusCode, message, data}`
+      // envelope, and the global `ResponseInterceptor` adds another one on top of whatever
+      // this returns — so only the actual payload goes back, not a 3rd nested wrapper.
       return {
-        statusCode: 200,
-        message: 'Success',
-        data: response,
+        ...response.data,
         requestId,
         duration,
-        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -106,14 +110,14 @@ export class AppController {
         }`,
       );
 
-      // If it's already an HttpException (from KafkaProducer), re-throw it
+      // If it's already an HttpException (from RmqProducer), re-throw it
       if (error instanceof Error && error['status'] !== undefined) {
         throw error;
       }
 
       // Otherwise throw a proper HttpException with detailed error info
       throw new Error(
-        `Kafka send failed after ${duration}ms: ${errorMessage}. requestId=${requestId}`,
+        `RabbitMQ send failed after ${duration}ms: ${errorMessage}. requestId=${requestId}`,
       );
     }
   }
@@ -121,8 +125,8 @@ export class AppController {
   @Public()
   @Get('kafka/error')
   @ApiOperation({
-    summary: 'Kafka emit health check',
-    description: 'Fire-and-forget ping to the user service over Kafka — no reply is awaited',
+    summary: 'RabbitMQ emit health check',
+    description: 'Fire-and-forget ping to the user service over RabbitMQ — no reply is awaited',
   })
   @SwaggerResponse({
     status: 200,
@@ -131,14 +135,14 @@ export class AppController {
   })
   async testMsgError(): Promise<unknown> {
     this.logger.log(`[EMIT] kafka.emit -> user, payload=123`);
-    return await this.kafkaProducer.send<unknown, number>('kafka.user.error', 123);
+    return await this.rmqProducer.send<unknown, number>('kafka.user.error', 123);
   }
 
   @Public()
   @Get('kafka/tutor/error')
   @ApiOperation({
-    summary: 'Kafka emit health check',
-    description: 'Fire-and-forget ping to the user service over Kafka — no reply is awaited',
+    summary: 'RabbitMQ emit health check',
+    description: 'Fire-and-forget ping to the user service over RabbitMQ — no reply is awaited',
   })
   @SwaggerResponse({
     status: 200,
@@ -147,7 +151,7 @@ export class AppController {
   })
   async testError(): Promise<unknown> {
     this.logger.log(`[SEND] kafka.emit -> user, payload=123`);
-    return await this.kafkaProducer.send<unknown, number>('kafka.user', 123);
+    return await this.rmqProducer.send<unknown, number>('kafka.user', 123);
   }
 
   @Public()
@@ -163,31 +167,34 @@ export class AppController {
       type: 'object',
       example: {
         statusCode: 200,
-        message: 'PostgreSQL connection is healthy',
+        message: 'Success',
         data: {
           connection: 'postgres',
           status: 'connected',
           timestamp: '2026-09-26T08:35:31.437Z',
+          databaseStats: {},
         },
+        timestamp: '2026-09-26T08:35:31.437Z',
+        method: 'GET',
+        path: '/health/postgres',
+        correlationId: '...',
       },
     },
   })
   async checkPostgresConnection(): Promise<unknown> {
     this.logger.log('[HEALTH] Checking PostgreSQL connection and fetching user data');
     try {
-      const response = await this.kafkaProducer.send<unknown, unknown>('health.postgres', {
+      const response = await this.rmqProducer.send<unknown, unknown>('health.postgres', {
         fetchData: true,
       });
       this.logger.log(`[HEALTH] PostgreSQL data fetched: ${JSON.stringify(response)}`);
+      // The global `ResponseInterceptor` already wraps whatever this returns in its own
+      // `{statusCode, message, data, ...}` envelope — don't nest a second one.
       return {
-        statusCode: 200,
-        message: 'PostgreSQL connection is healthy and data fetched',
-        data: {
-          connection: 'postgres',
-          status: 'connected',
-          timestamp: new Date().toISOString(),
-          databaseStats: response,
-        },
+        connection: 'postgres',
+        status: 'connected',
+        timestamp: new Date().toISOString(),
+        databaseStats: response,
       };
     } catch (error) {
       this.logger.error(`[HEALTH] PostgreSQL connection failed: ${error}`);
@@ -208,31 +215,34 @@ export class AppController {
       type: 'object',
       example: {
         statusCode: 200,
-        message: 'Redis connection is healthy',
+        message: 'Success',
         data: {
           connection: 'redis',
           status: 'connected',
           timestamp: '2026-09-26T08:35:31.437Z',
+          cacheStats: {},
         },
+        timestamp: '2026-09-26T08:35:31.437Z',
+        method: 'GET',
+        path: '/health/redis',
+        correlationId: '...',
       },
     },
   })
   async checkRedisConnection(): Promise<unknown> {
     this.logger.log('[HEALTH] Checking Redis connection and fetching cache data');
     try {
-      const response = await this.kafkaProducer.send<unknown, unknown>('health.redis', {
+      const response = await this.rmqProducer.send<unknown, unknown>('health.redis', {
         fetchData: true,
       });
       this.logger.log(`[HEALTH] Redis data fetched: ${JSON.stringify(response)}`);
+      // The global `ResponseInterceptor` already wraps whatever this returns in its own
+      // `{statusCode, message, data, ...}` envelope — don't nest a second one.
       return {
-        statusCode: 200,
-        message: 'Redis connection is healthy and cache data retrieved',
-        data: {
-          connection: 'redis',
-          status: 'connected',
-          timestamp: new Date().toISOString(),
-          cacheStats: response,
-        },
+        connection: 'redis',
+        status: 'connected',
+        timestamp: new Date().toISOString(),
+        cacheStats: response,
       };
     } catch (error) {
       this.logger.error(`[HEALTH] Redis connection failed: ${error}`);

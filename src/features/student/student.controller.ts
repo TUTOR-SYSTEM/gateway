@@ -20,17 +20,17 @@ import {
   type UpdateStudentDto,
 } from '@packages/entities/student';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge here: validation/guards/Swagger stay, every handler forwards to
- * the `user` service over Kafka via `KafkaProducer.send()` — no local business logic or DB access.
+ * the `user` service over RabbitMQ via `RmqProducer.send()` — no local business logic or DB access.
  */
 @ApiTags('Students')
 @ApiBearerAuth('access-token')
 @Controller('students')
 export class StudentController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('get-student-code')
   @HttpCode(StatusCodes.OK)
@@ -40,7 +40,7 @@ export class StudentController {
   })
   @SwaggerResponse({ status: 201, description: 'Student created' })
   generateStudentCodeController() {
-    return this.kafkaProducer.send('user.getUserByField', {});
+    return this.rmqProducer.send('user.getUserByField', {});
   }
 
   @Post()
@@ -108,7 +108,7 @@ export class StudentController {
     _dto: CreateStudentDto,
     @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('user.createUser', { userId: _currentUser.id, ..._dto });
+    return this.rmqProducer.send('user.createUser', { userId: _currentUser.id, ..._dto });
   }
 
   @Get()
@@ -141,7 +141,7 @@ export class StudentController {
     @Query(new ZodValidationPipe<GetStudentsQueryDto>(getStudentsQuerySchema))
     _query: GetStudentsQueryDto,
   ) {
-    return this.kafkaProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', _query);
   }
 
   @Get(':id')
@@ -210,7 +210,7 @@ export class StudentController {
   })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   findById(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getUserByField', { id: _id });
   }
 
   @Put(':id')
@@ -254,7 +254,7 @@ export class StudentController {
     @Body(new ZodValidationPipe(updateStudentSchema))
     _dto: UpdateStudentDto,
   ) {
-    return this.kafkaProducer.send('user.updateUser', { userId: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUser', { userId: _id, ..._dto });
   }
 
   @Delete(':id')
@@ -263,6 +263,6 @@ export class StudentController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
   delete(@Param('id') _id: string) {
-    return this.kafkaProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
   }
 }

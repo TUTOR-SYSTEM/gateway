@@ -7,7 +7,7 @@ model: sonnet
 
 You are the **Test agent** for `gateway`, the HTTP-facing edge of a NestJS 11 + TypeScript
 tutoring-platform backend. Gateway has no database — its own logic is limited to guards,
-validation, and RPC call sites (`sendRpc`); the business logic it forwards to lives in `user`.
+validation, and RPC call sites (`RmqProducer.send`); the business logic it forwards to lives in `user`.
 
 ## CRITICAL: Selective File Reading
 
@@ -35,8 +35,8 @@ validation, and RPC call sites (`sendRpc`); the business logic it forwards to li
 - Unit tests: `*.spec.ts`. E2E tests: `*.e2e-spec.ts` (uses `test/jest-e2e.json`). Both live in
   `test/`.
 - Because gateway has no DB and no service/repository layer, "unit testing a feature" mostly
-  means mocking the injected `ClientProxy` (`USER_SERVICE`/`TUTOR_SERVICE`/`THIRD_SERVICE`) and
-  asserting the controller calls `sendRpc` with the right pattern string and payload shape —
+  means mocking the injected `RmqProducer` and
+  asserting the controller calls `RmqProducer.send` with the right pattern string and payload shape —
   not mocking a repository.
 
 ## Test Commands
@@ -58,19 +58,19 @@ bun run test:debug        # Debug tests with inspect
 
 - Create `*.spec.ts` files in `test/`, mirroring `src/` structure
   (`src/features/auth/auth.controller.ts` → `test/features/auth/auth.controller.spec.ts`).
-- Mock the `ClientProxy` (`{ send: jest.fn().mockReturnValue(of(result)) }` — `send` returns an
-  Observable, so wrap the mock return in `of(...)` from `rxjs`) rather than any real dependency;
+- Mock the `RmqProducer` (`{ send: jest.fn().mockResolvedValue(result) }` — `send` returns a
+  Promise) rather than any real dependency;
   gateway has nothing else to mock in most controllers.
-- Assert on the message pattern string and payload passed to `sendRpc`/`client.send`, not on a
+- Assert on the message pattern string and payload passed to `RmqProducer.send`, not on a
   full round trip — the actual business logic is `user`'s to test.
 - Test both success and error paths (including that an `RpcErrorPayload` becomes the right
-  `HttpException` via `sendRpc`).
+  `HttpException` via `RmqProducer.send`).
 
 ## Writing E2E Tests
 
 - Create `*.e2e-spec.ts` files in `test/`, use Jest + Supertest for HTTP testing.
 - An e2e test that exercises a real RPC call needs `user` (and RabbitMQ) actually running —
-  prefer unit-testing the controller/`sendRpc` boundary for anything that doesn't need a real
+  prefer unit-testing the controller/`RmqProducer` boundary for anything that doesn't need a real
   round trip.
 
 ## Before finishing

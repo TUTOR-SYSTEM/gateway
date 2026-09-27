@@ -17,17 +17,17 @@ import {
   type GetHistoryQueryDto,
 } from '@packages/entities/ai-chat';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for the AI assistant (`ai-chat`): validation/guards/Swagger stay,
- * every handler forwards to the owning service over Kafka via `KafkaProducer.send()`.
+ * every handler forwards to the owning service over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('AI Chat')
 @ApiBearerAuth('access-token')
 @Controller('ai-chat')
 export class AiChatController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post('chat')
   @HttpCode(StatusCodes.OK)
@@ -38,7 +38,7 @@ export class AiChatController {
     @Body(new ZodValidationPipe<ChatDto>(chatSchema)) dto: ChatDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('ai.chat', { userId: user.id, data: dto });
+    return this.rmqProducer.send('ai.chat', { userId: user.id, data: dto });
   }
 
   @Get('history')
@@ -51,7 +51,7 @@ export class AiChatController {
     query: GetHistoryQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('ai.history', { userId: user.id, query });
+    return this.rmqProducer.send('ai.history', { userId: user.id, query });
   }
 
   @Delete('history')
@@ -59,6 +59,6 @@ export class AiChatController {
   @ApiOperation({ summary: 'Clear AI chat history' })
   @SwaggerResponse({ status: 200, description: 'Chat history cleared' })
   clearHistory(@CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('ai.clearHistory', { userId: user.id });
+    return this.rmqProducer.send('ai.clearHistory', { userId: user.id });
   }
 }

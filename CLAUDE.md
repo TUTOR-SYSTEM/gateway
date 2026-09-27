@@ -9,7 +9,7 @@ API **gateway** for a tutoring-platform backend split into 4 independent NestJS 
 
 **Gateway owns no database and no business logic.** It is the only service clients talk to over
 HTTP; every request, across every feature, is validated here (Zod, guards) then forwarded over
-**RabbitMQ** (`@nestjs/microservices`, RMQ transport, request/reply) via `sendRpc(...)` to
+**RabbitMQ** (`@nestjs/microservices`, RMQ transport, request/reply) via `RmqProducer.send(...)` to
 whichever service owns that domain: `user` (auth/user/admin/student), `tutor-service` (the
 education domain — class/schedule/session/curriculum/chapter/lesson/tuition/exercise/
 attendance/dashboard/report/ai-chat), or `third-service` (email/notification/redis/upload). See
@@ -37,9 +37,8 @@ gateway-wide to the other two services' domains as well).
 
 ### Files to read ONLY when necessary:
 - `src/main.ts` — Only when changing bootstrap configuration
-- `src/features/rmq-clients/*` — Only when adding a new downstream service client or changing
-  queue names
-- `src/packages/helpers/rmq.helper.ts` — Only when changing how RPC errors are translated
+- `src/features/rabbitmq/*` — Only when adding a new pattern prefix route, changing queue names,
+  or changing how RPC errors are translated
 - `src/data/constants/*` — Only when adding error/success messages
 
 ## Tech Stack
@@ -99,7 +98,7 @@ RabbitMQ reachable — it has nothing to serve on its own. Each service's `PORT`
 src/
 ├── main.ts                       # Bootstrap: CORS, interceptors, filters, listen
 ├── app.module.ts                 # Root module (imports all feature modules)
-├── app.controller.ts             # Health-check controller (+ RabbitMQ pub/sub demo route)
+├── app.controller.ts             # Health-check + RPC demo routes (`/kafka/*` paths kept for compat)
 ├── app.service.ts                # Health-check service (publishes/subscribes `health.check`)
 ├── features/                     # Feature modules (NestJS pattern) — every one below is a thin
 │                                  # proxy controller only (no service/repository), except auth's
@@ -111,11 +110,9 @@ src/
 │   ├── class/ schedule/ session/ curriculum/ chapter/ lesson/ tuition/ exercise/ attendance/
 │   │   dashboard/ report/ ai-chat/   # → `tutor-service` (RPC)
 │   ├── email/ notification/ redis/ upload/   # → `third-service` (RPC)
-│   ├── rmq-clients/               # ClientsModule registration: USER_SERVICE/TUTOR_SERVICE/
-│   │                              # THIRD_SERVICE RMQ clients (request/reply RPC) — all three
-│   │                              # have responders wired up on the owning-service side
-│   └── rabbitmq/                 # Hand-rolled pub/sub (amqplib) — fire-and-forget domain
-│                                  # events, separate from the RPC clients above
+│   └── rabbitmq/                 # RmqModule (@Global): one RMQ client per downstream queue
+│                                  # (user_queue/tutor_queue/third_queue) + RmqProducer, which
+│                                  # routes each pattern by prefix (rmq.constants.ts)
 └── packages/                     # Shared utilities (import via @packages/*)
     ├── configs/                  # JWT sign config
     ├── decorators/               # @ApiResponse, @Public, @Roles, @CurrentUser decorators
@@ -124,7 +121,7 @@ src/
     ├── filters/                  # HttpExceptionFilter (global)
     ├── guards/                   # JwtAuthGuard (verifies JWT locally, confirms the user
     │                              # still exists via an RPC call — no local DB), RolesGuard
-    ├── helpers/                  # hashing, JWT, `sendRpc` (RPC call + HttpException mapping)
+    ├── helpers/                  # hashing, JWT
     ├── interceptor/              # ResponseInterceptor, ErrorInterceptor, LoggerInterceptor
     ├── interfaces/               # ApiResponseInterface, UserInterface
     ├── pipes/                    # ZodValidationPipe
@@ -144,20 +141,21 @@ src/
 features/{name}/
 ├── {name}.module.ts     # Module definition (controller only, no service/repository)
 └── {name}.controller.ts # Route handlers: validate with ZodValidationPipe, then
-                          # `return sendRpc(this.userClient, '<pattern>', payload);`
+                          # `return this.rmqProducer.send('<pattern>', payload);`
 ```
 
 - No `{name}.service.ts` / `{name}.repository.ts` for any feature — business logic lives only in
   the owning service (`user`, `tutor-service`, or `third-service`). If you're about to add one
   here, stop: the logic belongs in that service's `*.service.ts` behind a new `@MessagePattern`,
-  and gateway only needs a new `sendRpc(...)` call site.
+  and gateway only needs a new `rmqProducer.send(...)` call site (plus a `RMQ_PREFIX_ROUTES`
+  entry if the prefix is new).
 - **Message pattern naming**: `<feature>.<methodName>`, matching the owning service's method it
   wraps (e.g. `auth.login`, `user.updateUserByAdmin`, `admin.createTutor`, `student.findById`,
   `ai.chat`, `email.test`). Keep gateway's pattern strings and the owning repo's
   `@MessagePattern(...)` strings in sync — they are the contract between the two repos and
   nothing enforces them at compile time across repos.
-- **Every RPC call goes through `sendRpc`** (`@packages/helpers`) — never call
-  `client.send(...)` directly from a controller. It converts the RPC error payload back into the
+- **Every RPC call goes through `RmqProducer`** (`src/features/rabbitmq/`) — never inject a raw
+  `ClientProxy` or call `client.send(...)` directly from a controller. It converts the RPC error payload back into the
   right `HttpException` (status + message) so error handling looks identical to a local call.
 
 ### Entity / DTO Pattern
@@ -171,15 +169,15 @@ Entities live in `src/packages/entities/{domain}/` — unchanged despite gateway
 ### Request/Response Flow
 
 1. Request → Global `JwtAuthGuard` (unless `@Public()`) — verifies the JWT locally, then confirms
-   the user still exists via `sendRpc(userClient, 'user.getUserByField', { field: 'id', value })`
+   the user has an active session via `rmqProducer.send('redis.get', { key })` (third-service; fails open)
 2. Controller validates body via `ZodValidationPipe` (Zod schema)
-3. Controller → `sendRpc(this.<name>Client, '<pattern>', payload)` → RabbitMQ → the owning
+3. Controller → `rmqProducer.send('<pattern>', payload)` → RabbitMQ queue → the owning
    service's `*.rpc.controller.ts` → its (unmodified) `*.service.ts` → its own Postgres
 4. `ResponseInterceptor` wraps the RPC result the same way it would a local return value:
    ```json
    { "statusCode": 200, "message": "Success", "data": { ... }, "timestamp": "...", "method": "POST", "path": "/auth/login" }
    ```
-5. Errors: `sendRpc` turns the responder's `RpcErrorPayload` into an `HttpException`, then the
+5. Errors: `RmqProducer.send` turns the responder's `RpcErrorPayload` into an `HttpException`, then the
    normal `ErrorInterceptor` + `HttpExceptionFilter` handle it exactly like a local exception
 
 ### Authentication
@@ -215,8 +213,7 @@ Entities live in `src/packages/entities/{domain}/` — unchanged despite gateway
 | `JWT_REFRESH_SECRET`          | Refresh token secret           | Required (must match `user`'s)       |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` / `GOOGLE_OAUTH_REDIRECT_URL` | Google OAuth (lives in gateway) | Required for Google login |
 | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` / `BACKEND_URL` | Facebook OAuth (lives in gateway) | Required for Facebook login |
-| `RABBITMQ_URL`                | RabbitMQ connection URL — used by both the RPC clients (`rmq-clients`) and the legacy pub/sub module (`rabbitmq`) | Required |
-| `RABBITMQ_EXCHANGE`           | Topic exchange name for the pub/sub module | `app.events`            |
+| `RABBITMQ_URL`                | RabbitMQ connection URL (on Railway: reference the RabbitMQ service's private URL) | `amqp://guest:guest@localhost:5672` |
 | `USER_QUEUE` / `TUTOR_QUEUE` / `THIRD_QUEUE` | Override the RMQ queue name for each downstream client | `user_queue` / `tutor_queue` / `third_queue` |
 
 Gateway no longer reads any `POSTGRES_*` / `DATABASE_URL` / `REDIS_*` / mail vars — those belong
@@ -232,10 +229,11 @@ one dependency gateway actually needs).
 
 - `src/main.ts` — Bootstrap with CORS, interceptors, filters
 - `src/app.module.ts` — Root module with all imports + global JWT guard
-- `src/features/rmq-clients/rmq-clients.module.ts` — RPC client registration (`USER_SERVICE`,
+- `src/features/rabbitmq/rmq.module.ts` — RMQ client registration (`USER_SERVICE`,
   `TUTOR_SERVICE`, `THIRD_SERVICE`)
-- `src/packages/helpers/rmq.helper.ts` — `sendRpc`, the only sanctioned way to call a downstream
-  service
+- `src/features/rabbitmq/rmq.producer.ts` — `RmqProducer`, the only sanctioned way to call a
+  downstream service (trace headers, retry/timeout, error → `HttpException`)
+- `src/features/rabbitmq/rmq.constants.ts` — pattern-prefix → queue routing table
 - `src/packages/guards/jwt-auth.guard.ts` — Global JWT auth guard (RPC-based existence check)
 - `src/packages/interceptor/response.interceptor.ts` — Standard response wrapper
 - `src/packages/pipes/zod-validation.pipe.ts` — Zod validation pipe

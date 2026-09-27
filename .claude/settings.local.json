@@ -15,7 +15,8 @@
       "Bash(railway projects *)",
       "Bash(railway project *)",
       "mcp__railway__get-logs",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(bun run *)"
     ]
   }
 }

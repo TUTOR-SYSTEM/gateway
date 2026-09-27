@@ -1,34 +1,26 @@
 ---
 name: generate-controller
-description: Scaffold the controller layer (src/features/{name}/{name}.controller.ts) as a thin RPC-proxy — ZodValidationPipe, CurrentUser, inline Swagger schemas, one sendRpc call per route, plural route path. Use when asked to create/add a controller, routes, or REST endpoints for a feature in this NestJS tutoring backend.
+description: Scaffold the controller layer (src/features/{name}/{name}.controller.ts) as a thin RPC-proxy — ZodValidationPipe, CurrentUser, inline Swagger schemas, one RmqProducer.send call per route, plural route path. Use when asked to create/add a controller, routes, or REST endpoints for a feature in this NestJS tutoring backend.
 ---
 
 # Generate Controller
 
 Create `src/features/foo/foo.controller.ts` as a **thin RPC-proxy**: every route validates
-input then forwards to the owning service via `sendRpc` — no local business logic. See
-`src/features/admin/admin.controller.ts`, `src/features/email/email.controller.ts`, or
-`src/features/ai-chat/ai-chat.controller.ts` for the shape (their `sendRpc(...)` calls are
-currently commented out mid-migration to Kafka — see `[[kafka-migration-wip]]` memory — so read
-them for structure, not as proof the call compiles today).
-
-**Before scaffolding**: confirm `sendRpc` is actually exported from `@packages/helpers`
-(`grep sendRpc src/packages/helpers/index.ts`). If it's commented out, say so and ask whether to
-scaffold the RMQ shape anyway (won't compile until `rmq.helper.ts` is restored) or wire this
-feature to Kafka instead (mirror `app.controller.ts`'s `kafka.ping`/`kafka.echo` routes).
+input then forwards to the owning service via `RmqProducer.send` — no local business logic. See
+`src/features/class/class.controller.ts` or `src/features/email/email.controller.ts` for the shape.
 
 ## Prerequisites
 - DTOs + schemas exist under `@packages/entities/foo` (see `generate-entity`).
-- Know which downstream service owns this feature — `USER_SERVICE`, `TUTOR_SERVICE`, or
-  `THIRD_SERVICE` (`../rmq-clients/rmq-clients.constants`) — and the exact
+- Know which downstream service owns this feature (`user`, `tutor-service`, or `third-service`),
+  make sure its pattern prefix is routed in `RMQ_PREFIX_ROUTES`
+  (`src/features/rabbitmq/rmq.constants.ts` — add it if new), and know the exact
   `<feature>.<methodName>` pattern string(s) its `*.rpc.controller.ts` exposes (or agree the
   naming with whoever is adding that responder, if it doesn't exist yet — see the root
   `add-rpc-endpoint` skill for adding both sides together).
 
 ## Shape
 ```ts
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import {
   ApiTags, ApiOperation, ApiBody, ApiResponse as SwaggerResponse,
   ApiBearerAuth, ApiParam, ApiQuery,
@@ -36,9 +28,8 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser } from '@packages/decorators';
-import { sendRpc } from '@packages/helpers';
 import { createFooSchema, type CreateFooDto, getFoosQuerySchema, type GetFoosQueryDto } from '@packages/entities/foo';
-import { TUTOR_SERVICE } from '../rmq-clients/rmq-clients.constants'; // or USER_SERVICE / THIRD_SERVICE
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 const CREATE_FOO_BODY_SCHEMA = {
   type: 'object',
@@ -50,7 +41,7 @@ const CREATE_FOO_BODY_SCHEMA = {
 @ApiBearerAuth('access-token')
 @Controller('foos') // plural route
 export class FooController {
-  constructor(@Inject(TUTOR_SERVICE) private readonly tutorClient: ClientProxy) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -58,7 +49,7 @@ export class FooController {
   @ApiBody({ schema: CREATE_FOO_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Foo created' })
   create(@Body(new ZodValidationPipe<CreateFooDto>(createFooSchema)) dto: CreateFooDto) {
-    return sendRpc(this.tutorClient, 'foo.create', dto);
+    return this.rmqProducer.send('foo.create', dto);
   }
 
   @Get()
@@ -68,7 +59,7 @@ export class FooController {
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @SwaggerResponse({ status: 200, description: 'Foos fetched' })
   list(@Query(new ZodValidationPipe<GetFoosQueryDto>(getFoosQuerySchema)) query: GetFoosQueryDto) {
-    return sendRpc(this.tutorClient, 'foo.list', query);
+    return this.rmqProducer.send('foo.list', query);
   }
 
   @Get(':id')
@@ -77,7 +68,7 @@ export class FooController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Foo detail' })
   get(@Param('id') id: string) {
-    return sendRpc(this.tutorClient, 'foo.get', { id });
+    return this.rmqProducer.send('foo.get', { id });
   }
 
   @Delete(':id')
@@ -86,20 +77,19 @@ export class FooController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Foo deleted' })
   delete(@Param('id') id: string) {
-    return sendRpc(this.tutorClient, 'foo.delete', { id });
+    return this.rmqProducer.send('foo.delete', { id });
   }
 }
 ```
 
 ## Rules
 - **No service/repository injected — no business logic here.** Every handler body is exactly
-  `return sendRpc(this.<name>Client, '<feature>.<methodName>', payload);`. If you find yourself
+  `return this.rmqProducer.send('<feature>.<methodName>', payload);`. If you find yourself
   wanting an `if`/validation beyond Zod, that check belongs in the owning service.
-- **`ClientProxy` injection**: `@Inject(<SERVICE>) private readonly <name>Client: ClientProxy`
-  — pick `USER_SERVICE`/`TUTOR_SERVICE`/`THIRD_SERVICE` based on who owns the feature (see
-  `../.claude/rules/architecture.md`'s ownership table). No module wiring needed for this —
-  `RmqClientsModule` is `@Global()`.
-- **Payload**: build the object passed to `sendRpc` from `@CurrentUser()` / `@Param()` / the
+- **`RmqProducer` injection**: `constructor(private readonly rmqProducer: RmqProducer) {}` — no
+  module wiring needed, `RmqModule` is `@Global()`. The queue (`user`/`tutor`/`third`) is
+  resolved from the pattern prefix, never picked at the call site.
+- **Payload**: build the object passed to `RmqProducer.send` from `@CurrentUser()` / `@Param()` / the
   validated Zod DTO — mirror exactly what the owning service's method signature expects (check
   its `*.rpc.controller.ts` if it already exists).
 - Get the current user with `@CurrentUser() user` (from `@packages/decorators`) and read

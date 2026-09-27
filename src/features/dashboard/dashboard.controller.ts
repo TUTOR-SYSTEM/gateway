@@ -8,17 +8,17 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { CurrentUser } from '@packages/decorators';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `dashboard`: guards/Swagger stay, every handler forwards to
- * the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Dashboard')
 @ApiBearerAuth('access-token')
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('overview')
   @HttpCode(StatusCodes.OK)
@@ -28,6 +28,6 @@ export class DashboardController {
   })
   @SwaggerResponse({ status: 200, description: 'Dashboard overview fetched' })
   overview(@CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('dashboard.overview', { userId: user.id });
+    return this.rmqProducer.send('dashboard.overview', { userId: user.id });
   }
 }

@@ -22,17 +22,17 @@ import {
   type UpdateScheduleDto,
 } from '@packages/entities/schedule';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `schedules`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Schedules')
 @ApiBearerAuth('access-token')
 @Controller('schedules')
 export class ScheduleController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -44,7 +44,7 @@ export class ScheduleController {
     dto: CreateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('schedule.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('schedule.create', { userId: user.id, ...dto });
   }
 
   @Post('bulk')
@@ -56,7 +56,7 @@ export class ScheduleController {
     dto: CreateSchedulesDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('schedule.createBulk', { userId: user.id, ...dto });
+    return this.rmqProducer.send('schedule.createBulk', { userId: user.id, ...dto });
   }
 
   @Get()
@@ -75,7 +75,7 @@ export class ScheduleController {
     query: GetSchedulesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('schedule.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('schedule.getAll', { userId: user.id, ...query });
   }
 
   @Get('class/:classId')
@@ -84,7 +84,7 @@ export class ScheduleController {
   @ApiParam({ name: 'classId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedules fetched' })
   getByClass(@Param('classId') classId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('schedule.getByClass', { userId: user.id, classId });
+    return this.rmqProducer.send('schedule.getByClass', { userId: user.id, classId });
   }
 
   @Get(':id')
@@ -93,7 +93,7 @@ export class ScheduleController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedule fetched' })
   getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('schedule.getById', { userId: user.id, id });
+    return this.rmqProducer.send('schedule.getById', { userId: user.id, id });
   }
 
   @Patch(':id')
@@ -107,7 +107,7 @@ export class ScheduleController {
     dto: UpdateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('schedule.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('schedule.update', { userId: user.id, id, ...dto });
   }
 
   @Delete(':id')
@@ -116,6 +116,6 @@ export class ScheduleController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedule deleted' })
   del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('schedule.delete', { userId: user.id, id });
+    return this.rmqProducer.send('schedule.delete', { userId: user.id, id });
   }
 }

@@ -8,7 +8,15 @@
       "Read(//home/haidangphan/.claude/plugins/cache/understand-anything/understand-anything/2.9.3/packages/core/dist/**)",
       "Bash(npx tsc *)",
       "Bash(./node_modules/.bin/tsc --noEmit -p .)",
-      "Bash(rtk grep *)"
+      "Bash(rtk grep *)",
+      "Bash(psql *)",
+      "Bash(docker-compose ps *)",
+      "Bash(podman-compose up *)",
+      "Bash(railway projects *)",
+      "Bash(railway project *)",
+      "mcp__railway__get-logs",
+      "Bash(python3 *)",
+      "Bash(bun run *)"
     ]
   }
 }

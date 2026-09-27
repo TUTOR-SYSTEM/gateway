@@ -31,21 +31,21 @@ import {
 import { ApiResponse, Public } from '@packages/decorators';
 import { ZodValidationPipe } from '@packages/pipes';
 import type { FacebookProfile, GoogleProfile } from '@packages/strategy';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 type RequestWithGoogleProfile = Request & { user: GoogleProfile };
 type RequestWithFacebookProfile = Request & { user: FacebookProfile };
 
 /**
  * Gateway is a thin HTTP edge for `auth`: it keeps validation, guards and Swagger metadata,
- * but every handler forwards to the `user` service over Kafka via `KafkaProducer.send` — no
+ * but every handler forwards to the `user` service over RabbitMQ via `RmqProducer.send` — no
  * local business logic or database access lives here anymore.
  */
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly kafkaProducer: KafkaProducer,
+    private readonly rmqProducer: RmqProducer,
     private readonly configService: ConfigService,
   ) {}
 
@@ -76,7 +76,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<RegisterDto>(registerSchema))
     registerDto: RegisterDto,
   ): Promise<RegisterResponseDto> {
-    return this.kafkaProducer.send('auth.register', registerDto);
+    return this.rmqProducer.send('auth.register', registerDto);
   }
 
   @Public()
@@ -122,7 +122,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<LoginDto>(loginSchema))
     loginDto: LoginDto,
   ): Promise<LoginResponseDto> {
-    return this.kafkaProducer.send('auth.login', loginDto);
+    return this.rmqProducer.send('auth.login', loginDto);
   }
 
   @Public()
@@ -169,7 +169,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<LoginByUserCodeDto>(loginByUserCodeSchema))
     dto: LoginByUserCodeDto,
   ): Promise<LoginResponseDto> {
-    return this.kafkaProducer.send('auth.loginByUserCode', dto);
+    return this.rmqProducer.send('auth.loginByUserCode', dto);
   }
 
   @Public()
@@ -195,7 +195,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<RefreshTokenBodyDto>(refreshTokenBodySchema))
     body: RefreshTokenBodyDto,
   ): Promise<LoginResponseDto> {
-    return this.kafkaProducer.send('auth.refresh', body);
+    return this.rmqProducer.send('auth.refresh', body);
   }
 
   @Public()
@@ -217,7 +217,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<ForgotPasswordDto>(forgotPasswordSchema))
     forgotPasswordDto: ForgotPasswordDto,
   ): Promise<ForgotPasswordResponseDto> {
-    return this.kafkaProducer.send('auth.forgotPassword', forgotPasswordDto);
+    return this.rmqProducer.send('auth.forgotPassword', forgotPasswordDto);
   }
 
   @ApiBearerAuth('access-token')
@@ -255,7 +255,7 @@ export class AuthController {
     @Body(new ZodValidationPipe<ResetPasswordDto>(resetPasswordSchema))
     resetPasswordDto: ResetPasswordDto,
   ): Promise<ResetPasswordResponseDto> {
-    return this.kafkaProducer.send('auth.resetPassword', resetPasswordDto);
+    return this.rmqProducer.send('auth.resetPassword', resetPasswordDto);
   }
 
   @Public()
@@ -285,7 +285,7 @@ export class AuthController {
     @Req() req: RequestWithGoogleProfile,
     @Res() res: Response,
   ): Promise<void> {
-    const { accessToken, refreshToken } = await this.kafkaProducer.send<LoginResponseDto, GoogleProfile>(
+    const { accessToken, refreshToken } = await this.rmqProducer.send<LoginResponseDto, GoogleProfile>(
       'auth.googleLogin',
       req.user,
     );
@@ -329,7 +329,7 @@ export class AuthController {
     @Req() req: RequestWithFacebookProfile,
     @Res() res: Response,
   ): Promise<void> {
-    const { accessToken, refreshToken } = await this.kafkaProducer.send<
+    const { accessToken, refreshToken } = await this.rmqProducer.send<
       LoginResponseDto,
       FacebookProfile
     >('auth.facebookLogin', req.user);

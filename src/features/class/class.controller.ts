@@ -22,17 +22,17 @@ import {
   updateClassSchema,
 } from '@packages/entities/class';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for the education `class` domain: validation/guards/Swagger stay,
- * every handler forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * every handler forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Classes')
 @ApiBearerAuth('access-token')
 @Controller('classes')
 export class ClassController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -44,7 +44,7 @@ export class ClassController {
     dto: CreateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('class.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('class.create', { userId: user.id, ...dto });
   }
 
   @Put(':id')
@@ -61,7 +61,7 @@ export class ClassController {
     dto: UpdateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('class.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('class.update', { userId: user.id, id, ...dto });
   }
 
   @Get('generate-code')
@@ -69,7 +69,7 @@ export class ClassController {
   @ApiOperation({ summary: 'Generate class code', description: 'Generate a unique, unused class code' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class code generated' })
   generateCode() {
-    return this.kafkaProducer.send('class.generateCode', {});
+    return this.rmqProducer.send('class.generateCode', {});
   }
 
   @Get()
@@ -87,7 +87,7 @@ export class ClassController {
     query: GetClassesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('class.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('class.getAll', { userId: user.id, ...query });
   }
 
   @Get(':id')
@@ -96,7 +96,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class detail fetched' })
   getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('class.getById', { userId: user.id, id });
+    return this.rmqProducer.send('class.getById', { userId: user.id, id });
   }
 
   @Post(':id/students')
@@ -110,7 +110,7 @@ export class ClassController {
     dto: AddStudentsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('class.addStudents', { userId: user.id, classId: id, ...dto });
+    return this.rmqProducer.send('class.addStudents', { userId: user.id, classId: id, ...dto });
   }
 
   @Get(':id/students')
@@ -119,7 +119,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Students fetched' })
   getStudents(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('class.getStudents', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getStudents', { userId: user.id, classId: id });
   }
 
   @Get(':id/materials')
@@ -128,7 +128,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class materials retrieved' })
   getMaterials(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('class.getMaterials', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getMaterials', { userId: user.id, classId: id });
   }
 
   @Get(':id/watches')
@@ -140,7 +140,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class watch overview retrieved' })
   getWatch(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('class.getWatch', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getWatch', { userId: user.id, classId: id });
   }
 
   @Delete(':id')
@@ -149,6 +149,6 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class deleted' })
   del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('class.delete', { userId: user.id, id });
+    return this.rmqProducer.send('class.delete', { userId: user.id, id });
   }
 }

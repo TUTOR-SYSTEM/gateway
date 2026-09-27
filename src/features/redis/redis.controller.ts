@@ -9,17 +9,17 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { getRedisQuerySchema, type GetRedisQueryDto } from '@packages/entities/redis';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `redis`: validation/guards/Swagger stay, the handler forwards
- * to the `third-service` over Kafka via `KafkaProducer.send()`.
+ * to the `third-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Redis')
 @ApiBearerAuth('access-token')
 @Controller('redis')
 export class RedisController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get()
   @HttpCode(StatusCodes.OK)
@@ -29,6 +29,6 @@ export class RedisController {
   get(
     @Query(new ZodValidationPipe<GetRedisQueryDto>(getRedisQuerySchema)) query: GetRedisQueryDto,
   ) {
-    return this.kafkaProducer.send('redis.get', { key: query.key });
+    return this.rmqProducer.send('redis.get', { key: query.key });
   }
 }

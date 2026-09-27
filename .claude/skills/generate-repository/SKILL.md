@@ -16,4 +16,4 @@ service's own repo instead:
 
 Run that repo's own `generate-repository` skill there (each of the other three services has
 Drizzle-backed repositories and its own copy of this skill name). Back in gateway, the feature
-only needs `generate-controller` (a thin `sendRpc(...)` proxy) + `generate-module`.
+only needs `generate-controller` (a thin `RmqProducer.send(...)` proxy) + `generate-module`.

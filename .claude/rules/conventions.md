@@ -15,8 +15,8 @@
   in `@packages/guards`. Read the acting user with `@CurrentUser()` from `@packages/decorators`
   (returns the JWT payload; use `user.id`).
 - **Helpers** (`@packages/helpers`): `checkUuidValid` / `generateCode` (from `generate.helper`),
-  `hashData` / `compareData` (bcrypt from `hashingData.helper`), `sendRpc` (from `rmq.helper` —
-  the only sanctioned way to call a downstream service; see `nestjs-feature-pattern.md`).
+  `hashData` / `compareData` (bcrypt from `hashingData.helper`). Downstream calls go through
+  `RmqProducer` (`src/features/rabbitmq/`), not a helper — see `nestjs-feature-pattern.md`.
   `jwt.helper`'s `signAccessToken`/`signRefreshToken` are no longer called from gateway (token
   issuance moved to the `user` service) — the `JwtUserRole`/`JwtGuardUser` *types* from that file
   are still used by `jwt-auth.guard.ts`. There is no `buildListWhereClause` here anymore (it was
@@ -39,17 +39,36 @@
   `serviceName`), opened per-HTTP-request by `requestContextMiddleware`
   (`@packages/context/request-context.middleware.ts`, wired first in `main.ts`'s `app.use(...)`
   chain — reuses an incoming `x-correlation-id` header or mints one, and echoes it back on the
-  response). `KafkaProducer.send()`/`.emit()` automatically read this context and attach it as
-  real Kafka message headers on every outbound call — **no call site needs to do anything**; the
-  wrapping is transparent (`this.kafkaProducer.send('auth.login', loginDto)` is unchanged). Both
+  response). `RmqProducer.send()`/`.emit()` automatically read this context and attach it as
+  AMQP message headers (`properties.headers`) on every outbound call — **no call site needs to do
+  anything** (`this.rmqProducer.send('auth.login', loginDto)` is unchanged). Both
   `ResponseInterceptor` and `HttpExceptionFilter` include `correlationId` in every JSON response,
   and `HttpExceptionFilter` also surfaces `serviceName` — which downstream service actually threw
-  — when the RPC error payload carried one through. See `[[kafka-rpc-plumbing]]` memory for the
-  full mechanism (how headers survive `KafkaRequestSerializer`, the sibling repos' matching
-  `TraceContextInterceptor`) and why a new Kafka route doesn't need to do anything extra to get
-  tracing for free.
-- **RabbitMQ pass/fail logging**: `RabbitMQProducer.publish` and `RabbitMQConsumer.subscribe`
-  (`src/features/rabbitmq/*`) log an explicit `[Publish OK/FAILED]` / `[Consume OK/FAILED]` line
-  per message (with routing key/queue and, on failure, the error + stack) — this is built into
-  the shared producer/consumer classes, so any feature that publishes or subscribes gets pass/fail
-  visibility for free; don't add ad-hoc logging around individual `publish`/`subscribe` call sites.
+  — when the RPC error payload carried one through. See `[[rmq-rpc-plumbing]]` memory for the
+  full mechanism (`RmqRecord` headers, the sibling repos' matching `TraceContextInterceptor`
+  reading `RmqContext.getMessage().properties.headers`).
+- **RPC timeouts**: `RmqProducer.send()` accepts an optional `timeoutMs` parameter (3rd
+  argument, default 10000) applied per attempt via RxJS `timeout()`, plus `maxRetries` (4th,
+  default 2). Pass it for
+  operations that should fail fast if the responder doesn't reply within a deadline:
+  `await this.rmqProducer.send('<pattern>', payload, 15000)` for a 15-second timeout. Omit it
+  to use the default. After the last attempt times out the caller gets a 504.
+- **RPC request tracking for debugging** (added 2026-09-26): Controller endpoints making RPC
+  calls should track requests with a unique `requestId` and log start/success/failure for
+  production diagnostics:
+  ```ts
+  const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  this.logger.log(`[SEND-START] requestId=${requestId} <pattern> -> <service>, payload=...`);
+  try {
+    const response = await this.rmqProducer.send('<pattern>', payload, timeoutMs);
+    this.logger.log(`[SEND-SUCCESS] requestId=${requestId} duration=${Date.now()-start}ms`);
+    return { statusCode: 200, message: 'Success', data: response, requestId, duration };
+  } catch (error) {
+    this.logger.error(`[SEND-FAILED] requestId=${requestId} error=${error.message}`);
+    throw error;
+  }
+  ```
+  The responder service should log `[RECEIVE-START]`/`[PROCESSING]`/`[RESPONSE-READY]` with the
+  same `requestId` for correlation. Use `requestId` to correlate gateway and responder service
+  logs when debugging production failures — see `ERROR_ANALYSIS.md` and `PRODUCTION_DEBUGGING.md`
+  for diagnostic workflows.

@@ -18,17 +18,17 @@ import {
   type GetChaptersQueryDto,
   type UpdateChapterDto,
 } from '@packages/entities/curriculum';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `chapter`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Chapter')
 @ApiBearerAuth('access-token')
 @Controller('chapter')
 export class ChapterController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post(':curriculumId')
   @HttpCode(StatusCodes.CREATED)
@@ -41,7 +41,7 @@ export class ChapterController {
     @Body(new ZodValidationPipe<CreateChapterDto>(createChapterSchema))
     _data: CreateChapterDto,
   ) {
-    return this.kafkaProducer.send('chapter.create', { curriculumId: _curriculumId, data: _data });
+    return this.rmqProducer.send('chapter.create', { curriculumId: _curriculumId, data: _data });
   }
 
   @Get()
@@ -55,7 +55,7 @@ export class ChapterController {
     @Query(new ZodValidationPipe<GetChaptersQueryDto>(getChaptersQuerySchema))
     _query: GetChaptersQueryDto,
   ) {
-    return this.kafkaProducer.send('chapter.getAll', { query: _query });
+    return this.rmqProducer.send('chapter.getAll', { query: _query });
   }
 
   @Get(':id')
@@ -64,7 +64,7 @@ export class ChapterController {
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter fetched' })
   getById(@Param('id') _id: string) {
-    return this.kafkaProducer.send('chapter.getById', { id: _id });
+    return this.rmqProducer.send('chapter.getById', { id: _id });
   }
 
   @Put(':id')
@@ -77,7 +77,7 @@ export class ChapterController {
     @Body(new ZodValidationPipe<UpdateChapterDto>(updateChapterSchema))
     _data: UpdateChapterDto,
   ) {
-    return this.kafkaProducer.send('chapter.update', { id: _id, data: _data });
+    return this.rmqProducer.send('chapter.update', { id: _id, data: _data });
   }
 
   @Delete(':id')
@@ -86,6 +86,6 @@ export class ChapterController {
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter deleted' })
   delete(@Param('id') _id: string) {
-    return this.kafkaProducer.send('chapter.delete', { id: _id });
+    return this.rmqProducer.send('chapter.delete', { id: _id });
   }
 }

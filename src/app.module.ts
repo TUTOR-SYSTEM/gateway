@@ -22,17 +22,18 @@ import { NotificationModule } from './features/notification/notification.module'
 import { RedisModule } from './features/redis/redis.module';
 import { UploadModule } from './features/upload/upload.module';
 import { EmailModule } from './features/email/email.module';
+import { LogModule } from './features/log/log.module';
 import { JwtAuthGuard, LanguageGuard } from '@packages/guards';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { KafkaModule } from './features/kafka/kafka.module';
+import { RmqModule } from './features/rabbitmq/rmq.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    KafkaModule,
+    RmqModule,
     UserModule,
     AdminModule,
     AuthModule,
@@ -53,6 +54,7 @@ import { KafkaModule } from './features/kafka/kafka.module';
     RedisModule,
     UploadModule,
     EmailModule,
+    LogModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },

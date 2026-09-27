@@ -44,10 +44,14 @@ export class ErrorInterceptor implements NestInterceptor {
         const originalMessage = isError ? error.message : 'Internal server error';
         const originalStack = isError ? error.stack : undefined;
 
-        this.logger.error(originalMessage, originalStack);
+        this.logger.error(`[ERROR-INTERCEPTOR] ${originalMessage}`, originalStack);
 
         const clientMessage = this.resolveClientMessage(error);
-        const exception = new InternalServerErrorException(clientMessage);
+        const exception = new InternalServerErrorException({
+          message: clientMessage,
+          originalError: originalMessage,
+          timestamp: new Date().toISOString(),
+        });
         if (originalStack) exception.stack = originalStack;
 
         return throwError(() => exception);

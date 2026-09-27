@@ -15,6 +15,6 @@ gateway feature, that logic belongs in the owning service's own repo instead:
 
 Run that repo's own `generate-service` skill there (each of the other three services has its
 own full service/repository layering and its own copy of this skill name). Back in gateway, the
-feature only needs `generate-controller` (a thin `sendRpc(...)` proxy) + `generate-module`, or
+feature only needs `generate-controller` (a thin `RmqProducer.send(...)` proxy) + `generate-module`, or
 use the root `add-rpc-endpoint` skill to scaffold both the gateway call site and the owning
 service's `@MessagePattern` handler together.

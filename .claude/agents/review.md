@@ -35,18 +35,12 @@ for branch scope. Focus on what changed and code it directly affects.
 - **No service/repository layer introduced.** A new `{name}.service.ts` or
   `{name}.repository.ts` under `src/features/` is a bug here — that logic belongs in `user`
   (or whichever service owns the domain) behind a `@MessagePattern`, not in gateway.
-- Every RMQ RPC call goes through `sendRpc(this.xClient, '<pattern>', payload)` — a direct
-  `client.send(...)` call on an RMQ `ClientProxy` bypasses the `RpcErrorPayload` →
-  `HttpException` translation. Exception: `KafkaProducer.emit(...)`/`.send(...)` calls are not a
-  violation — `sendRpc` only wraps RMQ `ClientProxy` errors, it doesn't support Kafka. This is no
-  longer just the small `app.controller.ts` demo routes: all of `AuthController` plus several
-  `kafka.*` relay routes are fully migrated to `KafkaProducer.send()`. See `[[kafka-migration-wip]]`
-  memory for which routes, `[[kafka-rpc-plumbing]]` for what a new Kafka route actually requires
-  on the owning service's side (topic pre-creation, global `RpcExceptionFilter` registration) —
-  a gateway-only diff adding a new `kafkaProducer.send()` call site without matching changes
-  there will compile but 404/hang at runtime. Most other existing controllers still have their
-  `sendRpc` calls commented out — that's expected WIP state, not a finding, unless the diff
-  itself introduces new dead code.
+- Every downstream call goes through `this.rmqProducer.send('<pattern>', payload)` (or `.emit()`
+  for fire-and-forget) — injecting a raw `ClientProxy` and calling `client.send(...)` bypasses the
+  trace headers, retry, and `RpcErrorPayload` → `HttpException` translation. A new pattern
+  prefix without an entry in `RMQ_PREFIX_ROUTES` (`src/features/rabbitmq/rmq.constants.ts`) throws
+  at call time; a pattern with no matching `@MessagePattern` on the owning service fails at runtime
+  — see `[[rmq-rpc-plumbing]]` memory.
 - The message pattern string matches what the owning service actually exposes (can't verify
   the other repo directly, but flag any pattern that looks inconsistent with this repo's
   existing naming, e.g. wrong casing or a feature prefix that doesn't match the controller).

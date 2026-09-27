@@ -29,18 +29,16 @@ Ask the user (or infer from the request) before generating:
 
 If fields are unclear, propose a sensible set and confirm before writing files.
 
-**Before scaffolding**: confirm `sendRpc` is actually exported from `@packages/helpers`
-(`grep sendRpc src/packages/helpers/index.ts`) — as of 2026-09-19 it's commented out
-gateway-wide mid-migration to Kafka (see `[[kafka-migration-wip]]` memory), so a freshly
-scaffolded `sendRpc`-based controller won't compile until `rmq.helper.ts` is restored. Flag this
-before generating rather than producing code that fails the build step below.
+**Before scaffolding**: if the feature introduces a new pattern prefix, add it to
+`RMQ_PREFIX_ROUTES` in `src/features/rabbitmq/rmq.constants.ts` so `RmqProducer` knows which
+queue to send to.
 
 ## Composition — run the layer skills in order
 
 This is the orchestrator for gateway's two real layers:
 
 1. **generate-entity** — Zod schema + DTOs under `src/packages/entities/{name}/`.
-2. **generate-controller** — thin RPC-proxy routes + Swagger, one `sendRpc(...)` per route.
+2. **generate-controller** — thin RPC-proxy routes + Swagger, one `this.rmqProducer.send(...)` per route.
 3. **generate-module** — module file (controller only) + wire into `app.module.ts`.
 
 `generate-service`, `generate-repository`, and `generate-db-table` **do not apply to gateway**
@@ -64,7 +62,7 @@ For a feature named `foo`:
 - **Controller** — `@ApiTags`, `@ApiBearerAuth('access-token')`, `@Controller('foos')`,
   `@Inject(<SERVICE>) private readonly <name>Client: ClientProxy`, `@CurrentUser()` for the
   acting user, `ZodValidationPipe` for every body/query, inline Swagger schema constants,
-  handler bodies that are exactly `return sendRpc(this.<name>Client, '<pattern>', payload);`.
+  handler bodies that are exactly `return this.rmqProducer.send('<pattern>', payload);`.
 - **Module** — `{ controllers: [FooController] }`, nothing else (see `generate-module`).
 
 ## Wiring (required)
@@ -78,6 +76,6 @@ insert `FooModule` into the `imports: [...]` array (near related feature modules
 2. Report exactly which files were created/modified, and whether the RPC patterns used already
    exist as `@MessagePattern` handlers in the owning repo — if not, say so explicitly (the user
    needs `add-rpc-endpoint`, or a separate change in that repo).
-3. Do NOT invent helpers — reuse `sendRpc` (`@packages/helpers`), `ZodValidationPipe`
+3. Do NOT invent helpers — reuse `RmqProducer` (`src/features/rabbitmq/`), `ZodValidationPipe`
    (`@packages/pipes`), `@CurrentUser` / `@Public` / `@Roles` (`@packages/decorators`) that
    already exist. There is no `@Admin()` decorator.

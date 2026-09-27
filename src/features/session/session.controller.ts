@@ -22,17 +22,17 @@ import {
   type UpdateSessionDto,
 } from '@packages/entities/session';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
-import { KafkaProducer } from '../kafka/kafka.producer';
+import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
  * Gateway is a thin HTTP edge for `sessions`: validation/guards/Swagger stay, every handler
- * forwards to the `tutor-service` over Kafka via `KafkaProducer.send()`.
+ * forwards to the `tutor-service` over RabbitMQ via `RmqProducer.send()`.
  */
 @ApiTags('Sessions')
 @ApiBearerAuth('access-token')
 @Controller('sessions')
 export class SessionController {
-  constructor(private readonly kafkaProducer: KafkaProducer) {}
+  constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
   @HttpCode(StatusCodes.CREATED)
@@ -44,7 +44,7 @@ export class SessionController {
     dto: CreateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('session.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('session.create', { userId: user.id, ...dto });
   }
 
   @Post('bulk')
@@ -56,7 +56,7 @@ export class SessionController {
     dto: CreateSessionsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('session.createBulk', { userId: user.id, ...dto });
+    return this.rmqProducer.send('session.createBulk', { userId: user.id, ...dto });
   }
 
   @Get()
@@ -80,7 +80,7 @@ export class SessionController {
     query: GetSessionsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('session.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('session.getAll', { userId: user.id, ...query });
   }
 
   @Get('class/:classId')
@@ -89,7 +89,7 @@ export class SessionController {
   @ApiParam({ name: 'classId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Sessions fetched' })
   getByClass(@Param('classId') classId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('session.getByClass', { userId: user.id, classId });
+    return this.rmqProducer.send('session.getByClass', { userId: user.id, classId });
   }
 
   @Get(':id')
@@ -98,7 +98,7 @@ export class SessionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Session detail fetched' })
   getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('session.getById', { userId: user.id, id });
+    return this.rmqProducer.send('session.getById', { userId: user.id, id });
   }
 
   @Put(':id')
@@ -112,7 +112,7 @@ export class SessionController {
     dto: UpdateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.kafkaProducer.send('session.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('session.update', { userId: user.id, id, ...dto });
   }
 
   @Delete(':id')
@@ -121,6 +121,6 @@ export class SessionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Session deleted' })
   del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.kafkaProducer.send('session.delete', { userId: user.id, id });
+    return this.rmqProducer.send('session.delete', { userId: user.id, id });
   }
 }

@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '@packages/decorators';
 import type { Request } from 'express';
 import type { JwtUserRole } from '@packages/helpers';
-import { KafkaProducer } from '../../features/kafka/kafka.producer';
+import { RmqProducer } from '../../features/rabbitmq/rmq.producer';
 
 /** Access-token payload shape (matches access JWTs from `signAccessToken`). */
 export type JwtGuardUser = {
@@ -66,7 +66,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly reflector: Reflector,
-    private readonly kafkaProducer: KafkaProducer,
+    private readonly rmqProducer: RmqProducer,
   ) {}
 
   private getCachedSession(userId: string): CacheEntry | undefined {
@@ -115,11 +115,11 @@ export class JwtAuthGuard implements CanActivate {
     const payload = parseAccessPayload(decoded);
     request.user = payload;
 
-    // Verify the user has an active session in Redis via third-service over Kafka.
+    // Verify the user has an active session in Redis via third-service over RabbitMQ.
     // A missing session means the user logged out or the session expired.
-    // Fail open: if Kafka/Redis is unreachable, let the request through (availability > security
+    // Fail open: if RabbitMQ/Redis is unreachable, let the request through (availability > security
     // for infrastructure failures). Only block when Redis explicitly returns null (session deleted).
-    // In-memory cache avoids a Kafka round-trip on every request from the same user.
+    // In-memory cache avoids a RabbitMQ round-trip on every request from the same user.
     const cached = this.getCachedSession(payload.id);
     if (cached) {
       if (!cached.valid) {
@@ -129,7 +129,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const session = await this.kafkaProducer.send<string | null, { key: string }>(
+      const session = await this.rmqProducer.send<string | null, { key: string }>(
         'redis.get',
         { key: `${SESSION_KEY_PREFIX}${payload.id}` },
       );
@@ -142,7 +142,7 @@ export class JwtAuthGuard implements CanActivate {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      // Infrastructure failure (Kafka down, third_service unreachable, etc.) — fail open
+      // Infrastructure failure (RabbitMQ down, third_service unreachable, etc.) — fail open
       this.logger.warn(
         `Redis session check failed for user ${payload.id}, failing open: ${error}`,
       );

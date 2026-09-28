@@ -7,15 +7,24 @@ API **gateway** for a tutoring-platform backend split into 4 independent NestJS 
 (education domain), `third-service` (notification/email/upload). Built with **NestJS 11** +
 **TypeScript**.
 
-**Gateway owns no database and no business logic.** It is the only service clients talk to over
-HTTP; every request, across every feature, is validated here (Zod, guards) then forwarded over
-**RabbitMQ** (`@nestjs/microservices`, RMQ transport, request/reply) via `RmqProducer.send(...)` to
-whichever service owns that domain: `user` (auth/user/admin/student), `tutor-service` (the
-education domain — class/schedule/session/curriculum/chapter/lesson/tuition/exercise/
-attendance/dashboard/report/ai-chat), or `third-service` (email/notification/redis/upload). See
-`[[gateway-rmq-refactor]]` for the history of this split (gateway used to be a full
+**Gateway makes no runtime database queries and has no business logic.** It is the only service
+clients talk to over HTTP; every request, across every feature, is validated here (Zod, guards)
+then forwarded over **RabbitMQ** (`@nestjs/microservices`, RMQ transport, request/reply) via
+`RmqProducer.send(...)` to whichever service owns that domain: `user` (auth/user/admin/student),
+`tutor-service` (the education domain — class/schedule/session/curriculum/chapter/lesson/tuition/
+exercise/attendance/dashboard/report/ai-chat), or `third-service` (email/notification/redis/
+upload). See `[[gateway-rmq-refactor]]` for the history of this split (gateway used to be a full
 Drizzle-backed duplicate of `user`, and the same thin-proxy shape has since been extended
 gateway-wide to the other two services' domains as well).
+
+**2026-09-28 schema consolidation**: gateway is now the canonical owner of the Drizzle
+**schema + migration tooling** for the one shared Postgres database all 4 services connect to
+(`src/database/schema.ts`, `drizzle.config.ts`, `drizzle/`, `db:generate`/`db:push`/`db:migrate`/
+`db:studio`). This does not reintroduce a `DatabaseModule` or any query code here — `user`/
+`tutor-service`/`third-service` still own all runtime queries against their own tables, now
+importing the shared table/enum definitions from gateway's `./schema` export
+(`"@tutor/gateway"` local package, see their `src/database/database.module.ts`) instead of each
+maintaining a divergent local copy.
 
 ## IMPORTANT: Selective File Reading
 
@@ -55,9 +64,11 @@ gateway-wide to the other two services' domains as well).
 | Formatting       | Prettier (single quotes, trailing commas)           |
 | Linting          | ESLint + typescript-eslint                          |
 | Containerization | Docker Compose / Podman Compose (Postgres/Redis/RabbitMQ — shared with the other 3 services) |
+| Database tooling | Drizzle ORM schema + `drizzle-kit` migrations (`src/database/schema.ts`, `drizzle.config.ts`) — canonical for the shared DB since the 2026-09-28 consolidation, but **dev/CLI-only**: gateway has no `DatabaseModule` and opens no DB connection at request time |
 
-Gateway has **no** database, ORM, or seed scripts — those live only in the services that own
-data (`user`, `tutor-service`, `third-service`).
+Gateway has no runtime database connection, business-logic services, or seed scripts — query
+code lives only in the services that own data (`user`, `tutor-service`, `third-service`); they
+now import gateway's schema definitions rather than maintaining their own copies.
 
 ## Commands
 
@@ -86,6 +97,13 @@ bun compose:up            # Docker Compose up -d
 bun compose:down          # Docker Compose down
 bun podman:up             # Podman Compose up -d
 bun podman:down           # Podman Compose down
+
+# Database (Drizzle) — canonical schema + migration tooling for the shared Postgres DB (dev/CLI
+# only; gateway itself never opens a DB connection at runtime)
+bun run db:generate       # Generate migration SQL from schema changes
+bun run db:migrate        # Run pending migrations
+bun run db:push           # Push schema directly (dev only)
+bun run db:studio         # Open Drizzle Studio
 ```
 
 Gateway must run alongside `user` (and, once wired, `tutor-service`/`third-service`) with
@@ -215,15 +233,18 @@ Entities live in `src/packages/entities/{domain}/` — unchanged despite gateway
 | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` / `BACKEND_URL` | Facebook OAuth (lives in gateway) | Required for Facebook login |
 | `RABBITMQ_URL`                | RabbitMQ connection URL (on Railway: reference the RabbitMQ service's private URL) | `amqp://guest:guest@localhost:5672` |
 | `USER_QUEUE` / `TUTOR_QUEUE` / `THIRD_QUEUE` | Override the RMQ queue name for each downstream client | `user_queue` / `tutor_queue` / `third_queue` |
+| `DATABASE_URL` or `POSTGRES_*`| Postgres connection — read only by `drizzle.config.ts` for the `db:*` CLI scripts (`resolveDatabaseUrl()`, same resolution as the other 3 services). Not read by any runtime app code — gateway's NestJS process never opens this connection. | none (required to run `db:generate`/`db:push`/`db:migrate`) |
 
-Gateway no longer reads any `POSTGRES_*` / `DATABASE_URL` / `REDIS_*` / mail vars — those belong
-to the services that actually use them.
+Gateway reads no `REDIS_*` or mail vars at runtime — those belong to the services that actually
+use them.
 
 ## Docker Services
 
 `docker-compose.yml` still provisions Postgres/Redis (used by `user`/`tutor-service`/
-`third-service`, not gateway itself) plus **RabbitMQ** (used by all four services — this is the
-one dependency gateway actually needs).
+`third-service`, not gateway's own NestJS process) plus **RabbitMQ** (used by all four services
+— this is the one dependency gateway's app actually needs at runtime). Gateway's `drizzle.config.ts`
+does need Postgres reachable, but only when a human runs `bun run db:generate`/`db:push`/
+`db:migrate` locally.
 
 ## Key Files to Know
 
@@ -251,8 +272,8 @@ The following rule files are loaded as part of these instructions and must be fo
 
 Configured in `.claude/settings.json` (scripts in `.claude/hooks/`):
 
-- **PreToolUse (Write|Edit)** → `guard-paths.mjs` blocks edits to `.env*` files (gateway has no
-  `drizzle/` anymore, so that half of the rule no longer applies here).
+- **PreToolUse (Write|Edit)** → `guard-paths.mjs` blocks edits to `.env*` and generated
+  `drizzle/**` files (gateway owns the canonical migration history since 2026-09-28).
 - **PostToolUse (Write|Edit)** → `format-ts.mjs` runs prettier + eslint `--fix` on the
   touched `.ts/.js` file.
 - **Stop** → `review-skills.mjs` runs after each task that changed `src/`, and asks Claude to

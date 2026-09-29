@@ -23,6 +23,7 @@ import { RedisModule } from './features/redis/redis.module';
 import { UploadModule } from './features/upload/upload.module';
 import { EmailModule } from './features/email/email.module';
 import { LogModule } from './features/log/log.module';
+import { TestScenarioModule } from './features/test-scenario/test-scenario.module';
 import { JwtAuthGuard, LanguageGuard } from '@packages/guards';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
@@ -55,6 +56,7 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
     UploadModule,
     EmailModule,
     LogModule,
+    TestScenarioModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },

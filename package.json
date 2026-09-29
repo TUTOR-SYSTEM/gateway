@@ -1,10 +1,16 @@
 {
-  "name": "backends",
+  "name": "gateway",
   "version": "0.0.1",
   "description": "",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "exports": {
+    "./schema": {
+      "types": "./dist/database/schema.d.ts",
+      "default": "./dist/database/schema.js"
+    }
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -55,12 +61,16 @@
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "http-status-codes": "^2.3.0",
     "ioredis": "^5.8.2",
+    "multer": "^2.4.0",
     "nodemailer": "^7.0.11",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
+    "pg": "^8.20.0",
+    "postgres": "^3.4.9",
     "redis": "^6.1.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.17.2",
@@ -89,6 +99,7 @@
     "@types/supertest": "^7.0.0",
     "@types/uuid": "^10.0.0",
     "c8": "^11.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

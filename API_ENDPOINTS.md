@@ -580,6 +580,57 @@ read access follows the same rule as `GET /sessions/:id` (owner, enrolled studen
 
 ---
 
+## 22. Logs (Request Logging) — `/logs`
+
+
+| M   | Path                         | Auth | Scenario | Payload                                                                                                                       | Response                                                                                                            | Roles | Status |
+| --- | ---------------------------- | ---- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----- | ------ |
+| GET | `/logs`                      | JWT  | success  | Query: `page?`, `limit?` (default 1/20, max 100), `serviceName?`, `type?` (`HTTP`/`RPC`), `correlationId?`, `search?` (path) | `{ data: RequestLogRow[], pagination: { total, page, limit, totalPages } }`                                          | ADMIN |        |
+| GET | `/logs/trace/:correlationId` | JWT  | success  | —                                                                                                                             | `RequestLogRow[]` — flat array, every hop sharing the correlationId, ORDER BY `createdAt` ASC                         | ADMIN |        |
+| GET | `/logs/stats`                | JWT  | success  | —                                                                                                                             | `[{ method, path, calls24h, errorCount24h, p95Ms }]` — gateway HTTP hops only, last 24h, grouped by `(method, path)`  | ADMIN |        |
+
+Notes: `p95Ms` = `percentile_cont(0.95) within group (order by duration_ms)`, rounded to ms;
+`errorCount24h` counts `status_code >= 400`. RPC hops between services never count here.
+
+
+---
+
+## 23. Test Scenarios — `/test-scenarios`
+
+Admin-managed test cases per endpoint. **Running** a scenario fires a real HTTP request at this
+gateway with a fresh `x-correlation-id`, so it flows through the whole system and shows up in
+`/logs` like any other request; the verdict is stored in `test_runs` (linked to `request_logs`
+through `correlationId`). All routes are thin proxies to third-service (`testscenario.*` RPC).
+
+
+| M      | Path                        | Auth | Scenario | Payload                                                                                                                                                              | Response                                                                                                                                             | Roles | Status |
+| ------ | --------------------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------ |
+| POST   | `/test-scenarios`           | JWT  | success  | `{ service, method, path, name, description?, requestTemplate?: { headers?, body? }, expectedStatus, category? }` (`category`: `valid`/`auth`/`validation`/`not_found`/`domain`) | Created scenario row                                                                                                                                 | ADMIN |        |
+| POST   | `/test-scenarios`           | JWT  | 422      | `path` not starting with a single `/`, `method` not in GET/POST/PUT/PATCH/DELETE, `expectedStatus` outside 100–599, missing required field                           | Zod default                                                                                                                                          | ADMIN |        |
+| GET    | `/test-scenarios`           | JWT  | success  | Query: `service?`, `method?`, `path?`, `category?`                                                                                                                   | `ScenarioRow[]` (no pagination), each with `lastRun: { correlationId, actualStatus, passed, durationMs, runAt } \| null` (latest run)                | ADMIN |        |
+| GET    | `/test-scenarios/stats`     | JWT  | success  | —                                                                                                                                                                    | `[{ method, path, casesPassed, casesTotal }]` — a case counts as passed only if its **latest** run passed; never-run cases count toward the total only | ADMIN |        |
+| PATCH  | `/test-scenarios/:id`       | JWT  | success  | Any subset of the create body                                                                                                                                        | Updated row                                                                                                                                          | ADMIN |        |
+| PATCH  | `/test-scenarios/:id`       | JWT  | 404      | Unknown id                                                                                                                                                           | `"Test scenario not found"`                                                                                                                          | ADMIN |        |
+| DELETE | `/test-scenarios/:id`       | JWT  | success  | —                                                                                                                                                                    | Deleted row (its `test_runs` cascade)                                                                                                                | ADMIN |        |
+| POST   | `/test-scenarios/:id/run`   | JWT  | success  | —                                                                                                                                                                    | Recorded run `{ id, scenarioId, correlationId, actualStatus, expectedStatus, passed, durationMs, errorMessage, triggeredBy }` (waits for the response) | ADMIN |        |
+| POST   | `/test-scenarios/:id/run?async=true` | JWT | success | —                                                                                                                                                             | `{ correlationId, scenarioId }` **immediately**; the run finishes and is recorded in the background — follow it live via the `/logs` socket (`log:new`) | ADMIN |        |
+| POST   | `/test-scenarios/:id/run`   | JWT  | 404      | Unknown id                                                                                                                                                           | `"Test scenario not found"`                                                                                                                          | ADMIN |        |
+
+Notes:
+- `requestTemplate.headers` values may contain `{{accessToken}}`, replaced by the calling admin's
+  bearer token. When the caller has no token the header is **dropped**, which is what keeps
+  "missing token" cases honest.
+- A run passes iff `actualStatus === expectedStatus`. Transport failures (timeout after 15s,
+  connection refused) are recorded as a failed run with `actualStatus: null` + `errorMessage`
+  rather than an error response.
+- Requests are sent to `GATEWAY_BASE_URL` (third-service env, default `http://localhost:8888`);
+  `path` must be relative, so a scenario can never target another host.
+- Write scenarios (POST/PUT/PATCH/DELETE) really execute against the live data of the environment.
+- Seed: `bun scripts/seed-test-scenarios.ts` in THIRD_SERVICE (idempotent).
+
+
+---
+
 ## Summary
 
 
@@ -606,7 +657,9 @@ read access follows the same rule as `GET /sessions/:id` (owner, enrolled studen
 | 19        | ReportController       | `/reports/learning`| 3       | 0      | 3 (ADMIN)       |
 | 20        | EmailController        | `/emails`          | 1       | 1      | 0               |
 | 21        | AttendanceController   | `/attendances`     | 2       | 0      | 0               |
-| **Total** |                        |                    | **115** | **14** | **16**          |
+| 22        | LogController          | `/logs`            | 3       | 0      | 3 (ADMIN)       |
+| 23        | TestScenarioController | `/test-scenarios`  | 6       | 0      | 6 (ADMIN)       |
+| **Total** |                        |                    | **124** | **14** | **25**          |
 
 
 ---

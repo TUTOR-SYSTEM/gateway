@@ -30,6 +30,7 @@ export const RMQ_PREFIX_ROUTES: Record<string, RmqTarget> = {
   notification: THIRD_SERVICE,
   upload: THIRD_SERVICE,
   log: THIRD_SERVICE,
+  testscenario: THIRD_SERVICE,
 
   tutor: TUTOR_SERVICE,
   curriculum: TUTOR_SERVICE,

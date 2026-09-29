@@ -57,7 +57,7 @@ function toRpcErrorPayload(raw: unknown): RpcErrorPayload {
   if (typeof raw === 'object' && raw !== null && !(raw instanceof Error)) {
     const obj = raw as Record<string, unknown>;
     if (typeof obj.message === 'string' || Array.isArray(obj.message)) {
-      return obj as RpcErrorPayload;
+      return obj;
     }
     // Not a real RPC error payload — e.g. an amqplib/amqp-connection-manager connection
     // failure shaped like `{ err: {}, url: '...' }` (wrong RABBITMQ_URL/credentials, broker

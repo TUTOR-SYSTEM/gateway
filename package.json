@@ -6,7 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "exports": {
-    "./schema": "./src/database/schema.ts"
+    "./schema": {
+      "types": "./dist/database/schema.d.ts",
+      "default": "./dist/database/schema.js"
+    }
   },
   "scripts": {
     "build": "nest build",
@@ -61,6 +64,7 @@
     "drizzle-orm": "^0.45.2",
     "http-status-codes": "^2.3.0",
     "ioredis": "^5.8.2",
+    "multer": "^2.4.0",
     "nodemailer": "^7.0.11",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",

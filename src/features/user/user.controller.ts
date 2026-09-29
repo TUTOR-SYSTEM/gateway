@@ -139,7 +139,7 @@ export class UserController {
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUser', { userId: _user.id, ..._updateUserDto });
+    return this.rmqProducer.send('user.updateUser', { userId: _user.id, role: _user.role, ..._updateUserDto });
   }
 
   @Put('/:id')

@@ -127,7 +127,9 @@ src/
 │   ├── user/ admin/ student/     # → `user` (RPC)
 │   ├── class/ schedule/ session/ curriculum/ chapter/ lesson/ tuition/ exercise/ attendance/
 │   │   dashboard/ report/ ai-chat/   # → `tutor-service` (RPC)
-│   ├── email/ notification/ redis/ upload/   # → `third-service` (RPC)
+│   ├── email/ notification/ redis/ upload/ log/ test-scenario/   # → `third-service` (RPC).
+│   │                              # `test-scenario` proxies `testscenario.*`; `POST /:id/run` also
+│   │                              # forwards the caller's bearer token + `?async=true` → `wait:false`
 │   └── rabbitmq/                 # RmqModule (@Global): one RMQ client per downstream queue
 │                                  # (user_queue/tutor_queue/third_queue) + RmqProducer, which
 │                                  # routes each pattern by prefix (rmq.constants.ts)

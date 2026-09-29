@@ -65,6 +65,13 @@ export const notificationActionEnum = pgEnum('notification_action', [
   'UPDATE',
 ]);
 export const logTypeEnum = pgEnum('log_type', ['HTTP', 'RPC']);
+export const testScenarioCategoryEnum = pgEnum('test_scenario_category', [
+  'valid',
+  'auth',
+  'validation',
+  'not_found',
+  'domain',
+]);
 
 // ─── USER: users, grades ────────────────────────────────────────────
 export const users = pgTable('users', {
@@ -457,12 +464,60 @@ export const requestLogs = pgTable(
     traceId: varchar('trace_id', { length: 100 }).notNull(),
     parentTraceId: varchar('parent_trace_id', { length: 100 }),
     userId: uuid('user_id'),
+    ip: varchar('ip', { length: 64 }),
     requestBody: text('request_body'),
     responseBody: text('response_body'),
+    errorMessage: text('error_message'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
     index('request_logs_correlation_id_idx').on(table.correlationId),
     index('request_logs_service_name_created_at_idx').on(table.serviceName, table.createdAt),
+  ],
+);
+
+// Admin-managed test cases per gateway endpoint ("Kịch bản test"). The request is fired for real
+// against the gateway, so it also lands in `request_logs` like any other traffic.
+export const testScenarios = pgTable(
+  'test_scenarios',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    service: varchar('service', { length: 50 }).notNull(),
+    method: varchar('method', { length: 10 }).notNull(),
+    path: text('path').notNull(),
+    name: varchar('name', { length: 200 }).notNull(),
+    description: text('description'),
+    // { headers?: Record<string,string>, body?: unknown } — header values may use `{{accessToken}}`.
+    requestTemplate: jsonb('request_template').$type<Record<string, unknown>>().notNull().default({}),
+    expectedStatus: integer('expected_status').notNull(),
+    category: testScenarioCategoryEnum('category').notNull().default('valid'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index('test_scenarios_method_path_idx').on(table.method, table.path)],
+);
+
+// One row per execution of a scenario; joins to `request_logs` through `correlationId`.
+export const testRuns = pgTable(
+  'test_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    scenarioId: uuid('scenario_id')
+      .notNull()
+      .references(() => testScenarios.id, { onDelete: 'cascade' }),
+    correlationId: varchar('correlation_id', { length: 100 }).notNull(),
+    actualStatus: integer('actual_status'),
+    expectedStatus: integer('expected_status').notNull(),
+    passed: boolean('passed').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    errorMessage: text('error_message'),
+    triggeredBy: uuid('triggered_by'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('test_runs_scenario_id_created_at_idx').on(table.scenarioId, table.createdAt),
+    index('test_runs_correlation_id_idx').on(table.correlationId),
   ],
 );

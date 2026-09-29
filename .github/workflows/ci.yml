@@ -63,8 +63,29 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install -g @railway/cli
+
+      # --- Debug: token is injected only into the steps below, never earlier ---
+      - name: Debug - check secrets are set (values never printed)
+        run: |
+          for v in RAILWAY_TOKEN RAILWAY_SERVICE; do
+            if [ -n "${!v}" ]; then echo "$v: set"; else echo "::error::$v is EMPTY (missing secret, or not available to environment 'production')"; fi
+          done
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+
+      - name: Debug - Railway CLI version and auth
+        run: |
+          railway --version
+          echo "--- railway whoami ---"
+          railway whoami || echo "::warning::whoami failed (a project token can't run whoami; that's OK)"
+          echo "--- railway status ---"
+          railway status
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
       - name: Deploy to Railway
-        run: railway up --ci --service "$RAILWAY_SERVICE"
+        run: railway up --ci --verbose --service "$RAILWAY_SERVICE"
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}

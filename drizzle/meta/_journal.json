@@ -8,6 +8,13 @@
       "when": 1790692366919,
       "tag": "0000_needy_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791297948714,
+      "tag": "0001_rainy_mole_man",
+      "breakpoints": true
     }
   ]
 }

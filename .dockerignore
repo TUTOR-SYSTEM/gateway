@@ -1,12 +1,57 @@
-node_modules
-dist
-coverage
+# VCS
 .git
-.claude
-.opencode
+.gitignore
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+bun.lockb
+bun.lock
+
+# Tests (not needed in final image)
+test
+
+# Config & env
+.env*
+docker.env
+docker-compose*.yml
+.env.compose*
+
+# Build artifacts
+dist
+build
+.next
+coverage
+
+# IDE
 .vscode
-.env
-.env.*
-*.md
-Dockerfile
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Misc
 .dockerignore
+Dockerfile
+*.md
+coverage-report.txt
+flow.d
+drizzle/
+drizzle.config.ts
+.github/
+.gitlab*
+.railwayignore
+.opencode/
+.ai-devkit.json
+.editorconfig
+.prettier*
+.gitattributes
+docs/
+scripts/
+.claude/
+.claude.json
+eslint.config.*
+jest.config.js
+prettier.config.js

@@ -22,21 +22,183 @@ x-service-deps: &service-deps
   rabbitmq: { condition: service_healthy }
 
 services:
+  # ============================================================================
+  # UI Layer
+  # ============================================================================
+  tutor-ui:
+    build:
+      context: ../TUTOR-UI
+      dockerfile: Dockerfile
+    container_name: tutor-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:8888
+    depends_on:
+      - gateway
+    networks:
+      - app-network
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:3000' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # API Services
+  # ============================================================================
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-gateway
+    ports:
+      - "8888:8888"
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=development
+      - PORT=8888
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gateway_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ 'CMD-SHELL', 'nc -z localhost 8888 || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: ../USER
+      dockerfile: Dockerfile
+    container_name: app-user-service
+    ports:
+      - "4001:4001"
+    env_file:
+      - ../USER/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=4001
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/user_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ 'CMD-SHELL', 'nc -z localhost 4001 || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tutor-service:
+    build:
+      context: ../tutor-service
+      dockerfile: Dockerfile
+    container_name: app-tutor-service
+    ports:
+      - "4002:4002"
+    env_file:
+      - ../tutor-service/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=4002
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/tutor_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ 'CMD-SHELL', 'nc -z localhost 4002 || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  third-service:
+    build:
+      context: ../THIRD_SERVICE
+      dockerfile: Dockerfile
+    container_name: app-third-service
+    ports:
+      - "4003:4003"
+    env_file:
+      - ../THIRD_SERVICE/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=4003
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/third_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ 'CMD-SHELL', 'nc -z localhost 4003 || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # Infrastructure: Database
+  # ============================================================================
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-backends_db}
+      POSTGRES_DB: ${POSTGRES_DB:-tutor_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports: ['5432:5432']
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-backends_db}']
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tutor_db}' ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
+  # ============================================================================
+  # Infrastructure: Cache
+  # ============================================================================
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -47,6 +209,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================================================
+  # Infrastructure: Message Queue
+  # ============================================================================
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
@@ -118,6 +283,21 @@ services:
     ports: ['3000:3000']
     depends_on: [gateway, third-service]
 
+# ============================================================================
+# Named Volumes
+# ============================================================================
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
   rabbitmq_data:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  app-network:
+    driver: bridge
+    name: app-network

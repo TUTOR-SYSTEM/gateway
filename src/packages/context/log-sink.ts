@@ -21,6 +21,12 @@ export interface RequestLogEntry {
   ip?: string;
   requestBody?: string;
   responseBody?: string;
+  /** JSON string of an allowlisted request-header subset (never authorization/cookie). */
+  requestHeaders?: string;
+  /** JSON string of an allowlisted response-header subset. */
+  responseHeaders?: string;
+  /** Service address that handled the hop, e.g. `api-gateway:8080`. */
+  host?: string;
   errorMessage?: string;
 }
 

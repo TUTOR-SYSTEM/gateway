@@ -77,6 +77,19 @@ export class TestScenarioController {
     return this.rmqProducer.send('testscenario.list', query);
   }
 
+  @Get('meta')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({
+    summary: 'Runtime metadata for the test monitor (admin only)',
+    description: 'Returns the deployment environment name from env APP_ENV (fallback NODE_ENV).',
+  })
+  @SwaggerResponse({ status: 200, description: 'Meta fetched' })
+  meta(): { environment: string } {
+    return {
+      environment: process.env.APP_ENV?.trim() || process.env.NODE_ENV?.trim() || 'development',
+    };
+  }
+
   @Get('stats')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({

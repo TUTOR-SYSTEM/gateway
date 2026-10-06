@@ -17,6 +17,40 @@ const SENSITIVE_KEYS = [
   'refreshToken',
 ];
 const MAX_LOG_LENGTH = 1000;
+const SERVICE_NAME = 'gateway';
+
+// Allowlist only — authorization/cookie/set-cookie must never be captured.
+const REQUEST_HEADER_ALLOWLIST = [
+  'x-trace-id',
+  'x-span-id',
+  'content-type',
+  'x-forwarded-for',
+  'user-agent',
+  'accept-language',
+];
+const RESPONSE_HEADER_ALLOWLIST = ['content-type', 'x-response-time', 'server'];
+
+function pickHeaders(
+  source: Record<string, unknown> | undefined,
+  allowlist: readonly string[],
+): string | undefined {
+  if (!source) return undefined;
+  const picked: Record<string, string> = {};
+  for (const name of allowlist) {
+    const value = source[name];
+    if (typeof value === 'string') picked[name] = value;
+    else if (Array.isArray(value)) picked[name] = value.map(String).join(', ');
+    else if (typeof value === 'number' || typeof value === 'boolean') picked[name] = String(value);
+  }
+  return Object.keys(picked).length > 0 ? stringifyForLog(picked) : undefined;
+}
+
+/** Service address for the `host` column: `SERVICE_HOST`, else `${SERVICE_NAME}:${PORT}`. */
+export function resolveServiceHost(): string {
+  const configured = process.env.SERVICE_HOST?.trim();
+  if (configured) return configured.slice(0, 100);
+  return `${SERVICE_NAME}:${process.env.PORT?.trim() || '8888'}`.slice(0, 100);
+}
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
@@ -113,9 +147,14 @@ export class LoggerInterceptor implements NestInterceptor {
 
       finalize(() => {
         const duration = Date.now() - startTime;
+        // Response headers are read at finalize, when express has set them.
+        const responseHeaders = pickHeaders(
+          typeof response.getHeaders === 'function' ? response.getHeaders() : undefined,
+          RESPONSE_HEADER_ALLOWLIST,
+        );
         this.logger.log(`[Timing] ${trace}${method} ${url} - ${duration}ms`);
         emitRequestLog({
-          serviceName: 'gateway',
+          serviceName: SERVICE_NAME,
           type: 'HTTP',
           method,
           path: url,
@@ -128,6 +167,9 @@ export class LoggerInterceptor implements NestInterceptor {
           ip: request.ip,
           requestBody,
           responseBody,
+          requestHeaders: pickHeaders(request.headers, REQUEST_HEADER_ALLOWLIST),
+          responseHeaders,
+          host: resolveServiceHost(),
           errorMessage,
         });
       }),

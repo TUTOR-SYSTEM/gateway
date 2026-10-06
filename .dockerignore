@@ -7,6 +7,7 @@ node_modules
 npm-debug.log
 yarn-error.log
 bun.lockb
+bun.lock
 
 # Tests (not needed in final image)
 test
@@ -15,6 +16,7 @@ test
 .env*
 docker.env
 docker-compose*.yml
+.env.compose*
 
 # Build artifacts
 dist
@@ -33,11 +35,23 @@ coverage
 # Misc
 .dockerignore
 Dockerfile
-README.md
+*.md
+coverage-report.txt
+flow.d
+drizzle/
+drizzle.config.ts
+.github/
+.gitlab*
+.railwayignore
+.opencode/
+.ai-devkit.json
+.editorconfig
+.prettier*
+.gitattributes
 docs/
 scripts/
 .claude/
 .claude.json
-eslint.config.js
+eslint.config.*
 jest.config.js
 prettier.config.js

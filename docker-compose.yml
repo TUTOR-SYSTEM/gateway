@@ -1,4 +1,25 @@
-name: project
+# Full stack: infra (postgres, redis, rabbitmq) + gateway, user, tutor, third services + UI.
+#   cd gateway && docker compose up -d --build
+# Each service keeps its own env file; the `environment:` block below overrides the
+# host-style values (localhost) with in-network service names.
+name: tutor
+
+x-infra-env: &infra-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672
+  USER_QUEUE: user_queue
+  TUTOR_QUEUE: tutor_queue
+  THIRD_QUEUE: third_queue
+
+x-service-deps: &service-deps
+  postgres: { condition: service_healthy }
+  redis: { condition: service_healthy }
+  rabbitmq: { condition: service_healthy }
 
 services:
   # ============================================================================
@@ -160,16 +181,13 @@ services:
   # ============================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: app-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tutor_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    ports: ['5432:5432']
+    volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tutor_db}' ]
       interval: 10s
@@ -183,42 +201,87 @@ services:
   # ============================================================================
   redis:
     image: redis:7-alpine
-    container_name: app-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
+    ports: ['6380:6379']
     healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app-network
 
   # ============================================================================
   # Infrastructure: Message Queue
   # ============================================================================
   rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: app-rabbitmq
+    image: rabbitmq:3-management-alpine
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
-    ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+    ports: ['5672:5672', '15672:15672']
+    volumes: [rabbitmq_data:/var/lib/rabbitmq]
     healthcheck:
-      test: [ 'CMD', 'rabbitmq-diagnostics', '-q', 'ping' ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 15s
+      timeout: 20s
+      retries: 10
+      start_period: 90s
+
+  gateway:
+    build: .
+    restart: unless-stopped
+    env_file: ./docker.env
+    environment:
+      <<: *infra-env
+      PORT: "8888"
+      NODE_ENV: production
+    ports: ['8888:8888']
+    depends_on: *service-deps
+
+  user:
+    build: ../USER
+    restart: unless-stopped
+    env_file: ../USER/docker.env
+    environment:
+      <<: *infra-env
+      PORT: "4002"
+      NODE_ENV: production
+    ports: ['4002:4002']
+    depends_on: *service-deps
+
+  tutor-service:
+    build: ../tutor-service
+    restart: unless-stopped
+    env_file: ../tutor-service/docker.env
+    environment:
+      <<: *infra-env
+      PORT: "4003"
+      NODE_ENV: production
+    ports: ['4003:4003']
+    depends_on: *service-deps
+
+  third-service:
+    build: ../THIRD_SERVICE
+    restart: unless-stopped
+    env_file: ../THIRD_SERVICE/docker.env
+    environment:
+      <<: *infra-env
+      PORT: "4001"
+      NODE_ENV: production
+      GATEWAY_BASE_URL: http://gateway:8888
+    ports: ['4001:4001']
+    depends_on: *service-deps
+
+  ui:
+    build:
+      context: ../TUTOR-UI
+      args:
+        # Baked at build time and used by the browser, so they must be host-reachable URLs.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8888}
+        NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
+    restart: unless-stopped
+    ports: ['3000:3000']
+    depends_on: [gateway, third-service]
 
 # ============================================================================
 # Named Volumes

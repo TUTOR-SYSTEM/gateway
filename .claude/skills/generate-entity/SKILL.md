@@ -25,7 +25,10 @@ Zod v4. Export:
   existing `student.schema.ts` style (e.g. `z.string({ message: 'Name is required' })`).
   Coerce numbers/dates with `z.coerce.number()` / `z.coerce.date()`; UUID FKs with
   `.uuid('Invalid tutor ID')`.
-- `updateFooSchema = createFooSchema.partial()` (`.omit({ ... })` any immutable field).
+- `updateFooSchema = createFooSchema.partial()` (`.omit({ ... })` any immutable field). **Zod 4
+  `.partial()` keeps `.default(...)`** — re-declare each defaulted field without a default via
+  `.extend({ field: <type>.optional() })`, because gateway forwards the already-parsed DTO and an
+  injected default would overwrite stored data (see `updateClassSchema` / `updateTuitionSchema`).
 - `getFoosQuerySchema = z.object({ ... })` — plain `z.coerce` pagination, copy the shape from
   `student.schema.ts` / `user.schema.ts`:
   ```ts

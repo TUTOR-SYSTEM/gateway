@@ -10,6 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
+import { CurrentUser } from '@packages/decorators';
+import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import {
   createLessonBodySchema,
   getLessonsQuerySchema,
@@ -38,12 +40,18 @@ export class LessonController {
   @ApiBody({ schema: { type: 'object', required: ['title'] } })
   @SwaggerResponse({ status: 201, description: 'Lesson created' })
   create(
+    @CurrentUser() user: JwtGuardUser,
     @Query('curriculumId') _curriculumId: string,
     @Query('chapterId') _chapterId: string | undefined,
     @Body(new ZodValidationPipe<CreateLessonBodyDto>(createLessonBodySchema))
     _data: CreateLessonBodyDto,
   ) {
-    return this.rmqProducer.send('lesson.create', { curriculumId: _curriculumId, chapterId: _chapterId, data: _data });
+    return this.rmqProducer.send('lesson.create', {
+      userId: user.id,
+      curriculumId: _curriculumId,
+      chapterId: _chapterId,
+      data: _data,
+    });
   }
 
   @Get()
@@ -75,11 +83,12 @@ export class LessonController {
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson updated' })
   update(
+    @CurrentUser() user: JwtGuardUser,
     @Param('id') _id: string,
     @Body(new ZodValidationPipe<UpdateLessonDto>(updateLessonSchema))
     _data: UpdateLessonDto,
   ) {
-    return this.rmqProducer.send('lesson.update', { id: _id, data: _data });
+    return this.rmqProducer.send('lesson.update', { userId: user.id, id: _id, data: _data });
   }
 
   @Delete(':id')
@@ -87,7 +96,7 @@ export class LessonController {
   @ApiOperation({ summary: 'Delete lesson' })
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson deleted' })
-  delete(@Param('id') _id: string) {
-    return this.rmqProducer.send('lesson.delete', { id: _id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id') _id: string) {
+    return this.rmqProducer.send('lesson.delete', { userId: user.id, id: _id });
   }
 }

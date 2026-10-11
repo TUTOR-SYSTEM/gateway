@@ -38,7 +38,11 @@ export class NotificationController {
       type: 'object',
       required: ['type', 'title'],
       properties: {
-        type: { type: 'string', enum: ['SYSTEM', 'TUITION', 'STUDENT', 'TUTOR'], example: 'SYSTEM' },
+        type: {
+          type: 'string',
+          enum: ['SYSTEM', 'TUITION', 'STUDENT', 'TUTOR'],
+          example: 'SYSTEM',
+        },
         title: { type: 'string', maxLength: 255, example: 'Cap nhat tinh nang moi' },
         content: { type: 'string', example: 'Da them chuc nang quan ly bai tap' },
         subContent: { type: 'string', example: 'Chưa cập nhật ...' },
@@ -76,7 +80,10 @@ export class NotificationController {
 
   @Patch('read-all')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Mark all as read', description: 'Mark all notifications as read for the current user' })
+  @ApiOperation({
+    summary: 'Mark all as read',
+    description: 'Mark all notifications as read for the current user',
+  })
   @SwaggerResponse({ status: 200, description: 'All marked as read' })
   markAllAsRead(@CurrentUser() user: JwtGuardUser) {
     return this.rmqProducer.send('notification.markAllAsRead', { userId: user.id });
@@ -87,8 +94,8 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get notification detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification detail' })
-  getById(@Param('id') id: string) {
-    return this.rmqProducer.send('notification.getById', { id });
+  getById(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
+    return this.rmqProducer.send('notification.getById', { id, userId: user.id });
   }
 
   @Patch(':id/read')
@@ -96,8 +103,8 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark notification as read' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Marked as read' })
-  markAsRead(@Param('id') id: string) {
-    return this.rmqProducer.send('notification.markAsRead', { id });
+  markAsRead(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
+    return this.rmqProducer.send('notification.markAsRead', { id, userId: user.id });
   }
 
   @Delete(':id')
@@ -105,7 +112,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Delete notification' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification deleted' })
-  delete(@Param('id') id: string) {
-    return this.rmqProducer.send('notification.delete', { id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
+    return this.rmqProducer.send('notification.delete', { id, userId: user.id });
   }
 }

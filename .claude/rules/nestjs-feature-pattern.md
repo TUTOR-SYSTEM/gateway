@@ -29,6 +29,11 @@ on 2026-09-27.
   education-domain features + `ai` → `tutor_queue`; `redis`/`email`/`notification`/`upload` →
   `third_queue`; full-pattern overrides in `RMQ_PATTERN_ROUTES`). **A new feature prefix must be
   added there** — an unknown prefix throws at call time instead of silently timing out.
+- **Acting user in write payloads**: pass `userId: user.id` (from `@CurrentUser()`) for every write
+  the owning service must authorize — `chapter.create|update|delete`, `lesson.create|update|delete`
+  and `notification.getById|markAsRead|delete` all carry it; without it the service can't enforce
+  ownership. Update schemas must not inherit `.default(...)` through `.partial()` (see tutor's
+  `conventions.md`) because gateway forwards the already-parsed DTO.
 - **Message pattern naming**: `<feature>.<methodName>`, matching the method name on the owning
   service's `*Service` class (e.g. `auth.login` → `AuthService.loginService`, `ai.chat` →
   `tutor-service`'s agents feature). The pattern is a literal string — there is no shared

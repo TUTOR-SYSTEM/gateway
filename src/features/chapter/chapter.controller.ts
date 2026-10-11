@@ -10,6 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
+import { CurrentUser } from '@packages/decorators';
+import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import {
   createChapterSchema,
   getChaptersQuerySchema,
@@ -37,11 +39,16 @@ export class ChapterController {
   @ApiBody({ schema: { type: 'object', required: ['title'] } })
   @SwaggerResponse({ status: 201, description: 'Chapter created' })
   create(
+    @CurrentUser() user: JwtGuardUser,
     @Param('curriculumId') _curriculumId: string,
     @Body(new ZodValidationPipe<CreateChapterDto>(createChapterSchema))
     _data: CreateChapterDto,
   ) {
-    return this.rmqProducer.send('chapter.create', { curriculumId: _curriculumId, data: _data });
+    return this.rmqProducer.send('chapter.create', {
+      userId: user.id,
+      curriculumId: _curriculumId,
+      data: _data,
+    });
   }
 
   @Get()
@@ -73,11 +80,12 @@ export class ChapterController {
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter updated' })
   update(
+    @CurrentUser() user: JwtGuardUser,
     @Param('id') _id: string,
     @Body(new ZodValidationPipe<UpdateChapterDto>(updateChapterSchema))
     _data: UpdateChapterDto,
   ) {
-    return this.rmqProducer.send('chapter.update', { id: _id, data: _data });
+    return this.rmqProducer.send('chapter.update', { userId: user.id, id: _id, data: _data });
   }
 
   @Delete(':id')
@@ -85,7 +93,7 @@ export class ChapterController {
   @ApiOperation({ summary: 'Delete chapter' })
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter deleted' })
-  delete(@Param('id') _id: string) {
-    return this.rmqProducer.send('chapter.delete', { id: _id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id') _id: string) {
+    return this.rmqProducer.send('chapter.delete', { userId: user.id, id: _id });
   }
 }

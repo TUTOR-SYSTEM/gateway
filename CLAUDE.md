@@ -112,41 +112,12 @@ RabbitMQ reachable — it has nothing to serve on its own. Each service's `PORT`
 
 ## Project Structure
 
-```
-src/
-├── main.ts                       # Bootstrap: CORS, interceptors, filters, listen
-├── app.module.ts                 # Root module (imports all feature modules)
-├── app.controller.ts             # Health-check + RPC demo routes (`/kafka/*` paths kept for compat)
-├── app.service.ts                # Health-check service (publishes/subscribes `health.check`)
-├── features/                     # Feature modules (NestJS pattern) — every one below is a thin
-│                                  # proxy controller only (no service/repository), except auth's
-│                                  # OAuth routes. All forward to whichever service owns them:
-│   ├── auth/                     # → `user` (RPC), except OAuth: Passport strategies stay here
-│   │   ├── auth.controller.ts
-│   │   └── auth.module.ts
-│   ├── user/ admin/ student/     # → `user` (RPC)
-│   ├── class/ schedule/ session/ curriculum/ chapter/ lesson/ tuition/ exercise/ attendance/
-│   │   dashboard/ report/ ai-chat/   # → `tutor-service` (RPC)
-│   ├── email/ notification/ redis/ upload/ log/ test-scenario/   # → `third-service` (RPC).
-│   │                              # `test-scenario` proxies `testscenario.*`; `POST /:id/run` also
-│   │                              # forwards the caller's bearer token + `?async=true` → `wait:false`
-│   └── rabbitmq/                 # RmqModule (@Global): one RMQ client per downstream queue
-│                                  # (user_queue/tutor_queue/third_queue) + RmqProducer, which
-│                                  # routes each pattern by prefix (rmq.constants.ts)
-└── packages/                     # Shared utilities (import via @packages/*)
-    ├── configs/                  # JWT sign config
-    ├── decorators/               # @ApiResponse, @Public, @Roles, @CurrentUser decorators
-    ├── entities/                 # DTOs + Zod schemas per domain (still used here for
-    │                              # request validation even though there's no DB)
-    ├── filters/                  # HttpExceptionFilter (global)
-    ├── guards/                   # JwtAuthGuard (verifies JWT locally, confirms the user
-    │                              # still exists via an RPC call — no local DB), RolesGuard
-    ├── helpers/                  # hashing, JWT
-    ├── interceptor/              # ResponseInterceptor, ErrorInterceptor, LoggerInterceptor
-    ├── interfaces/               # ApiResponseInterface, UserInterface
-    ├── pipes/                    # ZodValidationPipe
-    └── strategy/                 # Google/Facebook Passport strategies (OAuth stays in gateway)
-```
+Gotchas (the rest of the layout is derivable with `ls`):
+- Every feature under `src/features/` is a thin proxy controller (no service/repository) that forwards to its owning service over RMQ. Exception: `auth`'s OAuth routes and the Passport strategies (`packages/strategy`) stay here.
+- `/kafka/*` paths in `app.controller.ts` are kept for compatibility.
+- `test-scenario` proxies `testscenario.*`; `POST /:id/run` also forwards the caller's bearer token and `?async=true` (sent as `wait: false`).
+- `RmqProducer` routes each pattern to a queue by prefix (`rmq.constants.ts`); one RMQ client per downstream queue.
+- `JwtAuthGuard` verifies the JWT locally but confirms the user still exists via RPC (no local DB).
 
 ## Code Conventions
 

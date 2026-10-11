@@ -42,7 +42,7 @@ export class ExerciseController {
     _dto: CreateExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.create', { userId: _user.id, ..._dto });
+    return this.rmqProducer.send('exercise.create', { userId: _user.id, data: _dto });
   }
 
   @Get()
@@ -63,7 +63,7 @@ export class ExerciseController {
     _query: getExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.getAll', { userId: _user.id, ..._query });
+    return this.rmqProducer.send('exercise.getAll', { userId: _user.id, query: _query });
   }
 
   @Get(':id')

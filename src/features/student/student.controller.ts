@@ -210,7 +210,7 @@ export class StudentController {
   })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   findById(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
   }
 
   @Put(':id')

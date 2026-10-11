@@ -1,5 +1,5 @@
 import { listHttpRoutes } from '@packages/helpers';
-import { TestScenarioController } from './test-scenario.controller';
+import { TestScenarioController } from 'src/features/test-scenario/test-scenario.controller';
 
 jest.mock('@packages/helpers', () => ({
   ...jest.requireActual<object>('@packages/helpers'),

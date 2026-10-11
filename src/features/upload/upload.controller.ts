@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -25,6 +26,7 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { StatusCodes } from 'http-status-codes';
 import { Public } from '@packages/decorators';
+import { ERROR_MESSAGES } from 'src/data/constants';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
@@ -98,6 +100,7 @@ export class UploadController {
   @SwaggerResponse({ status: 400, description: 'key query param missing' })
   @SwaggerResponse({ status: 404, description: 'File not found in R2' })
   async download(@Query('key') key: string, @Res() res: Response): Promise<void> {
+    if (!key) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_KEY_REQUIRED);
     const result = await this.rmqProducer.send<{ buffer: string }, { key: string }>('upload.download', { key });
     const fileBuffer = Buffer.from(result.buffer, 'base64');
     res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${key}"` });

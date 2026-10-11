@@ -5,7 +5,7 @@ import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { Public, Roles } from '@packages/decorators';
 import { ZodValidationPipe } from '@packages/pipes';
-import { listHttpRoutes } from './route-catalog.helper';
+import { listHttpRoutes } from 'src/packages/helpers/route-catalog.helper';
 
 const createSchema = z.object({ name: z.string().min(2), size: z.number().int().optional() });
 const listSchema = z.object({ status: z.enum(['OPEN', 'CLOSED']).optional() });

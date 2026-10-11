@@ -44,7 +44,7 @@ export class SessionController {
     dto: CreateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('session.create', { userId: user.id, data: dto });
   }
 
   @Post('bulk')
@@ -56,7 +56,7 @@ export class SessionController {
     dto: CreateSessionsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.createBulk', { userId: user.id, ...dto });
+    return this.rmqProducer.send('session.createBulk', { userId: user.id, data: dto });
   }
 
   @Get()
@@ -80,7 +80,7 @@ export class SessionController {
     query: GetSessionsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('session.getAll', { userId: user.id, query });
   }
 
   @Get('class/:classId')
@@ -112,7 +112,7 @@ export class SessionController {
     dto: UpdateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('session.update', { userId: user.id, id, data: dto });
   }
 
   @Delete(':id')

@@ -63,7 +63,7 @@ export class CurriculumController {
     _dto: CreateCurriculumDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('curriculum.create', { userId: _user.id, ..._dto });
+    return this.rmqProducer.send('curriculum.create', { userId: _user.id, createCurriculum: _dto });
   }
 
   @Get()
@@ -78,7 +78,7 @@ export class CurriculumController {
     _query: GetCurriculumsQueryDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('curriculum.getAll', { userId: _user.id, ..._query });
+    return this.rmqProducer.send('curriculum.getAll', { userId: _user.id, query: _query });
   }
 
   @Get(':id')

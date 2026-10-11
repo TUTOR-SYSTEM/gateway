@@ -54,7 +54,7 @@ export class NotificationController {
     dto: CreateNotificationDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('notification.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('notification.create', { ...dto, senderId: user.id });
   }
 
   @Get()
@@ -71,7 +71,7 @@ export class NotificationController {
     query: GetNotificationsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('notification.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('notification.getAll', { userId: user.id, query });
   }
 
   @Patch('read-all')

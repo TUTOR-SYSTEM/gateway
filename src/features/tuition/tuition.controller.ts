@@ -53,8 +53,8 @@ export class TuitionController {
   })
   @ApiQuery({ name: 'classId', required: false, type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
-  getSummary(@Query('classId') classId?: string) {
-    return this.rmqProducer.send('tuition.getSummary', { classId });
+  getSummary(@Query('classId') classId: string | undefined, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('tuition.getSummary', { userId: user.id, classId });
   }
 
   @Get()
@@ -69,8 +69,9 @@ export class TuitionController {
   getAll(
     @Query(new ZodValidationPipe<GetTuitionsQueryDto>(getTuitionsQuerySchema))
     query: GetTuitionsQueryDto,
+    @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('tuition.getAll', { query });
+    return this.rmqProducer.send('tuition.getAll', { userId: user.id, query });
   }
 
   @Get(':id')
@@ -78,8 +79,8 @@ export class TuitionController {
   @ApiOperation({ summary: 'Get tuition detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition detail' })
-  getById(@Param('id') id: string) {
-    return this.rmqProducer.send('tuition.getById', { id });
+  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('tuition.getById', { userId: user.id, id });
   }
 
   @Put(':id')

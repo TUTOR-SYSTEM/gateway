@@ -1,0 +1,2418 @@
+{
+  "pages": [
+    {
+      "page": "(global)",
+      "file": "components/providers/auth.provider.tsx; lib/axios/auth-refresh.ts; components/ai-chat/ai-analysis-widget.tsx; components/providers/socket.provider.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/users/detail-user",
+          "file": "components/providers/auth.provider.tsx",
+          "line": 107,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:75 → usr/user/user.rpc.controller.ts:26 (user.getDetailUser)",
+          "note": "Session check on mount; also :139 after refresh"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/refresh",
+          "file": "lib/axios/auth-refresh.ts",
+          "line": 29,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:176 → usr/auth/auth.rpc.controller.ts:42 (auth.refresh)",
+          "note": "Called on 401; no Bearer"
+        },
+        {
+          "method": "POST",
+          "path": "/ai-chat/chat",
+          "file": "components/ai-chat/ai-analysis-widget.tsx",
+          "line": 67,
+          "status": "OK",
+          "backend": "gw/ai-chat/ai-chat.controller.ts:32 → tsvc/agents/agents.rpc.controller.ts:16 (ai.chat)",
+          "note": "AI widget mounted on every (app) page via root.layout"
+        },
+        {
+          "method": "WS",
+          "path": "/chat (socket namespace)",
+          "file": "components/providers/socket.provider.tsx",
+          "line": 39,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Socket URL = NEXT_PUBLIC_API_URL (gateway :8888). Gateway has no WebSocket gateway; chat.gateway.ts (ns /chat) lives in tutor-service on its own port"
+        }
+      ]
+    },
+    {
+      "page": "/",
+      "file": "app/(app)/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/dashboard/overview",
+          "file": "app/(app)/page.tsx",
+          "line": 141,
+          "status": "OK",
+          "backend": "gw/dashboard/dashboard.controller.ts:23 → tsvc/dashboard/dashboard.rpc.controller.ts:14 (dashboard.overview)",
+          "note": "Body/response not diffed"
+        }
+      ]
+    },
+    {
+      "page": "/accounts",
+      "file": "app/(app)/accounts/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/accounts/accounts.data.ts",
+          "line": 103,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "Static MOCK_ACCOUNTS / MOCK_TRANSACTIONS"
+        }
+      ]
+    },
+    {
+      "page": "/ai-chat",
+      "file": "app/(app)/ai-chat/page.tsx",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/ai-chat/chat",
+          "file": "components/ai-chat/ai-chat.tsx",
+          "line": 34,
+          "status": "OK",
+          "backend": "gw/ai-chat/ai-chat.controller.ts:32 → tsvc/agents/agents.rpc.controller.ts:16 (ai.chat)",
+          "note": "Sends full history"
+        }
+      ]
+    },
+    {
+      "page": "/analytics",
+      "file": "app/(app)/analytics/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/analytics/analytics-page.tsx",
+          "line": 1,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "TOP_CATEGORIES and charts hard-coded"
+        }
+      ]
+    },
+    {
+      "page": "/budgets",
+      "file": "app/(app)/budgets/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/budgets/budgets-page.tsx",
+          "line": 14,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "MONTHLY constant; budgetItems in components/dashboard/budget-overview-card.tsx:7"
+        }
+      ]
+    },
+    {
+      "page": "/categories",
+      "file": "app/(app)/categories/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/categories",
+          "file": "components/categories/categories-page.tsx",
+          "line": 180,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway controller, no tutor-service controller for categories"
+        },
+        {
+          "method": "POST",
+          "path": "/categories",
+          "file": "components/categories/categories-page.tsx",
+          "line": 198,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/categories/:id",
+          "file": "components/categories/categories-page.tsx",
+          "line": 210,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/categories/:id",
+          "file": "components/categories/categories-page.tsx",
+          "line": 222,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/classes",
+      "file": "app/(app)/classes/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/classes/page/classes-page.tsx",
+          "line": 246,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": "limit:100"
+        },
+        {
+          "method": "GET",
+          "path": "/classes/generate-code",
+          "file": "components/classes/dialog/create-class-modal.tsx",
+          "line": 158,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:67 → tsvc/class/class.rpc.controller.ts:30 (class.generateCode)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum",
+          "file": "components/classes/dialog/create-class-modal.tsx",
+          "line": 167,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:69 → tsvc/curriculum/curriculum.rpc.controller.ts:29 (curriculum.getAll)",
+          "note": "curriculum picker"
+        },
+        {
+          "method": "POST",
+          "path": "/classes",
+          "file": "components/classes/dialog/create-class-modal.tsx",
+          "line": 304,
+          "status": "MISMATCH",
+          "backend": "gw/class/class.controller.ts:37 → tsvc/class/class.rpc.controller.ts:20 (class.create)",
+          "note": "UI sends maxStudents; not in gw createClassSchema (gw/packages/entities/class/class.schema.ts:6-34), silently dropped"
+        },
+        {
+          "method": "POST",
+          "path": "/schedules/bulk",
+          "file": "components/classes/dialog/create-class-modal.tsx",
+          "line": 334,
+          "status": "OK",
+          "backend": "gw/schedule/schedule.controller.ts:50 → tsvc/schedule/schedule.rpc.controller.ts:25 (schedule.createBulk)",
+          "note": "Only when schedules exist"
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum",
+          "file": "components/classes/dialog/edit-class-dialog.tsx",
+          "line": 137,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:69 → tsvc/curriculum/curriculum.rpc.controller.ts:29 (curriculum.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/classes/dialog/edit-class-dialog.tsx",
+          "line": 175,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/students",
+          "file": "components/classes/dialog/edit-class-dialog.tsx",
+          "line": 186,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:114 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Reads studentsPayload.students (edit-class-dialog.tsx:~196); Gateway returns {data,pagination} (usr/user/user.service.ts:60-80); UI reads `students` (types StudentsApiPayload). Gateway schema (gw/packages/entities/student/student.schema.ts:42-54) drops classCode/classId, no role filter"
+        },
+        {
+          "method": "PUT",
+          "path": "/classes/:id",
+          "file": "components/classes/dialog/edit-class-dialog.tsx",
+          "line": 228,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:50 → tsvc/class/class.rpc.controller.ts:25 (class.update)",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/classes/:id",
+          "file": "components/classes/dialog/delete-class-dialog.tsx",
+          "line": 23,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:146 → tsvc/class/class.rpc.controller.ts:66 (class.delete)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "file": "components/classes/dialog/create-session-dialog.tsx",
+          "line": 82,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:37 → tsvc/session/session.rpc.controller.ts:20 (session.create)",
+          "note": "Sends startAt/endAt (create-session-dialog.tsx:120-130)"
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]",
+      "file": "app/(app)/classes/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes/:id",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 133,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:93 → tsvc/class/class.rpc.controller.ts:41 (class.getById)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 139,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/lessons",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 162,
+          "status": "UNVERIFIED",
+          "backend": "gw/lesson/lesson.controller.ts:49 → tsvc/lesson/lesson.rpc.controller.ts:27 (lesson.getAll)",
+          "note": "Probably shadowed by GET /curriculum/:id (gw/curriculum/curriculum.controller.ts:84); CurriculumModule is imported before LessonModule in gw/app.module.ts:45-47"
+        },
+        {
+          "method": "GET",
+          "path": "/sessions",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 185,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:62 → tsvc/session/session.rpc.controller.ts:30 (session.getAll)",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 125,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:104 → tsvc/session/session.rpc.controller.ts:45 (session.update)",
+          "note": "Body not traced"
+        },
+        {
+          "method": "PUT",
+          "path": "/classes/:id",
+          "file": "components/classes/page/class-detail-page.tsx",
+          "line": 127,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:50 → tsvc/class/class.rpc.controller.ts:25 (class.update)",
+          "note": "Status change"
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/watches",
+          "file": "components/classes/page/class-detail-watch-page.tsx",
+          "line": 288,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:134 → tsvc/class/class.rpc.controller.ts:61 (class.getWatch)",
+          "note": "Watch view; rendering condition not traced"
+        },
+        {
+          "method": "GET",
+          "path": "/users/get-by-field",
+          "file": "components/classes/page/class-detail-watch-page.tsx",
+          "line": 302,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:89 → usr/user/user.rpc.controller.ts:31 (user.getUserByField)",
+          "note": "field=id, value=tutorId; id is searchable"
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/materials",
+          "file": "components/classes/page/class-detail-watch-page.tsx",
+          "line": 314,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:125 → tsvc/class/class.rpc.controller.ts:56 (class.getMaterials)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/tuitions",
+          "file": "components/classes/page/class-detail-watch-page.tsx",
+          "line": 360,
+          "status": "OK",
+          "backend": "gw/tuition/tuition.controller.ts:60 → tsvc/tuition/tuition.rpc.controller.ts:24 (tuition.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/notifications",
+          "file": "components/classes/page/class-detail-watch-page.tsx",
+          "line": 374,
+          "status": "OK",
+          "backend": "gw/notification/notification.controller.ts:60 → third/notification/notification.rpc.controller.ts:20 (notification.getAll)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/curriculum",
+      "file": "app/(app)/classes/[id]/curriculum/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes/:id/materials",
+          "file": "components/classes/page/class-materials-page.tsx",
+          "line": 74,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:125 → tsvc/class/class.rpc.controller.ts:56 (class.getMaterials)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/classes/components/material-file-row.tsx",
+          "line": 15,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": "blob download, key query"
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/exercise",
+      "file": "app/(app)/classes/[id]/exercise/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes/:id/materials",
+          "file": "components/classes/page/class-materials-page.tsx",
+          "line": 74,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:125 → tsvc/class/class.rpc.controller.ts:56 (class.getMaterials)",
+          "note": "Same component as /curriculum"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/classes/components/material-file-row.tsx",
+          "line": 15,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/sessions/[sessionId]",
+      "file": "app/(app)/classes/[id]/sessions/[sessionId]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 160,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/:curriculumId",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 183,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:84 → tsvc/curriculum/curriculum.rpc.controller.ts:34 (curriculum.getById)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/attendances/session/:id",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 170,
+          "status": "OK",
+          "backend": "gw/attendance/attendance.controller.ts:29 → tsvc/attendance/attendance.rpc.controller.ts:15 (attendance.getBySession)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/lessons/:lessonId",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 362,
+          "status": "OK",
+          "backend": "gw/lesson/lesson.controller.ts:63 → tsvc/lesson/lesson.rpc.controller.ts:32 (lesson.getById)",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 172,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:104 → tsvc/session/session.rpc.controller.ts:45 (session.update)",
+          "note": "Also direct PUT at :315, :336, :391, :413 (inline edits)"
+        },
+        {
+          "method": "PUT",
+          "path": "/attendances",
+          "file": "components/classes/page/session-detail-page.tsx",
+          "line": 436,
+          "status": "OK",
+          "backend": "gw/attendance/attendance.controller.ts:41 → tsvc/attendance/attendance.rpc.controller.ts:20 (attendance.upsert)",
+          "note": "Body {sessionId,studentId,present,note} matches upsertAttendanceSchema"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/classes/components/session-material-file-row.tsx",
+          "line": 16,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/sessions/[sessionId]/exercise",
+      "file": "app/(app)/classes/[id]/sessions/[sessionId]/exercise/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 158,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 164,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/users/get-by-field",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 177,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:89 → usr/user/user.rpc.controller.ts:31 (user.getUserByField)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 189,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/attendances/session/:id",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 195,
+          "status": "OK",
+          "backend": "gw/attendance/attendance.controller.ts:29 → tsvc/attendance/attendance.rpc.controller.ts:15 (attendance.getBySession)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/upload",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 214,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:42 → third/uploads/upload.rpc.controller.ts:26 (upload.upload)",
+          "note": "multipart field 'file' matches FileInterceptor('file')"
+        },
+        {
+          "method": "PATCH",
+          "path": "/exercises/:id/submit",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 265,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:78 → tsvc/exercise/exercise.rpc.controller.ts:35 (exercise.submit)",
+          "note": "Body not diffed (exerciseUrls[] per gw exercise.schema.ts:37)"
+        },
+        {
+          "method": "POST",
+          "path": "/exercises",
+          "file": "components/classes/page/exercise-submit-page.tsx",
+          "line": 269,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:36 → tsvc/exercise/exercise.rpc.controller.ts:20 (exercise.create)",
+          "note": "Body not diffed"
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/sessions/[sessionId]/submissions",
+      "file": "app/(app)/classes/[id]/sessions/[sessionId]/submissions/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/session-submissions-page.tsx",
+          "line": 95,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/classes/page/session-submissions-page.tsx",
+          "line": 106,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/classes/page/session-submissions-page.tsx",
+          "line": 119,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/sessions/session-shared.tsx",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/classes/[id]/sessions/[sessionId]/submissions/[exerciseId]",
+      "file": "app/(app)/classes/[id]/sessions/[sessionId]/submissions/[exerciseId]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/classes/page/exercise-grade-page.tsx",
+          "line": 59,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": "File path per ui-pages (exercise-grade-page)"
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/classes/page/exercise-grade-page.tsx",
+          "line": 69,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/classes/page/exercise-grade-page.tsx",
+          "line": 81,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/upload",
+          "file": "components/classes/components/exercise-grade-workspace.tsx",
+          "line": 215,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:42 → third/uploads/upload.rpc.controller.ts:26 (upload.upload)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/exercises/:id/grade",
+          "file": "components/classes/components/exercise-grade-workspace.tsx",
+          "line": 232,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:92 → tsvc/exercise/exercise.rpc.controller.ts:40 (exercise.grade)",
+          "note": "Body (score 0-10, comment) not diffed"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/sessions/session-shared.tsx",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/curriculum",
+      "file": "app/(app)/curriculum/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/curriculum",
+          "file": "components/curriculum/page/curriculum-list-page.tsx",
+          "line": 129,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:69 → tsvc/curriculum/curriculum.rpc.controller.ts:29 (curriculum.getAll)",
+          "note": "Response shape not traced"
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/generate-code",
+          "file": "components/curriculum/dialog/curriculum-form-dialog.tsx",
+          "line": 157,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:35 → tsvc/curriculum/curriculum.rpc.controller.ts:18 (curriculum.generateCode)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/curriculum",
+          "file": "components/curriculum/dialog/curriculum-form-dialog.tsx",
+          "line": 173,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:43 → tsvc/curriculum/curriculum.rpc.controller.ts:24 (curriculum.create)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "PUT",
+          "path": "/curriculum/:id",
+          "file": "components/curriculum/dialog/curriculum-form-dialog.tsx",
+          "line": 190,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:93 → tsvc/curriculum/curriculum.rpc.controller.ts:39 (curriculum.update)",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/curriculum/:id",
+          "file": "components/curriculum/dialog/delete-curriculum-dialog.tsx",
+          "line": 23,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:118 → tsvc/curriculum/curriculum.rpc.controller.ts:44 (curriculum.delete)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/classes/components/curriculum-file-chip.tsx",
+          "line": 16,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": "Per ui-pages summary"
+        }
+      ]
+    },
+    {
+      "page": "/curriculum/[id]",
+      "file": "app/(app)/curriculum/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/curriculum/:id",
+          "file": "components/curriculum/page/curriculum-detail-page.tsx",
+          "line": 43,
+          "status": "OK",
+          "backend": "gw/curriculum/curriculum.controller.ts:84 → tsvc/curriculum/curriculum.rpc.controller.ts:34 (curriculum.getById)",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/chapter/:id",
+          "file": "components/curriculum/page/curriculum-detail-page.tsx",
+          "line": 60,
+          "status": "OK",
+          "backend": "gw/chapter/chapter.controller.ts:83 → tsvc/chapter/chapter.rpc.controller.ts:39 (chapter.delete)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/chapter/:frameworkId",
+          "file": "components/curriculum/dialog/create-chapter-dialog.tsx",
+          "line": 37,
+          "status": "OK",
+          "backend": "gw/chapter/chapter.controller.ts:33 → tsvc/chapter/chapter.rpc.controller.ts:19 (chapter.create)",
+          "note": "Gateway param is curriculumId; UI passes frameworkId (curriculum id). Body not diffed"
+        },
+        {
+          "method": "POST",
+          "path": "/curriculum/lessons?curriculumId&chapterId",
+          "file": "components/curriculum/components/chapter-section.tsx",
+          "line": 44,
+          "status": "OK",
+          "backend": "gw/lesson/lesson.controller.ts:33 → tsvc/lesson/lesson.rpc.controller.ts:19 (lesson.create)",
+          "note": "Query keys match lesson.controller.ts:35-41"
+        },
+        {
+          "method": "DELETE",
+          "path": "/curriculum/lessons/:id",
+          "file": "components/curriculum/components/chapter-section.tsx",
+          "line": 68,
+          "status": "OK",
+          "backend": "gw/lesson/lesson.controller.ts:85 → tsvc/lesson/lesson.rpc.controller.ts:42 (lesson.delete)",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/curriculum/lessons/:id/add-theory | /exercises",
+          "file": "components/curriculum/components/lesson-row.tsx",
+          "line": 43,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route for /curriculum/lessons/:id/{add-theory|exercises}. lib/services/lesson.service.ts:29-31 uses the same path"
+        },
+        {
+          "method": "DELETE",
+          "path": "/curriculum/lessons/:id/add-theory | /exercises",
+          "file": "components/curriculum/components/lesson-row.tsx",
+          "line": 63,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/curriculum/components/file-row.tsx",
+          "line": 16,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/discussions",
+      "file": "app/(app)/discussions/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/chat/conversations",
+          "file": "hooks/useChat.hook.ts",
+          "line": 49,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No chat controller in gateway. tutor-service/src/features/chat/chat.controller.ts exists but is only on tutor-service's own port"
+        },
+        {
+          "method": "GET",
+          "path": "/chat/conversations/:id/messages",
+          "file": "hooks/useChat.hook.ts",
+          "line": 71,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Same as above"
+        },
+        {
+          "method": "GET",
+          "path": "/chat/users",
+          "file": "hooks/useChat.hook.ts",
+          "line": 149,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Same as above"
+        },
+        {
+          "method": "POST",
+          "path": "/chat/conversations/direct",
+          "file": "hooks/useChat.hook.ts",
+          "line": 84,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Same as above"
+        },
+        {
+          "method": "POST",
+          "path": "/chat/conversations/:id/read",
+          "file": "hooks/useChat.hook.ts",
+          "line": 117,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Same as above"
+        },
+        {
+          "method": "WS",
+          "path": "/chat (socket namespace)",
+          "file": "hooks/useChatSocket.hook.ts",
+          "line": 1,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "Socket goes to gateway URL; no gateway WS gateway (see global row)"
+        }
+      ]
+    },
+    {
+      "page": "/fees",
+      "file": "app/(app)/fees/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/tuitions",
+          "file": "components/fees/fees-page.tsx",
+          "line": 76,
+          "status": "OK",
+          "backend": "gw/tuition/tuition.controller.ts:60 → tsvc/tuition/tuition.rpc.controller.ts:24 (tuition.getAll)",
+          "note": "limit:100"
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/fees/fees-page.tsx",
+          "line": 82,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/fees/create-tuition-dialog.tsx",
+          "line": 54,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/tuitions",
+          "file": "components/fees/create-tuition-dialog.tsx",
+          "line": 104,
+          "status": "OK",
+          "backend": "gw/tuition/tuition.controller.ts:35 → tsvc/tuition/tuition.rpc.controller.ts:19 (tuition.create)",
+          "note": "Body (classId, studentId, amount, dueDate...) not diffed"
+        },
+        {
+          "method": "PUT",
+          "path": "/tuitions/:id",
+          "file": "components/fees/tuition-detail-dialog.tsx",
+          "line": 80,
+          "status": "OK",
+          "backend": "gw/tuition/tuition.controller.ts:85 → tsvc/tuition/tuition.rpc.controller.ts:39 (tuition.update)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/students",
+          "file": "components/fees/family-fees-page.tsx",
+          "line": 65,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:114 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Reads studentsPayload.students (family-fees-page.tsx:72); Gateway returns {data,pagination} (usr/user/user.service.ts:60-80); UI reads `students` (types StudentsApiPayload). Gateway schema (gw/packages/entities/student/student.schema.ts:42-54) drops classCode/classId, no role filter"
+        }
+      ]
+    },
+    {
+      "page": "/grades",
+      "file": "app/(app)/grades/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/grades/grades-page.tsx",
+          "line": 180,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/sessions",
+          "file": "components/grades/grades-page.tsx",
+          "line": 191,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:62 → tsvc/session/session.rpc.controller.ts:30 (session.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/grades/grades-page.tsx",
+          "line": 209,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": "classId, limit:100"
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/by-grade/:gradeId",
+          "file": "components/grades/grades-page.tsx",
+          "line": 484,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route (3 segments; GET /curriculum/:id is 1 segment)"
+        },
+        {
+          "method": "GET",
+          "path": "/exercises (tutor view)",
+          "file": "components/grades/grades-page.tsx",
+          "line": 608,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/exercises (tutor view)",
+          "file": "components/grades/grades-page.tsx",
+          "line": 831,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/grades/grades-page.tsx",
+          "line": 849,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/users/grades",
+          "file": "components/grades/grades-page.tsx",
+          "line": 827,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route for GET /users/grades (useUserActions().userGrades, lib/services/user.service.ts:121)"
+        },
+        {
+          "method": "GET",
+          "path": "/sessions (via student-assignments-view)",
+          "file": "components/practice/student-assignments-view.tsx",
+          "line": 123,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:62 → tsvc/session/session.rpc.controller.ts:30 (session.getAll)",
+          "note": "Imported by grades page"
+        },
+        {
+          "method": "GET",
+          "path": "/exercises (via student-assignments-view)",
+          "file": "components/practice/student-assignments-view.tsx",
+          "line": 130,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/investments",
+      "file": "app/(app)/investments/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/investments/investments-page.tsx",
+          "line": 24,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "HOLDINGS, PERFORMANCE_VALUES hard-coded"
+        }
+      ]
+    },
+    {
+      "page": "/logger",
+      "file": "app/(app)/(admin)/logger/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/logs",
+          "file": "components/logger/logger-page.tsx",
+          "line": 64,
+          "status": "OK",
+          "backend": "gw/log/log.controller.ts:29 → third/log/log.rpc.controller.ts:22 (log.query)",
+          "note": "ADMIN on both sides"
+        },
+        {
+          "method": "GET",
+          "path": "/logs/trace/:correlationId",
+          "file": "components/logger/logger-page.tsx",
+          "line": 64,
+          "status": "OK",
+          "backend": "gw/log/log.controller.ts:46 → third/log/log.rpc.controller.ts:27 (log.trace)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/logs/stats",
+          "file": "components/logger/logger-page.tsx",
+          "line": 70,
+          "status": "OK",
+          "backend": "gw/log/log.controller.ts:58 → third/log/log.rpc.controller.ts:32 (log.stats)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios",
+          "file": "components/logger/logger-page.tsx",
+          "line": 71,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:203 → third/test-scenario/test-scenario.rpc.controller.ts:32 (testscenario.list)",
+          "note": "ADMIN on both sides"
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/:id/run?async=true",
+          "file": "components/logger/logger-page.tsx",
+          "line": 131,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:284 → third/test-scenario/test-scenario.rpc.controller.ts:57 (testscenario.run)",
+          "note": ""
+        },
+        {
+          "method": "WS",
+          "path": "/logs (socket namespace, event log:new)",
+          "file": "hooks/useLogSocket.hook.ts",
+          "line": 36,
+          "status": "OK",
+          "backend": "Direct to THIRD_SERVICE (NEXT_PUBLIC_THIRD_SERVICE_URL, default :4000), not via gateway: third/log/log.gateway.ts:31-33 ns /logs",
+          "note": "Connects to THIRD_SERVICE directly; event name not traced"
+        }
+      ]
+    },
+    {
+      "page": "/notifications",
+      "file": "app/(app)/notifications/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/notifications",
+          "file": "app/(app)/notifications/page.tsx",
+          "line": 205,
+          "status": "OK",
+          "backend": "gw/notification/notification.controller.ts:60 → third/notification/notification.rpc.controller.ts:20 (notification.getAll)",
+          "note": "Response normalized in page; ok"
+        },
+        {
+          "method": "PATCH",
+          "path": "/notifications/:id/read",
+          "file": "app/(app)/notifications/page.tsx",
+          "line": 245,
+          "status": "OK",
+          "backend": "gw/notification/notification.controller.ts:94 → third/notification/notification.rpc.controller.ts:35 (notification.markAsRead)",
+          "note": "Also :491. read-all defined but not called"
+        }
+      ]
+    },
+    {
+      "page": "/notifications/[id]",
+      "file": "app/(app)/notifications/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/notifications/:id",
+          "file": "app/(app)/notifications/[id]/page.tsx",
+          "line": 43,
+          "status": "OK",
+          "backend": "gw/notification/notification.controller.ts:85 → third/notification/notification.rpc.controller.ts:30 (notification.getById)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/notifications/:id/read",
+          "file": "app/(app)/notifications/[id]/page.tsx",
+          "line": 49,
+          "status": "OK",
+          "backend": "gw/notification/notification.controller.ts:94 → third/notification/notification.rpc.controller.ts:35 (notification.markAsRead)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/practice-exams",
+      "file": "app/(app)/practice-exams/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/practice-exams/practice-exams.data.ts",
+          "line": 1,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "Static data files"
+        }
+      ]
+    },
+    {
+      "page": "/practice-exams/[id]",
+      "file": "app/(app)/practice-exams/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/practice-exams/practice-exam-take.data.ts",
+          "line": 1,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "Static data; local state"
+        }
+      ]
+    },
+    {
+      "page": "/practice-exams/[id]/result",
+      "file": "app/(app)/practice-exams/[id]/result/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/practice-exams/practice-exam-result.data.ts",
+          "line": 1,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "Static data"
+        }
+      ]
+    },
+    {
+      "page": "/reports",
+      "file": "app/(app)/reports/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/reports/learning/summary",
+          "file": "components/reports/reports-page.tsx",
+          "line": 71,
+          "status": "OK",
+          "backend": "gw/report/report.controller.ts:31 → tsvc/report/report.rpc.controller.ts:15 (report.summary)",
+          "note": "ADMIN on both sides; page enabled only when isAdmin"
+        },
+        {
+          "method": "GET",
+          "path": "/reports/learning/attendance-trend",
+          "file": "components/reports/reports-page.tsx",
+          "line": 83,
+          "status": "OK",
+          "backend": "gw/report/report.controller.ts:42 → tsvc/report/report.rpc.controller.ts:20 (report.attendanceTrend)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/reports/learning/classes",
+          "file": "components/reports/reports-page.tsx",
+          "line": 100,
+          "status": "OK",
+          "backend": "gw/report/report.controller.ts:53 → tsvc/report/report.rpc.controller.ts:25 (report.classList)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/schedule",
+      "file": "app/(app)/schedule/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions",
+          "file": "app/(app)/schedule/page.tsx",
+          "line": 408,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:62 → tsvc/session/session.rpc.controller.ts:30 (session.getAll)",
+          "note": "limit:100"
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/schedule/schedule-form-dialog.tsx",
+          "line": 116,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "file": "components/schedule/schedule-form-dialog.tsx",
+          "line": 161,
+          "status": "MISMATCH",
+          "backend": "gw/session/session.controller.ts:37 → tsvc/session/session.rpc.controller.ts:20 (session.create)",
+          "note": "UI sends {date,startTime,endTime}; gw createSessionSchema requires startAt/endAt (gw/packages/entities/session/session.schema.ts:23-40) -> 400. Form computes startAt/endAt (:136-137) but does not send them"
+        },
+        {
+          "method": "PUT",
+          "path": "/sessions/:id",
+          "file": "components/schedule/schedule-form-dialog.tsx",
+          "line": 147,
+          "status": "MISMATCH",
+          "backend": "gw/session/session.controller.ts:104 → tsvc/session/session.rpc.controller.ts:45 (session.update)",
+          "note": "UI sends date/startTime/endTime; not in updateSessionSchema (session.schema.ts:68-), so time edits are silently dropped"
+        },
+        {
+          "method": "DELETE",
+          "path": "/sessions/:id",
+          "file": "components/schedule/delete-schedule-dialog.tsx",
+          "line": 30,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:118 → tsvc/session/session.rpc.controller.ts:50 (session.delete)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/sessions",
+      "file": "app/(app)/sessions/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sessions",
+          "file": "components/sessions/student-sessions-page.tsx",
+          "line": 135,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:62 → tsvc/session/session.rpc.controller.ts:30 (session.getAll)",
+          "note": "page={1},limit=10"
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 378,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": "Listed in ui-pages for /sessions (same components as detail)"
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 378,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": "Also student-session-detail.tsx:103"
+        },
+        {
+          "method": "PATCH",
+          "path": "/sessions/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 281,
+          "status": "MISMATCH",
+          "backend": "gw/session/session.controller.ts:104 → tsvc/session/session.rpc.controller.ts:45 (session.update)",
+          "note": "Gateway only defines PUT /sessions/:id (session.controller.ts:104); PATCH not defined. Also :393"
+        },
+        {
+          "method": "GET",
+          "path": "/users/get-by-field",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 415,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:89 → usr/user/user.rpc.controller.ts:31 (user.getUserByField)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 428,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": "Only when needRoster"
+        },
+        {
+          "method": "GET",
+          "path": "/attendances/session/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 450,
+          "status": "OK",
+          "backend": "gw/attendance/attendance.controller.ts:29 → tsvc/attendance/attendance.rpc.controller.ts:15 (attendance.getBySession)",
+          "note": "STUDENT and PARENT views"
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 110,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": "sessionId, studentId, limit:1"
+        },
+        {
+          "method": "POST",
+          "path": "/upload",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 131,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:42 → third/uploads/upload.rpc.controller.ts:26 (upload.upload)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/exercises/:id/submit",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 163,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:78 → tsvc/exercise/exercise.rpc.controller.ts:35 (exercise.submit)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "POST",
+          "path": "/exercises",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 167,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:36 → tsvc/exercise/exercise.rpc.controller.ts:20 (exercise.create)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/sessions/session-shared.tsx",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/sessions/[id]",
+      "file": "app/(app)/sessions/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/curriculum/lessons",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 246,
+          "status": "UNVERIFIED",
+          "backend": "gw/lesson/lesson.controller.ts:49 → tsvc/lesson/lesson.rpc.controller.ts:27 (lesson.getAll)",
+          "note": "Same route-order caveat as /classes/[id]"
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 378,
+          "status": "OK",
+          "backend": "gw/session/session.controller.ts:95 → tsvc/session/session.rpc.controller.ts:40 (session.getById)",
+          "note": "Also student-session-detail.tsx:103"
+        },
+        {
+          "method": "PATCH",
+          "path": "/sessions/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 281,
+          "status": "MISMATCH",
+          "backend": "gw/session/session.controller.ts:104 → tsvc/session/session.rpc.controller.ts:45 (session.update)",
+          "note": "Gateway only defines PUT /sessions/:id (session.controller.ts:104); PATCH not defined. Also :393"
+        },
+        {
+          "method": "GET",
+          "path": "/users/get-by-field",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 415,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:89 → usr/user/user.rpc.controller.ts:31 (user.getUserByField)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/classes/:id/students",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 428,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:116 → tsvc/class/class.rpc.controller.ts:51 (class.getStudents)",
+          "note": "Only when needRoster"
+        },
+        {
+          "method": "GET",
+          "path": "/attendances/session/:id",
+          "file": "components/sessions/session-detail-view.tsx",
+          "line": 450,
+          "status": "OK",
+          "backend": "gw/attendance/attendance.controller.ts:29 → tsvc/attendance/attendance.rpc.controller.ts:15 (attendance.getBySession)",
+          "note": "STUDENT and PARENT views"
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 110,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": "sessionId, studentId, limit:1"
+        },
+        {
+          "method": "POST",
+          "path": "/upload",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 131,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:42 → third/uploads/upload.rpc.controller.ts:26 (upload.upload)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/exercises/:id/submit",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 163,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:78 → tsvc/exercise/exercise.rpc.controller.ts:35 (exercise.submit)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "POST",
+          "path": "/exercises",
+          "file": "components/sessions/student-session-detail.tsx",
+          "line": 167,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:36 → tsvc/exercise/exercise.rpc.controller.ts:20 (exercise.create)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "GET",
+          "path": "/upload/download",
+          "file": "components/sessions/session-shared.tsx",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/upload/upload.controller.ts:94 → third/uploads/upload.rpc.controller.ts:36 (upload.download)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/settings",
+      "file": "app/(app)/settings/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/users/detail-user",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 1870,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:75 → usr/user/user.rpc.controller.ts:26 (user.getDetailUser)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/users/avatar",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 767,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route; no usr user route for avatar"
+        },
+        {
+          "method": "PUT",
+          "path": "/users",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 792,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:126 → usr/user/user.rpc.controller.ts:41 (user.updateUser)",
+          "note": "avatar: null"
+        },
+        {
+          "method": "PUT",
+          "path": "/users",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 812,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:126 → usr/user/user.rpc.controller.ts:41 (user.updateUser)",
+          "note": "Profile payload; body not diffed"
+        },
+        {
+          "method": "POST",
+          "path": "/users/change-password",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 1163,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:195 → usr/user/user.rpc.controller.ts:63 (user.changePassword)",
+          "note": "useUserActions().changePassword (lib/services/user.service.ts:143)"
+        },
+        {
+          "method": "GET",
+          "path": "/curriculum/grades",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 1545,
+          "status": "MISMATCH",
+          "backend": "gw/curriculum/curriculum.controller.ts:84 (matches GET /curriculum/:id with id='grades')",
+          "note": "No gateway route for /curriculum/grades; 2-segment path resolves to GET /curriculum/:id with id 'grades' (curriculum.getById)"
+        },
+        {
+          "method": "GET",
+          "path": "/users/grades",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 1547,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route (lib/services/user.service.ts:121)"
+        },
+        {
+          "method": "PUT",
+          "path": "/users/grade",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 1573,
+          "status": "MISMATCH",
+          "backend": "gw/user/user.controller.ts:145 → usr/user/user.rpc.controller.ts:48 (user.updateUserByAdmin)",
+          "note": "No gateway route; matches PUT /users/:id with id='grade' (usr/user/user.service.ts:189-191 rejects non-UUID)"
+        },
+        {
+          "method": "GET",
+          "path": "/students",
+          "file": "app/(app)/settings/page.tsx",
+          "line": 696,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:114 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Parent view; reads linkedStudentsPayload.students (settings page:702); Gateway returns {data,pagination} (usr/user/user.service.ts:60-80); UI reads `students` (types StudentsApiPayload). Gateway schema (gw/packages/entities/student/student.schema.ts:42-54) drops classCode/classId, no role filter"
+        }
+      ]
+    },
+    {
+      "page": "/students",
+      "file": "app/(app)/students/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "app/(app)/students/page.tsx",
+          "line": 130,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/students",
+          "file": "app/(app)/students/page.tsx",
+          "line": 199,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:114 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Reads apiPayload.students (students/page.tsx:208); classCode/classId filters dropped by gateway. Gateway returns {data,pagination} (usr/user/user.service.ts:60-80); UI reads `students` (types StudentsApiPayload). Gateway schema (gw/packages/entities/student/student.schema.ts:42-54) drops classCode/classId, no role filter"
+        },
+        {
+          "method": "DELETE",
+          "path": "/students/:id",
+          "file": "app/(app)/students/page.tsx",
+          "line": 224,
+          "status": "OK",
+          "backend": "gw/student/student.controller.ts:260 → usr/user/user.rpc.controller.ts:58 (user.deleteUserByAdmin)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/students/get-student-code",
+          "file": "components/students/add-student-dialog.tsx",
+          "line": 87,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:35-43 → usr/user/user.rpc.controller.ts:31 (user.getUserByField with {})",
+          "note": "Gateway sends empty payload to getUserByField, which rejects field 'undefined' (usr/user/user.service.ts:98-108). Generator exists only as HTTP in usr/student/student.controller.ts:32 with no MessagePattern"
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/students/add-student-dialog.tsx",
+          "line": 98,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/students",
+          "file": "components/students/add-student-dialog.tsx",
+          "line": 114,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:46 → usr/user/user.rpc.controller.ts:36 (user.createUser)",
+          "note": "UI sends classCode; not in gw createStudentSchema (gw/packages/entities/student/student.schema.ts:3-21), silently dropped"
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/students/edit-student-dialog.tsx",
+          "line": 158,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/students/:id",
+          "file": "components/students/edit-student-dialog.tsx",
+          "line": 175,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:216 → usr/user/user.rpc.controller.ts:41 (user.updateUser)",
+          "note": "UI always sends classId (edit-student-dialog.tsx:196); not in updateStudentSchema (student.schema.ts:23-40), dropped. Forwards with userId only; role undefined"
+        }
+      ]
+    },
+    {
+      "page": "/students/[id]",
+      "file": "app/(app)/students/[id]/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/students/:id",
+          "file": "app/(app)/students/[id]/page.tsx",
+          "line": 135,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:147 → usr/user/user.rpc.controller.ts:31 (user.getUserByField ({id}))",
+          "note": "Gateway sends {id}; getUserByField needs {field,value} (usr/user/user.service.ts:98-108) -> 400 'Unsupported field: undefined'. Would also return an array, not one student"
+        },
+        {
+          "method": "GET",
+          "path": "/exercises",
+          "file": "app/(app)/students/[id]/page.tsx",
+          "line": 145,
+          "status": "OK",
+          "backend": "gw/exercise/exercise.controller.ts:48 → tsvc/exercise/exercise.rpc.controller.ts:25 (exercise.getAll)",
+          "note": "studentId, limit:100"
+        },
+        {
+          "method": "PUT",
+          "path": "/students/:id",
+          "file": "components/students/edit-student-dialog.tsx",
+          "line": 175,
+          "status": "MISMATCH",
+          "backend": "gw/student/student.controller.ts:216 → usr/user/user.rpc.controller.ts:41 (user.updateUser)",
+          "note": "Same as /students (classId dropped)"
+        },
+        {
+          "method": "GET",
+          "path": "/classes",
+          "file": "components/students/edit-student-dialog.tsx",
+          "line": 158,
+          "status": "OK",
+          "backend": "gw/class/class.controller.ts:75 → tsvc/class/class.rpc.controller.ts:36 (class.getAll)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/test-monitor",
+      "file": "app/(app)/(admin)/test-monitor/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/test-scenarios",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 107,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:203 → third/test-scenario/test-scenario.rpc.controller.ts:32 (testscenario.list)",
+          "note": "ADMIN on both sides. Mock mode (?mock=1 / NEXT_PUBLIC_TEST_MONITOR_MOCK) disables requests"
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/stats",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 97,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:235 → third/test-scenario/test-scenario.rpc.controller.ts:47 (testscenario.stats)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/routes",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 107,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:65 (local listHttpRoutes, no downstream)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/meta",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:222 (local env read, no downstream)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/:id/runs",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 127,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:246 → third/test-scenario/test-scenario.rpc.controller.ts:52 (testscenario.runs)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/fixtures",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 137,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:129 → third/test-scenario/test-scenario.rpc.controller.ts:83 (testscenario.fixtures.list)",
+          "note": "Also hooks/useTestFixtures.hook.ts:21"
+        },
+        {
+          "method": "GET",
+          "path": "/test-scenarios/auth-profiles",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 147,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:117 → third/test-scenario/test-scenario.rpc.controller.ts:78 (testscenario.authprofiles)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/logs/stats",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 120,
+          "status": "OK",
+          "backend": "gw/log/log.controller.ts:58 → third/log/log.rpc.controller.ts:32 (log.stats)",
+          "note": ""
+        },
+        {
+          "method": "GET",
+          "path": "/logs/trace/:id",
+          "file": "hooks/useTestMonitorTrace.hook.ts",
+          "line": 37,
+          "status": "OK",
+          "backend": "gw/log/log.controller.ts:46 → third/log/log.rpc.controller.ts:27 (log.trace)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/:id/run",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 202,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:284 → third/test-scenario/test-scenario.rpc.controller.ts:57 (testscenario.run)",
+          "note": "Also :225 (mutateAsync) and lib/services/test-scenario.service.ts:183"
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/generate",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 269,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:77 → third/test-scenario/test-scenario.rpc.controller.ts:68 (testscenario.generate)",
+          "note": "Proposals only"
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/bulk",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 296,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:103 → third/test-scenario/test-scenario.rpc.controller.ts:73 (testscenario.createMany)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 338,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:192 → third/test-scenario/test-scenario.rpc.controller.ts:27 (testscenario.create)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/test-scenarios/:id",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 337,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:262 → third/test-scenario/test-scenario.rpc.controller.ts:37 (testscenario.update)",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/test-scenarios/:id",
+          "file": "components/test-monitor/test-monitor-page.tsx",
+          "line": 351,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:275 → third/test-scenario/test-scenario.rpc.controller.ts:42 (testscenario.delete)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/fixtures",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 159,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:137 → third/test-scenario/test-scenario.rpc.controller.ts:88 (testscenario.fixtures.create)",
+          "note": ""
+        },
+        {
+          "method": "PATCH",
+          "path": "/test-scenarios/fixtures/:id",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 162,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:153 → third/test-scenario/test-scenario.rpc.controller.ts:93 (testscenario.fixtures.update)",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/test-scenarios/fixtures/:id",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 166,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:166 → third/test-scenario/test-scenario.rpc.controller.ts:98 (testscenario.fixtures.delete)",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/fixtures/:id/resolve",
+          "file": "lib/services/test-scenario.service.ts",
+          "line": 171,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:175 → third/test-scenario/test-scenario.rpc.controller.ts:103 (testscenario.fixtures.resolve)",
+          "note": "Body not diffed"
+        },
+        {
+          "method": "POST",
+          "path": "/test-scenarios/:id/run?async=true",
+          "file": "hooks/useTestMonitorTrace.hook.ts",
+          "line": 41,
+          "status": "OK",
+          "backend": "gw/test-scenario/test-scenario.controller.ts:284 → third/test-scenario/test-scenario.rpc.controller.ts:57 (testscenario.run)",
+          "note": "Realtime run"
+        },
+        {
+          "method": "WS",
+          "path": "/logs (socket namespace, event log:new)",
+          "file": "hooks/useLogSocket.hook.ts",
+          "line": 36,
+          "status": "OK",
+          "backend": "Direct to THIRD_SERVICE (NEXT_PUBLIC_THIRD_SERVICE_URL, default :4000), not via gateway: third/log/log.gateway.ts:31-33 ns /logs",
+          "note": "Connects to THIRD_SERVICE directly; event name not traced"
+        }
+      ]
+    },
+    {
+      "page": "/tutors",
+      "file": "app/(app)/(admin)/tutors/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/admin/tutors",
+          "file": "hooks/useAdminUsers.hook.ts",
+          "line": 32,
+          "status": "MISMATCH",
+          "backend": "gw/admin/admin.controller.ts:125 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Gateway forwards query unchanged (no role=TUTOR) so returns all roles. Response is {data,pagination}; UI reads data.tutors (tutors-page.tsx:105; types/user.types.ts:111). Tutor list always empty"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/tutors",
+          "file": "components/tutors/add-tutor-dialog.tsx",
+          "line": 86,
+          "status": "OK",
+          "backend": "gw/admin/admin.controller.ts:116 → usr/user/user.rpc.controller.ts:36 (user.createUser)",
+          "note": "Hook at hooks/useAdminUsers.hook.ts:44. Role forcing in gw not verified downstream"
+        }
+      ]
+    },
+    {
+      "page": "/users",
+      "file": "app/(app)/(admin)/users/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/users",
+          "file": "components/users/users-page.tsx",
+          "line": 124,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:52 → usr/user/user.rpc.controller.ts:21 (user.getUsers)",
+          "note": "Gateway has no @Roles here; any authenticated user can call it (page checks ADMIN only client-side)"
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:id",
+          "file": "components/users/users-page.tsx",
+          "line": 141,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:180 → usr/user/user.rpc.controller.ts:58 (user.deleteUserByAdmin)",
+          "note": "No backend role check (usr/user/user.service.ts:242-); page-only ADMIN check"
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:id/status",
+          "file": "components/users/users-page.tsx",
+          "line": 149,
+          "status": "MISMATCH",
+          "backend": "gw/user/user.controller.ts:165 → usr/user/user.rpc.controller.ts:53 (user.updateStatusUser)",
+          "note": "UI sends {id,isActive}; gw handler takes only the URL id and ignores the body; downstream flips status. No backend role check"
+        },
+        {
+          "method": "POST",
+          "path": "/users",
+          "file": "components/users/create-user-dialog.tsx",
+          "line": 104,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:108 → usr/user/user.rpc.controller.ts:36 (user.createUser)",
+          "note": "Body not diffed; no backend role check"
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:id",
+          "file": "components/users/edit-user-dialog.tsx",
+          "line": 115,
+          "status": "OK",
+          "backend": "gw/user/user.controller.ts:145 → usr/user/user.rpc.controller.ts:48 (user.updateUserByAdmin)",
+          "note": "Body not diffed; no backend role check"
+        }
+      ]
+    },
+    {
+      "page": "/transactions",
+      "file": "app/(app)/transactions/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/transactions/transactions-page.tsx",
+          "line": 41,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "TRANSACTIONS constant. Unused useTransactionsList (transactions.data.ts:59) would call /transactions, /wallets: not wired, not a UI request"
+        }
+      ]
+    },
+    {
+      "page": "/login",
+      "file": "app/(auth)/login/page.tsx",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/login",
+          "file": "components/auth/login-form.tsx",
+          "line": 113,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:83 → usr/auth/auth.rpc.controller.ts:32 (auth.login)",
+          "note": "Via lib/services/auth.service.ts:21"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/login/user-code",
+          "file": "components/auth/login-form.tsx",
+          "line": 117,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:129 → usr/auth/auth.rpc.controller.ts:37 (auth.loginByUserCode)",
+          "note": "Body {userCode,password,role} matches loginByUserCodeSchema"
+        },
+        {
+          "method": "GET",
+          "path": "/auth/google | /auth/facebook",
+          "file": "lib/oauth.ts",
+          "line": 6,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:262 → usr/auth/auth.rpc.controller.ts:57 (auth.googleLogin (callback))",
+          "note": "Full navigation, not fetch; facebook at lib/oauth.ts:11"
+        }
+      ]
+    },
+    {
+      "page": "/register",
+      "file": "app/(auth)/register/page.tsx",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/register",
+          "file": "components/auth/register-form.tsx",
+          "line": 59,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:54 → usr/auth/auth.rpc.controller.ts:27 (auth.register)",
+          "note": "confirmPassword not in gw registerSchema, stripped; harmless"
+        }
+      ]
+    },
+    {
+      "page": "/forgot-password",
+      "file": "app/(auth)/forgot-password/page.tsx",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/forgot-password",
+          "file": "components/auth/forgot-pass.tsx",
+          "line": 45,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:202 → usr/auth/auth.rpc.controller.ts:47 (auth.forgotPassword)",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "page": "/reset-password",
+      "file": "app/(auth)/reset-password/page.tsx",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/reset-password",
+          "file": "components/auth/reset-pass.tsx",
+          "line": 48,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:224 → usr/auth/auth.rpc.controller.ts:52 (auth.resetPassword)",
+          "note": "Body {jti,password,confirmPassword} matches resetPasswordBodySchema"
+        }
+      ]
+    },
+    {
+      "page": "/oauth/callback",
+      "file": "app/(auth)/oauth/callback/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(none)",
+          "file": "components/auth/oauth-callback.tsx",
+          "line": 24,
+          "status": "OK",
+          "backend": "gw/auth/auth.controller.ts:274-300 (redirect target)",
+          "note": "No request; tokens read from query string. Gateway google callback redirects with accessToken/refreshToken in query"
+        }
+      ]
+    },
+    {
+      "page": "/flow-request",
+      "file": "app/(flow)/flow-request/page.tsx",
+      "requests": [
+        {
+          "method": "-",
+          "path": "(static)",
+          "file": "components/flow-request/flow-request.data.ts",
+          "line": 1,
+          "status": "MOCK",
+          "backend": "—",
+          "note": "Static flow-request.data.ts and flow-request-seed-data.ts"
+        }
+      ]
+    },
+    {
+      "page": "/flow-requests",
+      "file": "app/flow-requests/page.tsx",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/flow-requests",
+          "file": "components/flow-requests/flow-request-diagram.tsx",
+          "line": 187,
+          "status": "MISSING",
+          "backend": "—",
+          "note": "No gateway route; UI falls back to seed data (flow-request-diagram.tsx:198-199)"
+        },
+        {
+          "method": "PUT",
+          "path": "/flow-requests/:id",
+          "file": "components/flow-requests/flow-request-diagram.tsx",
+          "line": 292,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        },
+        {
+          "method": "DELETE",
+          "path": "/flow-requests/:id",
+          "file": "components/flow-requests/flow-request-diagram.tsx",
+          "line": 316,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        },
+        {
+          "method": "POST",
+          "path": "/flow-requests",
+          "file": "components/flow-requests/add-flow-request-dialog.tsx",
+          "line": 69,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        },
+        {
+          "method": "PUT",
+          "path": "/flow-requests/:id",
+          "file": "components/flow-requests/edit-flow-request-dialog.tsx",
+          "line": 88,
+          "status": "MISSING",
+          "backend": "—",
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "unusedBackend": [
+    {
+      "method": "GET",
+      "path": "/",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/kafka/emit",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/kafka/send",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/kafka/error",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/kafka/tutor/error",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/health/postgres",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/health/redis",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/tutors/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/tutors/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/tutors/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/students",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/students",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/students/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/students/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/students/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/ai-chat/history",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/ai-chat/history",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/google/callback",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/facebook/callback",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/chapter",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/chapter/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "PUT",
+      "path": "/chapter/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/:id/students",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/emails",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/exercises/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "PUT",
+      "path": "/curriculum/lessons/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications",
+      "module": "gateway"
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications/read-all",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/notifications/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/redis",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/schedules",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/schedules",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/schedules/class/:classId",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/schedules/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "PATCH",
+      "path": "/schedules/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/schedules/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/bulk",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/class/:classId",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/tuitions/summary",
+      "module": "gateway"
+    },
+    {
+      "method": "GET",
+      "path": "/tuitions/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/tuitions/:id",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/upload/multiple",
+      "module": "gateway"
+    },
+    {
+      "method": "DELETE",
+      "path": "/upload/:key",
+      "module": "gateway"
+    },
+    {
+      "method": "POST",
+      "path": "/run",
+      "module": "tutor-service"
+    },
+    {
+      "method": "GET",
+      "path": "/chat/conversations",
+      "module": "tutor-service"
+    },
+    {
+      "method": "GET",
+      "path": "/chat/users",
+      "module": "tutor-service"
+    },
+    {
+      "method": "GET",
+      "path": "/chat/unread",
+      "module": "tutor-service"
+    },
+    {
+      "method": "GET",
+      "path": "/chat/conversations/:id",
+      "module": "tutor-service"
+    },
+    {
+      "method": "GET",
+      "path": "/chat/conversations/:id/messages",
+      "module": "tutor-service"
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/direct",
+      "module": "tutor-service"
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/group",
+      "module": "tutor-service"
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/class/:classId",
+      "module": "tutor-service"
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/:id/participants",
+      "module": "tutor-service"
+    },
+    {
+      "method": "POST",
+      "path": "/chat/conversations/:id/read",
+      "module": "tutor-service"
+    }
+  ]
+}

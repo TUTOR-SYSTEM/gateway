@@ -44,7 +44,7 @@ export class ClassController {
     dto: CreateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('class.create', { userId: user.id, data: dto });
   }
 
   @Put(':id')
@@ -61,7 +61,7 @@ export class ClassController {
     dto: UpdateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('class.update', { userId: user.id, id, data: dto });
   }
 
   @Get('generate-code')
@@ -87,7 +87,7 @@ export class ClassController {
     query: GetClassesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('class.getAll', { userId: user.id, query });
   }
 
   @Get(':id')
@@ -110,7 +110,7 @@ export class ClassController {
     dto: AddStudentsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.addStudents', { userId: user.id, classId: id, ...dto });
+    return this.rmqProducer.send('class.addStudents', { userId: user.id, classId: id, data: dto });
   }
 
   @Get(':id/students')
@@ -119,7 +119,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Students fetched' })
   getStudents(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getStudents', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getStudents', { userId: user.id, id });
   }
 
   @Get(':id/materials')
@@ -128,7 +128,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class materials retrieved' })
   getMaterials(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getMaterials', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getMaterials', { userId: user.id, id });
   }
 
   @Get(':id/watches')
@@ -140,7 +140,7 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class watch overview retrieved' })
   getWatch(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getWatch', { userId: user.id, classId: id });
+    return this.rmqProducer.send('class.getWatch', { userId: user.id, id });
   }
 
   @Delete(':id')

@@ -504,6 +504,8 @@ export const testScenarios = pgTable(
     // { headers?: Record<string,string>, body?: unknown } — header values may use `{{accessToken}}`.
     requestTemplate: jsonb('request_template').$type<Record<string, unknown>>().notNull().default({}),
     expectedStatus: integer('expected_status').notNull(),
+    // Substring the response `message` must contain (case-insensitive). Null = not yet captured: the run fails.
+    expectedMessage: text('expected_message'),
     category: testScenarioCategoryEnum('category').notNull().default('valid'),
     authProfile: testAuthProfileEnum('auth_profile').notNull().default('caller'),
     createdAt: timestamp('created_at').defaultNow().notNull(),

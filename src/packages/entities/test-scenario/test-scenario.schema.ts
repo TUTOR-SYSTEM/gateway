@@ -29,6 +29,8 @@ const scenarioFields = {
   description: z.string().optional(),
   requestTemplate: requestTemplateSchema.default({}),
   expectedStatus: z.number().int().min(100).max(599),
+  // Substring of the response `message` (case-insensitive). A case passes only when both the status and this text match.
+  expectedMessage: z.string().trim().min(1).max(500).nullable().optional(),
   category: testScenarioCategorySchema.default('valid'),
   authProfile: testAuthProfileSchema.default('caller'),
 };

@@ -50,6 +50,6 @@ export class AttendanceController {
     dto: UpsertAttendanceDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('attendance.upsert', { userId: user.id, ...dto });
+    return this.rmqProducer.send('attendance.upsert', { userId: user.id, data: dto });
   }
 }

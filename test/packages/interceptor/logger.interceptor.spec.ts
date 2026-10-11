@@ -1,7 +1,7 @@
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { lastValueFrom, of } from 'rxjs';
-import { LoggerInterceptor, resolveServiceHost } from './logger.interceptor';
+import { LoggerInterceptor, resolveServiceHost } from 'src/packages/interceptor/logger.interceptor';
 import { emitRequestLog, type RequestLogEntry } from '@packages/context/log-sink';
 
 jest.mock('@packages/context/log-sink', () => ({ emitRequestLog: jest.fn() }));

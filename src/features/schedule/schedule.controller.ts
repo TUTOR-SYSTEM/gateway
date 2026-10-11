@@ -44,7 +44,7 @@ export class ScheduleController {
     dto: CreateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.create', { userId: user.id, ...dto });
+    return this.rmqProducer.send('schedule.create', { userId: user.id, data: dto });
   }
 
   @Post('bulk')
@@ -56,7 +56,7 @@ export class ScheduleController {
     dto: CreateSchedulesDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.createBulk', { userId: user.id, ...dto });
+    return this.rmqProducer.send('schedule.createBulk', { userId: user.id, data: dto });
   }
 
   @Get()
@@ -75,7 +75,7 @@ export class ScheduleController {
     query: GetSchedulesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.getAll', { userId: user.id, ...query });
+    return this.rmqProducer.send('schedule.getAll', { userId: user.id, query });
   }
 
   @Get('class/:classId')
@@ -107,7 +107,7 @@ export class ScheduleController {
     dto: UpdateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.update', { userId: user.id, id, ...dto });
+    return this.rmqProducer.send('schedule.update', { userId: user.id, id, data: dto });
   }
 
   @Delete(':id')

@@ -1,0 +1,1 @@
+ALTER TABLE "test_scenarios" ADD COLUMN "expected_message" text;

@@ -42,9 +42,9 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
     ClassModule,
     SessionModule,
     ScheduleModule,
+    LessonModule,
     CurriculumModule,
     ChapterModule,
-    LessonModule,
     ExerciseModule,
     TuitionModule,
     DashboardModule,
@@ -56,7 +56,8 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
     UploadModule,
     EmailModule,
     LogModule,
-    TestScenarioModule,
+    // Test-monitor is a dev/QA tool: its routes are not registered in production at all.
+    ...(process.env.NODE_ENV === 'production' ? [] : [TestScenarioModule]),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },

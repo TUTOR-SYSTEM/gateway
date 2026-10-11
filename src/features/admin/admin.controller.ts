@@ -149,7 +149,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Tutor detail' })
   @SwaggerResponse({ status: 404, description: 'Tutor not found' })
   getTutor(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
   }
 
   @Put('tutors/:id')
@@ -217,7 +217,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Student detail' })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   getStudent(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getUserByField', { id: _id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
   }
 
   @Put('students/:id')

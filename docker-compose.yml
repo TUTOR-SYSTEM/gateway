@@ -33,10 +33,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports: ['5432:5432']
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # Tạo user_db / tutor_db / third_db (mỗi service một DB) khi volume mới khởi tạo
-      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tutor_db}' ]
       interval: 10s
@@ -97,7 +94,7 @@ services:
     env_file: ../user/docker.env
     environment:
       <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/user_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
       PORT: "4002"
       NODE_ENV: production
     ports: ['4002:4002']
@@ -110,7 +107,7 @@ services:
     env_file: ../tutor/docker.env
     environment:
       <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/tutor_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
       PORT: "4003"
       NODE_ENV: production
     ports: ['4003:4003']
@@ -123,7 +120,7 @@ services:
     env_file: ../third/docker.env
     environment:
       <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/third_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
       PORT: "4001"
       NODE_ENV: production
       GATEWAY_BASE_URL: http://gateway:8888

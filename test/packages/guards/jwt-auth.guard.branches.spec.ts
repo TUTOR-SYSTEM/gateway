@@ -33,10 +33,12 @@ describe('JwtAuthGuard branch coverage', () => {
   let guard: JwtAuthGuard;
   let env: Record<string, string | undefined>;
 
-  function build(configValues: Record<string, string | undefined> = {
+  function build(
+    configValues: Record<string, string | undefined> = {
       JWT_ACCESS_SECRET: 'access-secret',
       JWT_REFRESH_SECRET: 'refresh-secret',
-    }) {
+    },
+  ) {
     config = { get: jest.fn((key: string) => configValues[key]) };
     guard = new JwtAuthGuard(
       jwt as unknown as JwtService,
@@ -172,13 +174,8 @@ describe('JwtAuthGuard branch coverage', () => {
       expect(rmq.send).not.toHaveBeenCalled();
     });
 
-<<<<<<< Updated upstream
     it('does not cache a negative session result (GW-13), re-checks Redis', async () => {
       rmq.send.mockResolvedValueOnce(null);
-=======
-    it('rejects from cache without calling Redis after a recent null session', async () => {
-      rmq.send.mockResolvedValueOnce(false);
->>>>>>> Stashed changes
       await expect(guard.canActivate(buildContext({ headers: bearer() }))).rejects.toThrow(
         'Session expired or not found ...',
       );

@@ -1,5 +1,10 @@
 import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse as SwaggerResponse,
+} from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { Public, Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
@@ -164,7 +169,9 @@ export class AppController {
     return await this.rmqProducer.send<unknown, number>('kafka.user', 123);
   }
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get('health/postgres')
   @ApiOperation({
     summary: 'Check PostgreSQL connection',

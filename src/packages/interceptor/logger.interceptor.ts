@@ -125,7 +125,9 @@ export class LoggerInterceptor implements NestInterceptor {
     const request = http.getRequest<RequestWithUser>();
     const response = http.getResponse<Response>();
 
-    const { method, url } = request;
+    const { method } = request;
+    // Query strings can carry secrets (`/redis?key=...`, OAuth `code`), so they are never logged.
+    const url = (request.url ?? '').split('?')[0];
     const body: unknown = request.body;
     const startTime = Date.now();
     const ctx = getRequestContext();

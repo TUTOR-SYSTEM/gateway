@@ -7,6 +7,8 @@ import {
   Param,
   Post,
   Put,
+  NotImplementedException,
+  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -22,10 +24,7 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
-<<<<<<< Updated upstream
-import { RolesGuard } from '@packages/guards';
-=======
->>>>>>> Stashed changes
+import { ERROR_MESSAGES } from 'src/data/constants';
 import {
   createStudentSchema,
   type CreateStudentDto,
@@ -48,18 +47,24 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class StudentController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  // No user-service handler generates a student code yet (`user.getUserByField({})` was a 400).
+  // Answer 501 explicitly until one exists, instead of forwarding a broken call.
   @Get('get-student-code')
-  @HttpCode(StatusCodes.OK)
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @HttpCode(StatusCodes.NOT_IMPLEMENTED)
   @ApiOperation({
     summary: 'Generate student code for new student ...',
     description: 'Generate student code ...',
   })
   @SwaggerResponse({ status: 201, description: 'Student created' })
   generateStudentCodeController() {
-    return this.rmqProducer.send('user.getUserByField', {});
+    throw new NotImplementedException(ERROR_MESSAGES.STUDENT_CODE_NOT_IMPLEMENTED);
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({
     summary: 'Create student',
@@ -229,7 +234,7 @@ export class StudentController {
     },
   })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
-  findById(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+  findById(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
     return this.rmqProducer.send('user.getDetailUser', {
       userId: _id,
       actorId: _currentUser.id,
@@ -239,7 +244,7 @@ export class StudentController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'TUTOR')
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update student' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
@@ -276,7 +281,7 @@ export class StudentController {
   })
   @SwaggerResponse({ status: 200, description: 'Student updated' })
   update(
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe(updateStudentSchema))
     _dto: UpdateStudentDto,
     @CurrentUser() _currentUser: JwtGuardUser,
@@ -291,12 +296,12 @@ export class StudentController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'TUTOR')
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete student' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
-  delete(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+  delete(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
     return this.rmqProducer.send('user.deleteUserByAdmin', {
       id: _id,
       actorId: _currentUser.id,

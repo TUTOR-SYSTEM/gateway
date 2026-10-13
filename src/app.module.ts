@@ -67,13 +67,14 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    // LanguageGuard first: it only tags the request, so a 401 from JwtAuthGuard is localized too.
     {
       provide: APP_GUARD,
       useClass: LanguageGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

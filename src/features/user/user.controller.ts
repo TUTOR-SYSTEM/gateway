@@ -22,10 +22,6 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
-<<<<<<< Updated upstream
-import { RolesGuard } from '@packages/guards';
-=======
->>>>>>> Stashed changes
 import {
   changePasswordSchema,
   getUsersQuerySchema,
@@ -94,8 +90,12 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.GET_USER_SUCCESSFULLY,
   })
-  getDetailUserController(@CurrentUser() _user: Record<string, string>) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _user.id });
+  getDetailUserController(@CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.getDetailUser', {
+      userId: _user.id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Get('/get-by-field')
@@ -158,15 +158,12 @@ export class UserController {
     _updateUserDto: UpdateSelfDto,
   ) {
     return this.rmqProducer.send('user.updateUser', {
-<<<<<<< Updated upstream
       ..._updateUserDto,
       userId: _user.id,
+      // Trusted identity overrides any body field; the user service ignores `role` and reads actor.
       role: _user.role,
-=======
-      userId: _user.id,
-      role: _user.role,
-      ..._updateUserDto,
->>>>>>> Stashed changes
+      actorId: _user.id,
+      actorRole: _user.role,
     });
   }
 
@@ -188,10 +185,16 @@ export class UserController {
   })
   updateUserByAdminController(
     @Param('id') _id: string,
+    @CurrentUser() _user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { ..._updateUserDto, id: _id });
+    return this.rmqProducer.send('user.updateUserByAdmin', {
+      ..._updateUserDto,
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Roles('ADMIN')
@@ -209,8 +212,12 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
   })
-  updateStatusUserController(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.updateStatusUser', { id: _id });
+  updateStatusUserController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.updateStatusUser', {
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Roles('ADMIN')
@@ -228,8 +235,12 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
   })
-  deleteUserByAdminController(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
+  deleteUserByAdminController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.deleteUserByAdmin', {
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Post('change-password')
@@ -248,13 +259,9 @@ export class UserController {
     @Body(new ZodValidationPipe(changePasswordSchema))
     _changePasswordDto: ChangePasswordValues,
   ) {
-<<<<<<< Updated upstream
-    return this.rmqProducer.send('user.changePassword', { ..._changePasswordDto, userId: _user.id });
-=======
     return this.rmqProducer.send('user.changePassword', {
-      userId: _user.id,
       ..._changePasswordDto,
+      userId: _user.id,
     });
->>>>>>> Stashed changes
   }
 }

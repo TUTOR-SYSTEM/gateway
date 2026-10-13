@@ -1,6 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiOperation,
@@ -31,6 +30,12 @@ import {
 import { ApiResponse, Public } from '@packages/decorators';
 import { ZodValidationPipe } from '@packages/pipes';
 import type { FacebookProfile, GoogleProfile } from '@packages/strategy';
+import {
+  FacebookOAuthCallbackGuard,
+  FacebookOAuthStartGuard,
+  GoogleOAuthCallbackGuard,
+  GoogleOAuthStartGuard,
+} from '@packages/guards/oauth-state.guard';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 type RequestWithGoogleProfile = Request & { user: GoogleProfile };
@@ -260,7 +265,7 @@ export class AuthController {
 
   @Public()
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthStartGuard)
   @ApiOperation({
     summary: 'Google OAuth login',
     description: 'Redirect to Google consent screen for authentication',
@@ -272,7 +277,7 @@ export class AuthController {
 
   @Public()
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthCallbackGuard)
   @ApiOperation({
     summary: 'Google OAuth callback',
     description: 'Handle Google OAuth callback and return JWT tokens',
@@ -285,17 +290,16 @@ export class AuthController {
     @Req() req: RequestWithGoogleProfile,
     @Res() res: Response,
   ): Promise<void> {
-    const { accessToken, refreshToken } = await this.rmqProducer.send<LoginResponseDto, GoogleProfile>(
-      'auth.googleLogin',
-      req.user,
-    );
+    const { accessToken, refreshToken } = await this.rmqProducer.send<
+      LoginResponseDto,
+      GoogleProfile
+    >('auth.googleLogin', req.user);
 
     const redirectBase =
       this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URL') ??
       'http://localhost:3000/oauth/callback';
     const redirectUrl = new URL(redirectBase);
-    redirectUrl.searchParams.set('accessToken', accessToken);
-    redirectUrl.searchParams.set('refreshToken', refreshToken);
+    redirectUrl.hash = new URLSearchParams({ accessToken, refreshToken }).toString();
 
     res.redirect(redirectUrl.toString());
   }
@@ -303,7 +307,7 @@ export class AuthController {
   // GET /auth/facebook
   @Public()
   @Get('facebook')
-  @UseGuards(AuthGuard('facebook'))
+  @UseGuards(FacebookOAuthStartGuard)
   @ApiOperation({
     summary: 'Facebook OAuth login',
     description: 'Redirect to Facebook consent screen for authentication',
@@ -316,7 +320,7 @@ export class AuthController {
   // GET /auth/facebook/callback
   @Public()
   @Get('facebook/callback')
-  @UseGuards(AuthGuard('facebook'))
+  @UseGuards(FacebookOAuthCallbackGuard)
   @ApiOperation({
     summary: 'Facebook OAuth callback',
     description: 'Handle Facebook OAuth callback and return JWT tokens',
@@ -339,8 +343,7 @@ export class AuthController {
       this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URL') ??
       'http://localhost:3000/oauth/callback';
     const redirectUrl = new URL(redirectBase);
-    redirectUrl.searchParams.set('accessToken', accessToken);
-    redirectUrl.searchParams.set('refreshToken', refreshToken);
+    redirectUrl.hash = new URLSearchParams({ accessToken, refreshToken }).toString();
 
     res.redirect(redirectUrl.toString());
   }

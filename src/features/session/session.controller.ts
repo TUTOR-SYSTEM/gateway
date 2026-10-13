@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createSessionSchema,
   createSessionsSchema,
@@ -34,6 +46,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class SessionController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create session', description: 'Create a single class session' })
@@ -47,9 +61,14 @@ export class SessionController {
     return this.rmqProducer.send('session.create', { userId: user.id, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post('bulk')
   @HttpCode(StatusCodes.CREATED)
-  @ApiOperation({ summary: 'Create sessions (bulk)', description: 'Create up to 50 class sessions at once' })
+  @ApiOperation({
+    summary: 'Create sessions (bulk)',
+    description: 'Create up to 50 class sessions at once',
+  })
   @SwaggerResponse({ status: 201, description: 'Sessions created' })
   createBulk(
     @Body(new ZodValidationPipe<CreateSessionsDto>(createSessionsSchema))
@@ -101,6 +120,8 @@ export class SessionController {
     return this.rmqProducer.send('session.getById', { userId: user.id, id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Put(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update session' })
@@ -115,6 +136,8 @@ export class SessionController {
     return this.rmqProducer.send('session.update', { userId: user.id, id, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Delete(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete session' })

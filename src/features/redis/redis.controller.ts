@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
-import { Controller, Get, HttpCode, Query, UseGuards } from '@nestjs/common';
-=======
 import { Controller, ForbiddenException, Get, HttpCode, Query, UseGuards } from '@nestjs/common';
->>>>>>> Stashed changes
 import {
   ApiTags,
   ApiOperation,
@@ -14,12 +10,7 @@ import { StatusCodes } from 'http-status-codes';
 import { Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
 import { ZodValidationPipe } from '@packages/pipes';
-<<<<<<< Updated upstream
-import { Roles } from '@packages/decorators';
-import { RolesGuard } from '@packages/guards';
-=======
 import { ERROR_MESSAGES } from '../../data/constants';
->>>>>>> Stashed changes
 import { getRedisQuerySchema, type GetRedisQueryDto } from '@packages/entities/redis';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 

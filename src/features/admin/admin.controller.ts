@@ -20,8 +20,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
-import { Roles } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
+import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { ZodValidationPipe } from '@packages/pipes';
 import {
   createManagedUserSchema,
@@ -119,10 +120,7 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Tutor created' })
   createTutor(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
-<<<<<<< Updated upstream
-=======
     // role gắn server-side SAU validate: client không quyết định role; USER mặc định STUDENT nếu thiếu.
->>>>>>> Stashed changes
     return this.rmqProducer.send('user.createUser', { ..._dto, role: 'TUTOR' });
   }
 
@@ -143,12 +141,8 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     query: ListManagedUsersQueryDto,
   ) {
-<<<<<<< Updated upstream
-    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'TUTOR' });
-=======
     // role đặt SAU spread: client không thể ghi đè role (USER chỉ lọc khi có role trong payload).
     return this.rmqProducer.send('user.getUsers', { ...query, role: 'TUTOR' });
->>>>>>> Stashed changes
   }
 
   @Get('tutors/:id')
@@ -157,8 +151,13 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tutor detail' })
   @SwaggerResponse({ status: 404, description: 'Tutor not found' })
-  getTutor(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _id, expectedRole: 'TUTOR' });
+  getTutor(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.getDetailUser', {
+      userId: _id,
+      expectedRole: 'TUTOR',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Put('tutors/:id')
@@ -169,9 +168,16 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Tutor updated' })
   updateTutor(
     @Param('id') _id: string,
+    @CurrentUser() _currentUser: JwtGuardUser,
     @Body(new ZodValidationPipe(updateManagedUserSchema)) _dto: UpdateManagedUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { ..._dto, id: _id, expectedRole: 'TUTOR' });
+    return this.rmqProducer.send('user.updateUserByAdmin', {
+      ..._dto,
+      id: _id,
+      expectedRole: 'TUTOR',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Delete('tutors/:id')
@@ -179,8 +185,13 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete tutor' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tutor deleted' })
-  deleteTutor(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id, expectedRole: 'TUTOR' });
+  deleteTutor(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.deleteUserByAdmin', {
+      id: _id,
+      expectedRole: 'TUTOR',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   // ─── Students ──────────────────────────────────────────────────────
@@ -216,12 +227,8 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     query: ListManagedUsersQueryDto,
   ) {
-<<<<<<< Updated upstream
-    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'STUDENT' });
-=======
     // role đặt SAU spread: client không thể ghi đè role (USER chỉ lọc khi có role trong payload).
     return this.rmqProducer.send('user.getUsers', { ...query, role: 'STUDENT' });
->>>>>>> Stashed changes
   }
 
   @Get('students/:id')
@@ -230,8 +237,13 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student detail' })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
-  getStudent(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _id, expectedRole: 'STUDENT' });
+  getStudent(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.getDetailUser', {
+      userId: _id,
+      expectedRole: 'STUDENT',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Put('students/:id')
@@ -245,9 +257,16 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Student updated' })
   updateStudent(
     @Param('id') _id: string,
+    @CurrentUser() _currentUser: JwtGuardUser,
     @Body(new ZodValidationPipe(updateManagedStudentSchema)) _dto: UpdateManagedStudentDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { ..._dto, id: _id, expectedRole: 'STUDENT' });
+    return this.rmqProducer.send('user.updateUserByAdmin', {
+      ..._dto,
+      id: _id,
+      expectedRole: 'STUDENT',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Delete('students/:id')
@@ -255,7 +274,12 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete student' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
-  deleteStudent(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id, expectedRole: 'STUDENT' });
+  deleteStudent(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.deleteUserByAdmin', {
+      id: _id,
+      expectedRole: 'STUDENT',
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 }

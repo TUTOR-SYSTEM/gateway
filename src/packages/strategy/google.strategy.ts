@@ -11,24 +11,41 @@ export type GoogleProfile = {
   avatar?: string;
 };
 
+/**
+ * Fails at boot when the Google OAuth client is not configured. No placeholder credentials:
+ * a silent fallback would only surface later as an opaque provider error.
+ */
+function googleOptions(configService: ConfigService) {
+  const clientID = configService.get<string>('GOOGLE_CLIENT_ID');
+  const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
+  if (!clientID || !clientSecret) {
+    throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set');
+  }
+  return {
+    clientID,
+    clientSecret,
+    callbackURL:
+      configService.get<string>('GOOGLE_CALLBACK_URL') ||
+      'http://localhost:8888/auth/google/callback',
+    scope: ['email', 'profile'],
+  };
+}
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(configService: ConfigService) {
-    super({
-      clientID: configService.get<string>('GOOGLE_CLIENT_ID') || 'dev-missing-google-client-id',
-      clientSecret:
-        configService.get<string>('GOOGLE_CLIENT_SECRET') || 'dev-missing-google-client-secret',
-      callbackURL:
-        configService.get<string>('GOOGLE_CALLBACK_URL') ||
-        'http://localhost:8888/auth/google/callback',
-      scope: ['email', 'profile'],
-    });
+    super(googleOptions(configService));
   }
 
   validate(_accessToken: string, _refreshToken: string, profile: Profile): GoogleProfile {
     const email = profile.emails?.[0]?.value;
     if (!email) {
       throw new BadRequestException('Google account has no public email');
+    }
+    // Only an explicit `false` is rejected; the claim is absent for some account types.
+    const raw = (profile as Profile & { _json?: { email_verified?: boolean } })._json;
+    if (raw?.email_verified === false) {
+      throw new BadRequestException('Google account email is not verified');
     }
 
     return {

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,7 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createExerciseSchema,
   getExerciseQuerySchema,
@@ -33,9 +44,14 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class ExerciseController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
-  @ApiOperation({ summary: 'Create exercise', description: 'Submit an exercise for a session/lesson' })
+  @ApiOperation({
+    summary: 'Create exercise',
+    description: 'Submit an exercise for a session/lesson',
+  })
   @SwaggerResponse({ status: 201, description: 'Exercise submitted' })
   create(
     @Body(new ZodValidationPipe<CreateExerciseDto>(createExerciseSchema))
@@ -77,7 +93,10 @@ export class ExerciseController {
 
   @Patch(':id/submit')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Submit exercise', description: 'Re-submit the files of an existing (ungraded) exercise' })
+  @ApiOperation({
+    summary: 'Submit exercise',
+    description: 'Re-submit the files of an existing (ungraded) exercise',
+  })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise re-submitted' })
   submit(
@@ -89,9 +108,14 @@ export class ExerciseController {
     return this.rmqProducer.send('exercise.submit', { userId: _user.id, id: _id, data: _dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Patch(':id/grade')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Grade exercise', description: 'Grade an exercise submission (score 0-10 + comment)' })
+  @ApiOperation({
+    summary: 'Grade exercise',
+    description: 'Grade an exercise submission (score 0-10 + comment)',
+  })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise graded' })
   grade(

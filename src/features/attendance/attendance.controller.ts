@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Put } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Put, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,11 +8,9 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
-import {
-  upsertAttendanceSchema,
-  type UpsertAttendanceDto,
-} from '@packages/entities/attendance';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
+import { upsertAttendanceSchema, type UpsertAttendanceDto } from '@packages/entities/attendance';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
@@ -38,6 +36,8 @@ export class AttendanceController {
     return this.rmqProducer.send('attendance.getBySession', { userId: user.id, sessionId });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Put()
   @HttpCode(StatusCodes.OK)
   @ApiOperation({

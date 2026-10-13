@@ -19,6 +19,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+  // Lets Nest run onModuleDestroy (RMQ clients close) on SIGTERM/SIGINT instead of dropping
+  // in-flight requests.
+  app.enableShutdownHooks();
 
   // First in the chain: opens the AsyncLocalStorage context (correlationId/traceId/serviceName)
   // that every interceptor, guard, controller, and `RmqProducer.send()` call below reads from.
@@ -38,49 +41,47 @@ async function bootstrap() {
   const rmqProducer = app.get(RmqProducer);
   setLogSink((entry) => rmqProducer.emit('log.create', entry));
 
-  const config = new DocumentBuilder()
-    .setTitle('Backends API')
-    .setDescription('API documentation for the Backends financial management system')
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Enter JWT access token',
+  // The API schema is not published in production; it is served only in development/staging.
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Tutor Management API')
+      .setDescription('API documentation for the Tutor Management backend')
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Enter JWT access token',
+        },
+        'access-token',
+      )
+      // ── Tutor Management ─────────────────────────────
+      .addTag('Users')
+      .addTag('Auth')
+      .addTag('Students')
+      .addTag('Curriculum')
+      .addTag('Chapter')
+      .addTag('Lesson')
+      .addTag('Classes')
+      .addTag('Schedules')
+      .addTag('Sessions')
+      .addTag('Exercises')
+      .addTag('Tuitions')
+      .addTag('Notifications')
+      .addTag('Reports')
+      // ── System ────────────────────────────────────────
+      .addTag('Upload')
+      .addTag('Health')
+      .addTag('Redis')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api-docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
       },
-      'access-token',
-    )
-    // ── Tutor Management ─────────────────────────────
-    .addTag('Users')
-    .addTag('Auth')
-    .addTag('Students')
-    .addTag('Curriculum')
-    .addTag('Chapter')
-    .addTag('Lesson')
-    .addTag('Classes')
-    .addTag('Schedules')
-    .addTag('Sessions')
-    .addTag('Exercises')
-    .addTag('Tuitions')
-    .addTag('Notifications')
-    // ── Finance Management ────────────────────────────
-    .addTag('Categories')
-    .addTag('Wallets')
-    .addTag('Transactions')
-    .addTag('Reports')
-    // ── System ────────────────────────────────────────
-    .addTag('Upload')
-    .addTag('Cloudinary')
-    .addTag('Health')
-    .addTag('Redis')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+    });
+  }
 
   const port = process.env.PORT ?? 8888;
   await app.listen(port);

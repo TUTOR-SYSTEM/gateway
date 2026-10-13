@@ -22,7 +22,10 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
+<<<<<<< Updated upstream
 import { RolesGuard } from '@packages/guards';
+=======
+>>>>>>> Stashed changes
 import {
   createStudentSchema,
   type CreateStudentDto,
@@ -32,6 +35,7 @@ import {
   type UpdateStudentDto,
 } from '@packages/entities/student';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
+import { RolesGuard } from '@packages/guards';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
@@ -123,6 +127,8 @@ export class StudentController {
     return this.rmqProducer.send('user.createUser', { ..._dto, userId: _currentUser.id });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Get()
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'List students', description: 'Get paginated list of students' })

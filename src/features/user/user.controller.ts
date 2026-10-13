@@ -22,7 +22,10 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
+<<<<<<< Updated upstream
 import { RolesGuard } from '@packages/guards';
+=======
+>>>>>>> Stashed changes
 import {
   changePasswordSchema,
   getUsersQuerySchema,
@@ -39,6 +42,7 @@ import {
   type UserDataFieldDto,
 } from '@packages/entities/user';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
+import { RolesGuard } from '@packages/guards';
 import { USER_SWAGGER_MESSAGES } from 'src/data/swaggers/messages';
 import { USER_SWAGGERS_DATA } from 'src/data/swaggers/data/user.swagger';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
@@ -53,6 +57,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class UserController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Get()
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -113,6 +119,8 @@ export class UserController {
     return this.rmqProducer.send('user.getUserByField', _dataFieldDto);
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Post()
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -150,12 +158,20 @@ export class UserController {
     _updateUserDto: UpdateSelfDto,
   ) {
     return this.rmqProducer.send('user.updateUser', {
+<<<<<<< Updated upstream
       ..._updateUserDto,
       userId: _user.id,
       role: _user.role,
+=======
+      userId: _user.id,
+      role: _user.role,
+      ..._updateUserDto,
+>>>>>>> Stashed changes
     });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Put('/:id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -178,6 +194,8 @@ export class UserController {
     return this.rmqProducer.send('user.updateUserByAdmin', { ..._updateUserDto, id: _id });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Put('/:id/status')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -195,6 +213,8 @@ export class UserController {
     return this.rmqProducer.send('user.updateStatusUser', { id: _id });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Delete('/:id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -228,6 +248,13 @@ export class UserController {
     @Body(new ZodValidationPipe(changePasswordSchema))
     _changePasswordDto: ChangePasswordValues,
   ) {
+<<<<<<< Updated upstream
     return this.rmqProducer.send('user.changePassword', { ..._changePasswordDto, userId: _user.id });
+=======
+    return this.rmqProducer.send('user.changePassword', {
+      userId: _user.id,
+      ..._changePasswordDto,
+    });
+>>>>>>> Stashed changes
   }
 }

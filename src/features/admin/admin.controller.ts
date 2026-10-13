@@ -119,6 +119,10 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Tutor created' })
   createTutor(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
+<<<<<<< Updated upstream
+=======
+    // role gắn server-side SAU validate: client không quyết định role; USER mặc định STUDENT nếu thiếu.
+>>>>>>> Stashed changes
     return this.rmqProducer.send('user.createUser', { ..._dto, role: 'TUTOR' });
   }
 
@@ -137,9 +141,14 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Tutors fetched' })
   listTutors(
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
-    _query: ListManagedUsersQueryDto,
+    query: ListManagedUsersQueryDto,
   ) {
+<<<<<<< Updated upstream
     return this.rmqProducer.send('user.getUsers', { ..._query, role: 'TUTOR' });
+=======
+    // role đặt SAU spread: client không thể ghi đè role (USER chỉ lọc khi có role trong payload).
+    return this.rmqProducer.send('user.getUsers', { ...query, role: 'TUTOR' });
+>>>>>>> Stashed changes
   }
 
   @Get('tutors/:id')
@@ -205,9 +214,14 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Students fetched' })
   listStudents(
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
-    _query: ListManagedUsersQueryDto,
+    query: ListManagedUsersQueryDto,
   ) {
+<<<<<<< Updated upstream
     return this.rmqProducer.send('user.getUsers', { ..._query, role: 'STUDENT' });
+=======
+    // role đặt SAU spread: client không thể ghi đè role (USER chỉ lọc khi có role trong payload).
+    return this.rmqProducer.send('user.getUsers', { ...query, role: 'STUDENT' });
+>>>>>>> Stashed changes
   }
 
   @Get('students/:id')

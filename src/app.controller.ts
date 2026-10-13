@@ -182,7 +182,6 @@ export class AppController {
           connection: 'postgres',
           status: 'connected',
           timestamp: '2026-09-26T08:35:31.437Z',
-          databaseStats: {},
         },
         timestamp: '2026-09-26T08:35:31.437Z',
         method: 'GET',
@@ -194,17 +193,16 @@ export class AppController {
   async checkPostgresConnection(): Promise<unknown> {
     this.logger.log('[HEALTH] Checking PostgreSQL connection and fetching user data');
     try {
-      const response = await this.rmqProducer.send<unknown, unknown>('health.postgres', {
-        fetchData: true,
-      });
-      this.logger.log(`[HEALTH] PostgreSQL data fetched: ${JSON.stringify(response)}`);
+      // No `fetchData` flag: the user service only attaches sample user rows when it is set,
+      // and those must never leave this public endpoint. Only the connection status is returned.
+      await this.rmqProducer.send<unknown, unknown>('health.postgres', {});
+      this.logger.log('[HEALTH] PostgreSQL health check completed');
       // The global `ResponseInterceptor` already wraps whatever this returns in its own
       // `{statusCode, message, data, ...}` envelope — don't nest a second one.
       return {
         connection: 'postgres',
         status: 'connected',
         timestamp: new Date().toISOString(),
-        databaseStats: response,
       };
     } catch (error) {
       this.logger.error(`[HEALTH] PostgreSQL connection failed: ${error}`);
@@ -230,7 +228,6 @@ export class AppController {
           connection: 'redis',
           status: 'connected',
           timestamp: '2026-09-26T08:35:31.437Z',
-          cacheStats: {},
         },
         timestamp: '2026-09-26T08:35:31.437Z',
         method: 'GET',
@@ -242,17 +239,15 @@ export class AppController {
   async checkRedisConnection(): Promise<unknown> {
     this.logger.log('[HEALTH] Checking Redis connection and fetching cache data');
     try {
-      const response = await this.rmqProducer.send<unknown, unknown>('health.redis', {
-        fetchData: true,
-      });
-      this.logger.log(`[HEALTH] Redis data fetched: ${JSON.stringify(response)}`);
+      // The responder's stats (memory info, key counts) are not returned: this endpoint is public.
+      await this.rmqProducer.send<unknown, unknown>('health.redis', {});
+      this.logger.log('[HEALTH] Redis health check completed');
       // The global `ResponseInterceptor` already wraps whatever this returns in its own
       // `{statusCode, message, data, ...}` envelope — don't nest a second one.
       return {
         connection: 'redis',
         status: 'connected',
         timestamp: new Date().toISOString(),
-        cacheStats: response,
       };
     } catch (error) {
       this.logger.error(`[HEALTH] Redis connection failed: ${error}`);

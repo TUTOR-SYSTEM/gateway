@@ -19,6 +19,12 @@ export const ERROR_TRANSLATIONS = {
   FAILED_TO_UPDATE_PASSWORD: { vi: 'Cập nhật mật khẩu thất bại', en: 'Failed to update password' },
   INVALID_USER_ID: { vi: 'ID người dùng không hợp lệ', en: 'Invalid user ID' },
   UPLOAD_KEY_REQUIRED: { vi: 'Thiếu tham số key', en: 'The key query parameter is required' },
+  UPLOAD_KEY_INVALID: { vi: 'Khóa tệp không hợp lệ', en: 'Invalid file key' },
+  UPLOAD_FILE_REQUIRED: { vi: 'Vui lòng chọn tệp để tải lên', en: 'A file is required' },
+  UPLOAD_FILES_REQUIRED: {
+    vi: 'Vui lòng chọn ít nhất một tệp để tải lên',
+    en: 'At least one file is required',
+  },
   USER_ALREADY_LOGGED_OUT: { vi: 'Người dùng đã đăng xuất', en: 'User already logged out' },
   INVALID_TOKEN_PAYLOAD: { vi: 'Nội dung token không hợp lệ', en: 'Invalid token payload' },
   INVALID_TOKEN_TYPE: { vi: 'Loại token không hợp lệ', en: 'Invalid token type' },

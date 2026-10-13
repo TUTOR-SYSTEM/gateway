@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 import { Controller, Get, HttpCode, Query, UseGuards } from '@nestjs/common';
+=======
+import { Controller, ForbiddenException, Get, HttpCode, Query, UseGuards } from '@nestjs/common';
+>>>>>>> Stashed changes
 import {
   ApiTags,
   ApiOperation,
@@ -7,11 +11,26 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
-import { ZodValidationPipe } from '@packages/pipes';
 import { Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
+import { ZodValidationPipe } from '@packages/pipes';
+<<<<<<< Updated upstream
+import { Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
+=======
+import { ERROR_MESSAGES } from '../../data/constants';
+>>>>>>> Stashed changes
 import { getRedisQuerySchema, type GetRedisQueryDto } from '@packages/entities/redis';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
+
+/** Key prefixes holding sessions / refresh / reset tokens — never readable over HTTP. */
+const SENSITIVE_KEY_PREFIXES = [
+  'session:',
+  'login-session:',
+  'reset-password:',
+  'refresh:',
+  'refresh-token:',
+];
 
 /**
  * Gateway is a thin HTTP edge for `redis`: validation/guards/Swagger stay, the handler forwards
@@ -19,6 +38,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
  */
 @ApiTags('Redis')
 @ApiBearerAuth('access-token')
+@UseGuards(RolesGuard)
+@Roles('ADMIN')
 @Controller('redis')
 export class RedisController {
   constructor(private readonly rmqProducer: RmqProducer) {}
@@ -33,6 +54,10 @@ export class RedisController {
   get(
     @Query(new ZodValidationPipe<GetRedisQueryDto>(getRedisQuerySchema)) query: GetRedisQueryDto,
   ) {
+    const lowered = query.key.toLowerCase();
+    if (SENSITIVE_KEY_PREFIXES.some((prefix) => lowered.startsWith(prefix))) {
+      throw new ForbiddenException(ERROR_MESSAGES.PERMISSION_DENIED);
+    }
     return this.rmqProducer.send('redis.get', { key: query.key });
   }
 }

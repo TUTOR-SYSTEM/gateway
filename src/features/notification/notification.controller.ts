@@ -61,7 +61,11 @@ export class NotificationController {
     dto: CreateNotificationDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('notification.create', { ...dto, senderId: user.id });
+    return this.rmqProducer.send('notification.create', {
+      ...dto,
+      senderId: user.id,
+      role: user.role,
+    });
   }
 
   @Get()
@@ -97,8 +101,17 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get notification detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification detail' })
+<<<<<<< Updated upstream
   getById(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
     return this.rmqProducer.send('notification.getById', { id, userId: user.id });
+=======
+  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('notification.getById', {
+      id,
+      userId: user.id,
+      role: user.role,
+    });
+>>>>>>> Stashed changes
   }
 
   @Patch(':id/read')
@@ -106,8 +119,17 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark notification as read' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Marked as read' })
+<<<<<<< Updated upstream
   markAsRead(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
     return this.rmqProducer.send('notification.markAsRead', { id, userId: user.id });
+=======
+  markAsRead(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('notification.markAsRead', {
+      id,
+      userId: user.id,
+      role: user.role,
+    });
+>>>>>>> Stashed changes
   }
 
   @Delete(':id')
@@ -115,7 +137,16 @@ export class NotificationController {
   @ApiOperation({ summary: 'Delete notification' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification deleted' })
+<<<<<<< Updated upstream
   delete(@CurrentUser() user: JwtGuardUser, @Param('id') id: string) {
     return this.rmqProducer.send('notification.delete', { id, userId: user.id });
+=======
+  delete(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('notification.delete', {
+      id,
+      userId: user.id,
+      role: user.role,
+    });
+>>>>>>> Stashed changes
   }
 }

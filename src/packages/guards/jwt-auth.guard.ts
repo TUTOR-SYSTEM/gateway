@@ -118,7 +118,7 @@ export class JwtAuthGuard implements CanActivate {
     // Verify the user has an active session in Redis via third-service over RabbitMQ.
     // A missing session means the user logged out or the session expired.
     // Fail open: if RabbitMQ/Redis is unreachable, let the request through (availability > security
-    // for infrastructure failures). Only block when Redis explicitly returns null (session deleted).
+    // for infrastructure failures). Only block when Redis explicitly reports the session key is gone (exists=false).
     // In-memory cache avoids a RabbitMQ round-trip on every request from the same user.
     const cached = this.getCachedSession(payload.id);
     if (cached) {
@@ -126,12 +126,17 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const session = await this.rmqProducer.send<string | null, { key: string }>(
-        'redis.get',
+      const sessionExists = await this.rmqProducer.send<boolean, { key: string }>(
+        'redis.exists',
         { key: `${SESSION_KEY_PREFIX}${payload.id}` },
       );
+<<<<<<< Updated upstream
       if (!session) {
         this.sessionCache.delete(payload.id);
+=======
+      if (!sessionExists) {
+        this.setCachedSession(payload.id, false);
+>>>>>>> Stashed changes
         throw new UnauthorizedException('Session expired or not found ...');
       }
       this.setCachedSession(payload.id, true);

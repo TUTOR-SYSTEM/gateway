@@ -33,7 +33,7 @@ describe('JwtAuthGuard', () => {
     };
     reflector = new Reflector();
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
-    rmq = { send: jest.fn().mockResolvedValue('{"ok":true}') };
+    rmq = { send: jest.fn().mockResolvedValue(true) };
     guard = new JwtAuthGuard(
       jwt as unknown as JwtService,
       config as unknown as ConfigService,
@@ -75,7 +75,7 @@ describe('JwtAuthGuard', () => {
     const req: Req = { headers: { authorization: 'Bearer t' } };
     await expect(guard.canActivate(buildContext(req))).resolves.toBe(true);
     expect(req.user).toEqual({ id: 'user-1', email: 'a@b.c', typ: 'access', role: 'TUTOR' });
-    expect(rmq.send).toHaveBeenCalledWith('redis.get', { key: 'session:user-1' });
+    expect(rmq.send).toHaveBeenCalledWith('redis.exists', { key: 'session:user-1' });
   });
 
   it('verifies with JWT_ACCESS_SECRET from config', async () => {
@@ -84,8 +84,8 @@ describe('JwtAuthGuard', () => {
     expect(jwt.verify).toHaveBeenCalledWith('t', { secret: 'access-secret' });
   });
 
-  it('rejects when Redis returns null (session deleted)', async () => {
-    rmq.send.mockResolvedValue(null);
+  it('rejects when Redis reports no session (deleted)', async () => {
+    rmq.send.mockResolvedValue(false);
     const req = { headers: { authorization: 'Bearer t' } };
     await expect(guard.canActivate(buildContext(req))).rejects.toThrow('Session expired or not found ...');
   });
@@ -97,8 +97,13 @@ describe('JwtAuthGuard', () => {
     expect(rmq.send).toHaveBeenCalledTimes(1);
   });
 
+<<<<<<< Updated upstream
   it('does not cache an invalid session (GW-13): each request re-checks', async () => {
     rmq.send.mockResolvedValue(null);
+=======
+  it('caches an invalid session and rejects without another RPC', async () => {
+    rmq.send.mockResolvedValue(false);
+>>>>>>> Stashed changes
     const req = { headers: { authorization: 'Bearer t' } };
     await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);

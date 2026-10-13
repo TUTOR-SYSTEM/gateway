@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
-import { Public } from '@packages/decorators';
+import { Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
@@ -13,7 +14,9 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class EmailController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get()
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Test email', description: 'Send a test email through the third-service' })

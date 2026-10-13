@@ -54,3 +54,32 @@ export function resolveRmqTarget(pattern: string): RmqTarget {
   }
   return target;
 }
+
+export interface RmqCallPolicy {
+  timeoutMs?: number;
+  maxRetries?: number;
+}
+
+/** Slow operations: longer per-call timeout and no retry (LLM, test runs, file transfer). */
+const RMQ_SLOW_PATTERN_POLICIES: Record<string, RmqCallPolicy> = {
+  'ai.chat': { timeoutMs: 60000, maxRetries: 0 },
+  'testscenario.run': { timeoutMs: 120000, maxRetries: 0 },
+  'testscenario.generate': { timeoutMs: 120000, maxRetries: 0 },
+};
+const RMQ_SLOW_PREFIX_POLICIES: Record<string, RmqCallPolicy> = {
+  upload: { timeoutMs: 60000, maxRetries: 0 },
+};
+
+export function resolveRmqCallPolicy(pattern: string): RmqCallPolicy {
+  return (
+    RMQ_SLOW_PATTERN_POLICIES[pattern] ?? RMQ_SLOW_PREFIX_POLICIES[pattern.split('.')[0]] ?? {}
+  );
+}
+
+/** Read-only method names are safe to retry after a timeout; everything else is a write. */
+export function isIdempotentPattern(pattern: string): boolean {
+  const method = pattern.split('.').slice(1).join('.');
+  return /^(get|find|list|history|stats|runs|authprofiles|fixtures\.list|fixtures\.resolve|check|verify)/i.test(
+    method,
+  );
+}

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createStudentSchema,
   type CreateStudentDto,
@@ -108,7 +120,7 @@ export class StudentController {
     _dto: CreateStudentDto,
     @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('user.createUser', { userId: _currentUser.id, ..._dto });
+    return this.rmqProducer.send('user.createUser', { ..._dto, userId: _currentUser.id });
   }
 
   @Get()
@@ -145,6 +157,8 @@ export class StudentController {
   }
 
   @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Get student detail',
@@ -209,11 +223,17 @@ export class StudentController {
     },
   })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
-  findById(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
+  findById(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.getDetailUser', {
+      userId: _id,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update student' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
@@ -253,16 +273,28 @@ export class StudentController {
     @Param('id') _id: string,
     @Body(new ZodValidationPipe(updateStudentSchema))
     _dto: UpdateStudentDto,
+    @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('user.updateUser', { userId: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUser', {
+      ..._dto,
+      userId: _id,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete student' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
-  delete(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
+  delete(@Param('id') _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('user.deleteUserByAdmin', {
+      id: _id,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 }

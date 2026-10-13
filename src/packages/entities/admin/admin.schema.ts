@@ -10,7 +10,6 @@ import { z } from 'zod';
 
 /** Shared password-complexity refinement (mirrors the auth/user rules). */
 function refinePassword(password: string, ctx: z.RefinementCtx): void {
-  if (password.length < 8 || password.length > 14) return;
   if (!/[a-z]/.test(password)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -66,7 +65,7 @@ export const createManagedUserSchema = z
       .max(100, { message: 'Last name must be at most 100 characters' }),
     password: z
       .string({ message: 'Password is required' })
-      .min(6, { message: 'Password must be at least 6 characters' })
+      .min(8, { message: 'Password must be at least 8 characters' })
       .max(20, { message: 'Password must be at most 20 characters' }),
     phone: z.string().trim().max(20, { message: 'Phone must be at most 20 characters' }).optional(),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),

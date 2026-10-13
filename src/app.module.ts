@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { getJwtModuleOptionsFromConfig } from './packages/configs/jwt-sign.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './features/auth/auth.module';
@@ -58,9 +59,9 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
     LogModule,
     // Test-monitor is a dev/QA tool: its routes are not registered in production at all.
     ...(process.env.NODE_ENV === 'production' ? [] : [TestScenarioModule]),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1h' },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => getJwtModuleOptionsFromConfig(configService),
     }),
   ],
   controllers: [AppController],

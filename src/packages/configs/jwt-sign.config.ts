@@ -14,11 +14,16 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
 }
 
 export function getJwtTokensConfig(configService: ConfigService): JwtTokensConfig {
+  // Fail fast: no hardcoded fallback secret. `JWT_SECRET` is a legacy alias for the access secret.
   const accessSecret =
-    configService.get<string>('JWT_ACCESS_SECRET') ??
-    configService.get<string>('JWT_SECRET') ??
-    'dev-insecure-jwt-secret';
-  const refreshSecret = configService.get<string>('JWT_REFRESH_SECRET') ?? accessSecret;
+    configService.get<string>('JWT_ACCESS_SECRET') || configService.get<string>('JWT_SECRET');
+  if (!accessSecret) {
+    throw new Error('Missing required env JWT_ACCESS_SECRET (or legacy JWT_SECRET)');
+  }
+  const refreshSecret = configService.get<string>('JWT_REFRESH_SECRET');
+  if (!refreshSecret) {
+    throw new Error('Missing required env JWT_REFRESH_SECRET');
+  }
 
   const accessExpiresIn = parsePositiveInt(
     configService.get<string>('JWT_ACCESS_EXPIRES_SECONDS'),

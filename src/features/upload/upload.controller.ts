@@ -25,9 +25,10 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { StatusCodes } from 'http-status-codes';
-import { Public } from '@packages/decorators';
 import { ERROR_MESSAGES } from 'src/data/constants';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 
 /**
  * Gateway is a thin HTTP edge for file uploads (Cloudflare R2): the multipart body is parsed
@@ -40,9 +41,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class UploadController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
-  @Public()
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE } }))
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Upload file', description: 'Upload a file to Cloudflare R2' })
   @ApiConsumes('multipart/form-data')
@@ -55,6 +55,7 @@ export class UploadController {
   })
   @SwaggerResponse({ status: 201, description: 'File uploaded' })
   upload(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('File is required (multipart field)');
     return this.rmqProducer.send('upload.upload', {
       file: {
         originalname: file.originalname,
@@ -65,9 +66,8 @@ export class UploadController {
     });
   }
 
-  @Public()
   @Post('multiple')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: MAX_FILE_SIZE } }))
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Upload multiple files' })
   @ApiConsumes('multipart/form-data')
@@ -82,6 +82,9 @@ export class UploadController {
   })
   @SwaggerResponse({ status: 201, description: 'Files uploaded' })
   uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('File is required (multipart field)');
+    }
     return this.rmqProducer.send('upload.uploadMultiple', {
       files: files.map((file) => ({
         originalname: file.originalname,
@@ -92,7 +95,6 @@ export class UploadController {
     });
   }
 
-  @Public()
   @Get('download')
   @ApiOperation({ summary: 'Download file', description: 'Stream a file from Cloudflare R2 by its key' })
   @ApiQuery({ name: 'key', required: true, description: 'R2 object key (e.g. uploads/uuid.jpg)' })
@@ -103,11 +105,12 @@ export class UploadController {
     if (!key) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_KEY_REQUIRED);
     const result = await this.rmqProducer.send<{ buffer: string }, { key: string }>('upload.download', { key });
     const fileBuffer = Buffer.from(result.buffer, 'base64');
-    res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${key}"` });
+    const baseName = key.split('/').pop() || 'download';
+    const safeName = baseName.replace(/[^A-Za-z0-9._-]/g, '_');
+    res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(baseName)}` });
     res.send(fileBuffer);
   }
 
-  @Public()
   @Delete(':key')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete file' })

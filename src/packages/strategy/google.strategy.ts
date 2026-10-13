@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, type Profile } from 'passport-google-oauth20';
@@ -28,7 +28,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   validate(_accessToken: string, _refreshToken: string, profile: Profile): GoogleProfile {
     const email = profile.emails?.[0]?.value;
     if (!email) {
-      throw new Error('Google account has no public email');
+      throw new BadRequestException('Google account has no public email');
     }
 
     return {

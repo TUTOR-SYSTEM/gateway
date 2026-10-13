@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '@packages/decorators';
 import type { Request } from 'express';
+import { getJwtTokensConfig } from '../configs/jwt-sign.config';
 import type { JwtUserRole } from '@packages/helpers';
 import { RmqProducer } from '../../features/rabbitmq/rmq.producer';
 
@@ -50,7 +51,9 @@ function parseAccessPayload(decoded: unknown): JwtGuardUser {
 }
 
 const SESSION_KEY_PREFIX = 'session:';
-const SESSION_CACHE_TTL_MS = 30_000; // 30 seconds
+// Only positive results are cached, briefly, so a logout/revocation takes effect quickly and a
+// transient miss (or fresh login) is never pinned as "invalid".
+const SESSION_CACHE_TTL_MS = 5_000;
 
 interface CacheEntry {
   valid: boolean;
@@ -98,10 +101,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized ...');
     }
 
-    const accessSecret =
-      this.configService.get<string>('JWT_ACCESS_SECRET') ??
-      this.configService.get<string>('JWT_SECRET') ??
-      'dev-insecure-jwt-secret';
+    const { accessSecret } = getJwtTokensConfig(this.configService);
 
     let decoded: unknown;
     try {
@@ -122,9 +122,6 @@ export class JwtAuthGuard implements CanActivate {
     // In-memory cache avoids a RabbitMQ round-trip on every request from the same user.
     const cached = this.getCachedSession(payload.id);
     if (cached) {
-      if (!cached.valid) {
-        throw new UnauthorizedException('Session expired or not found ...');
-      }
       return true;
     }
 
@@ -134,7 +131,7 @@ export class JwtAuthGuard implements CanActivate {
         { key: `${SESSION_KEY_PREFIX}${payload.id}` },
       );
       if (!session) {
-        this.setCachedSession(payload.id, false);
+        this.sessionCache.delete(payload.id);
         throw new UnauthorizedException('Session expired or not found ...');
       }
       this.setCachedSession(payload.id, true);

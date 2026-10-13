@@ -119,7 +119,7 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Tutor created' })
   createTutor(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
-    return this.rmqProducer.send('user.createUser', _dto);
+    return this.rmqProducer.send('user.createUser', { ..._dto, role: 'TUTOR' });
   }
 
   @Get('tutors')
@@ -139,7 +139,7 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     _query: ListManagedUsersQueryDto,
   ) {
-    return this.rmqProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'TUTOR' });
   }
 
   @Get('tutors/:id')
@@ -149,7 +149,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Tutor detail' })
   @SwaggerResponse({ status: 404, description: 'Tutor not found' })
   getTutor(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _id, expectedRole: 'TUTOR' });
   }
 
   @Put('tutors/:id')
@@ -162,7 +162,7 @@ export class AdminController {
     @Param('id') _id: string,
     @Body(new ZodValidationPipe(updateManagedUserSchema)) _dto: UpdateManagedUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { ..._dto, id: _id, expectedRole: 'TUTOR' });
   }
 
   @Delete('tutors/:id')
@@ -171,7 +171,7 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tutor deleted' })
   deleteTutor(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id, expectedRole: 'TUTOR' });
   }
 
   // ─── Students ──────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export class AdminController {
   @ApiBody({ schema: CREATE_ACCOUNT_BODY_SCHEMA })
   @SwaggerResponse({ status: 201, description: 'Student created' })
   createStudent(@Body(new ZodValidationPipe(createManagedUserSchema)) _dto: CreateManagedUserDto) {
-    return this.rmqProducer.send('user.createUser', _dto);
+    return this.rmqProducer.send('user.createUser', { ..._dto, role: 'STUDENT' });
   }
 
   @Get('students')
@@ -207,7 +207,7 @@ export class AdminController {
     @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
     _query: ListManagedUsersQueryDto,
   ) {
-    return this.rmqProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'STUDENT' });
   }
 
   @Get('students/:id')
@@ -217,7 +217,7 @@ export class AdminController {
   @SwaggerResponse({ status: 200, description: 'Student detail' })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   getStudent(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _id });
+    return this.rmqProducer.send('user.getDetailUser', { userId: _id, expectedRole: 'STUDENT' });
   }
 
   @Put('students/:id')
@@ -233,7 +233,7 @@ export class AdminController {
     @Param('id') _id: string,
     @Body(new ZodValidationPipe(updateManagedStudentSchema)) _dto: UpdateManagedStudentDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._dto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { ..._dto, id: _id, expectedRole: 'STUDENT' });
   }
 
   @Delete('students/:id')
@@ -242,6 +242,6 @@ export class AdminController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
   deleteStudent(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
+    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id, expectedRole: 'STUDENT' });
   }
 }

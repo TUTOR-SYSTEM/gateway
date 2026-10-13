@@ -24,7 +24,12 @@ async function bootstrap() {
   // that every interceptor, guard, controller, and `RmqProducer.send()` call below reads from.
   app.use(requestContextMiddleware);
 
-  app.enableCors({ origin: true, credentials: true });
+  // Origin whitelist from CORS_ORIGINS (comma-separated). Dev default: local frontends only.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: corsOrigins, credentials: true });
   app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector)));
   app.useGlobalInterceptors(new ErrorInterceptor(), new LoggerInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());

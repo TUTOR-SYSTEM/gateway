@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   changePasswordSchema,
   getUsersQuerySchema,
@@ -32,6 +34,8 @@ import {
   type GetUsersQueryDto,
   type UpdateUserDto,
   updateUserSchema,
+  updateSelfSchema,
+  type UpdateSelfDto,
   type UserDataFieldDto,
 } from '@packages/entities/user';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
@@ -50,6 +54,8 @@ export class UserController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.GET_USERS_SUCCESSFULLY,
@@ -87,6 +93,8 @@ export class UserController {
   }
 
   @Get('/get-by-field')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.GET_USER_BY_FIELD_SUCCESSFULLY,
@@ -106,6 +114,8 @@ export class UserController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.CREATE_USER_SUCCESSFULLY,
@@ -136,13 +146,19 @@ export class UserController {
   })
   updateUserController(
     @CurrentUser() _user: JwtGuardUser,
-    @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
-    _updateUserDto: UpdateUserDto,
+    @Body(new ZodValidationPipe<UpdateSelfDto>(updateSelfSchema))
+    _updateUserDto: UpdateSelfDto,
   ) {
-    return this.rmqProducer.send('user.updateUser', { userId: _user.id, role: _user.role, ..._updateUserDto });
+    return this.rmqProducer.send('user.updateUser', {
+      ..._updateUserDto,
+      userId: _user.id,
+      role: _user.role,
+    });
   }
 
   @Put('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.UPDATE_USER_SUCCESSFULLY,
@@ -159,10 +175,12 @@ export class UserController {
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { id: _id, ..._updateUserDto });
+    return this.rmqProducer.send('user.updateUserByAdmin', { ..._updateUserDto, id: _id });
   }
 
   @Put('/:id/status')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
@@ -178,6 +196,8 @@ export class UserController {
   }
 
   @Delete('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
@@ -208,6 +228,6 @@ export class UserController {
     @Body(new ZodValidationPipe(changePasswordSchema))
     _changePasswordDto: ChangePasswordValues,
   ) {
-    return this.rmqProducer.send('user.changePassword', { userId: _user.id, ..._changePasswordDto });
+    return this.rmqProducer.send('user.changePassword', { ..._changePasswordDto, userId: _user.id });
   }
 }

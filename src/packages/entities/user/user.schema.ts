@@ -58,12 +58,10 @@ export const changePasswordSchema = z
     newPassword: z
       .string({ message: 'New password is required' })
       .min(8, { message: 'Password must be at least 8 characters' })
-      .max(14, { message: 'Password must be at most 14 characters' }),
+      .max(20, { message: 'Password must be at most 20 characters' }),
   })
   .superRefine((data, ctx) => {
     const { newPassword } = data;
-    if (newPassword.length < 8 || newPassword.length > 14) return;
-
     if (!/[a-z]/.test(newPassword)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -208,6 +206,19 @@ export const updateUserSchema = z
   })
   .strict();
 
+/**
+ * Self-service profile update (`PUT /users`). Excludes privileged / identity-linking columns
+ * (`role`, `isActive`, `userCode`, `googleId`, `facebookId`) so a caller cannot escalate
+ * privileges or relink accounts. Admin updates keep using `updateUserSchema`.
+ */
+export const updateSelfSchema = updateUserSchema.omit({
+  role: true,
+  isActive: true,
+  userCode: true,
+  googleId: true,
+  facebookId: true,
+});
+
 export const createUserSchema = z
   .object({
     email: z
@@ -232,7 +243,7 @@ export const createUserSchema = z
       .max(100, { message: 'First name must be at most 100 characters' }),
     password: z
       .string({ message: 'Password is required' })
-      .min(6, { message: 'Password must be at least 6 characters' })
+      .min(8, { message: 'Password must be at least 8 characters' })
       .max(20, { message: 'Password must be at most 20 characters' }),
     avatar: z
       .string({ message: 'Avatar must be string ...' })
@@ -277,11 +288,6 @@ export const createUserSchema = z
   })
   .superRefine((data, ctx) => {
     const { password } = data;
-    // Avoid stacking complexity issues when length rules already failed (Zod still runs this refine).
-    if (password.length < 8 || password.length > 100) {
-      return;
-    }
-
     if (!/[a-z]/.test(password)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

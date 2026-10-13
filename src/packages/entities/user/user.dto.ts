@@ -5,6 +5,7 @@ import {
   getUsersQuerySchema,
   updateGradeSchema,
   updateUserGradesSchema,
+  updateSelfSchema,
   updateUserSchema,
 } from './user.schema';
 
@@ -20,6 +21,7 @@ export type CreateUserDto = z.infer<typeof createUserSchema>;
  */
 export type CreateUserInput = z.input<typeof createUserSchema>;
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;
+export type UpdateSelfDto = z.infer<typeof updateSelfSchema>;
 export type ChangePasswordValues = {
   currentPassword: string;
   newPassword: string;

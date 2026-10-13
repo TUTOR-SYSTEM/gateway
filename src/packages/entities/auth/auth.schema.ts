@@ -49,6 +49,11 @@ export const passwordFieldSchema = z
     }
   });
 
+// Login must not re-validate strength: accounts with legacy/default passwords must still log in.
+export const loginPasswordFieldSchema = z
+  .string({ message: AUTH_MESSAGES.PASSWORD_REQUIRED })
+  .min(1, { message: AUTH_MESSAGES.PASSWORD_REQUIRED });
+
 export const registerSchema = z.object({
   email: emailFieldSchema,
   username: z.string({ message: AUTH_MESSAGES.USERNAME_REQUIRED }).optional(),
@@ -65,7 +70,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: emailFieldSchema,
-  password: passwordFieldSchema,
+  password: loginPasswordFieldSchema,
 });
 
 export const loginByUserCodeSchema = z.object({
@@ -73,7 +78,7 @@ export const loginByUserCodeSchema = z.object({
     .string({ message: ERROR_MESSAGES.AUTH_USER_CODE_REQUIRED })
     .min(6, { message: ERROR_MESSAGES.AUTH_USER_CODE_LENGTH })
     .max(6, { message: ERROR_MESSAGES.AUTH_USER_CODE_LENGTH }),
-  password: passwordFieldSchema,
+  password: loginPasswordFieldSchema,
   role: z.enum(['PARENT', 'STUDENT']),
 });
 

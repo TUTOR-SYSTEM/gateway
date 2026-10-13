@@ -61,3 +61,28 @@ describe('resolveRmqTarget', () => {
     expect(() => resolveRmqTarget('')).toThrow(/No RabbitMQ route for pattern ""/);
   });
 });
+
+import { isIdempotentPattern, resolveRmqCallPolicy } from 'src/features/rabbitmq/rmq.constants';
+
+describe('resolveRmqCallPolicy (GW-07)', () => {
+  it.each([
+    ['ai.chat', 60000, 0],
+    ['testscenario.run', 120000, 0],
+    ['testscenario.generate', 120000, 0],
+    ['upload.upload', 60000, 0],
+    ['upload.download', 60000, 0],
+  ])('%s -> timeout %i, retries %i', (pattern, timeoutMs, maxRetries) => {
+    expect(resolveRmqCallPolicy(pattern)).toEqual({ timeoutMs, maxRetries });
+  });
+
+  it('returns no overrides for ordinary patterns', () => {
+    expect(resolveRmqCallPolicy('auth.login')).toEqual({});
+  });
+
+  it('classifies read vs write patterns', () => {
+    expect(isIdempotentPattern('user.getUsers')).toBe(true);
+    expect(isIdempotentPattern('redis.get')).toBe(true);
+    expect(isIdempotentPattern('user.createUser')).toBe(false);
+    expect(isIdempotentPattern('notification.markAsRead')).toBe(false);
+  });
+});

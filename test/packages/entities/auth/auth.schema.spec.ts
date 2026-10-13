@@ -207,10 +207,12 @@ describe('loginByUserCodeSchema', () => {
     );
   });
 
-  it('applies the password rules to the login password', () => {
-    expect(messagesOf(loginByUserCodeSchema.safeParse({ ...valid, password: 'abc' }))).toContain(
-      AUTH_MESSAGES.PASSWORD_MIN,
-    );
+  it('accepts a weak password on login (GW-23)', () => {
+    expect(loginByUserCodeSchema.safeParse({ ...valid, password: 'abc' }).success).toBe(true);
+  });
+
+  it('rejects an empty password on login', () => {
+    expect(loginByUserCodeSchema.safeParse({ ...valid, password: '' }).success).toBe(false);
   });
 });
 

@@ -17,6 +17,8 @@ import {
   TRACE_ID_HEADER,
 } from '@packages/context/request-context';
 import {
+  isIdempotentPattern,
+  resolveRmqCallPolicy,
   resolveRmqTarget,
   RmqTarget,
   THIRD_SERVICE,
@@ -115,14 +117,16 @@ export class RmqProducer implements OnModuleDestroy {
     pattern: string,
     message: TRequest,
     timeoutMs?: number,
-    maxRetries: number = 2,
+    maxRetriesOverride?: number,
   ): Promise<TResponse> {
     const client = this.clients[resolveRmqTarget(pattern)];
     const { record, headers } = withTraceHeaders(message);
     const correlationId = headers[CORRELATION_ID_HEADER];
     const traceId = headers[TRACE_ID_HEADER];
     const totalStartTime = Date.now();
-    const finalTimeoutMs = timeoutMs ?? 10000;
+    const policy = resolveRmqCallPolicy(pattern);
+    const finalTimeoutMs = timeoutMs ?? policy.timeoutMs ?? 10000;
+    const maxRetries = maxRetriesOverride ?? policy.maxRetries ?? 2;
 
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       const attemptStartTime = Date.now();
@@ -152,7 +156,16 @@ export class RmqProducer implements OnModuleDestroy {
           `[SEND-ATTEMPT-FAILED] ${pattern} correlationId=${correlationId} traceId=${traceId} attempt=${attempt} attemptDuration=${attemptDuration}ms totalDuration=${totalDuration}ms isTimeout=${isTimeout} error=${errorMessage}`,
         );
 
-        if (attempt === maxRetries + 1) {
+        // A responder business error (carries a statusCode) is deterministic: retrying only
+        // repeats side effects. A timeout on a non-idempotent call may have already executed.
+        const isRpcBusinessError =
+          typeof error === 'object' &&
+          error !== null &&
+          !(error instanceof Error) &&
+          typeof (error as { statusCode?: unknown }).statusCode === 'number';
+        const unsafeToRetryTimeout = isTimeout && !isIdempotentPattern(pattern);
+
+        if (attempt === maxRetries + 1 || isRpcBusinessError || unsafeToRetryTimeout) {
           const payload = toRpcErrorPayload(error);
           this.logger.error(
             `[SEND-FAILED] ${pattern} correlationId=${correlationId} traceId=${traceId} attempts=${attempt} totalDuration=${totalDuration}ms error=${

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { CORRELATION_ID_HEADER, runWithRequestContext } from './request-context';
 
 const SERVICE_NAME = 'gateway';
+const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
 
 /**
  * Entry point for correlation tracking: reuses an incoming `x-correlation-id` (a caller-supplied
@@ -15,7 +16,9 @@ const SERVICE_NAME = 'gateway';
  */
 export function requestContextMiddleware(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.headers[CORRELATION_ID_HEADER];
-  const correlationId = (Array.isArray(incoming) ? incoming[0] : incoming) || randomUUID();
+  const candidate = Array.isArray(incoming) ? incoming[0] : incoming;
+  const correlationId =
+    candidate && CORRELATION_ID_PATTERN.test(candidate) ? candidate : randomUUID();
   const traceId = randomUUID();
 
   res.setHeader(CORRELATION_ID_HEADER, correlationId);

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,6 +8,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
+import { Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import { getRedisQuerySchema, type GetRedisQueryDto } from '@packages/entities/redis';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
@@ -22,6 +24,8 @@ export class RedisController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Get Redis value', description: 'Retrieve a value from Redis by key' })
   @ApiQuery({ name: 'key', required: true, type: String, description: 'Redis key' })

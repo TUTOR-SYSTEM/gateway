@@ -15,7 +15,18 @@ const SENSITIVE_KEYS = [
   'token',
   'accessToken',
   'refreshToken',
+  'jti',
+  'key',
+  'secret',
+  'clientSecret',
+  'apiKey',
+  'authorization',
+  'cookie',
+  'otp',
+  'resetToken',
+  'buffer',
 ];
+const SENSITIVE_KEYS_LOWER = new Set(SENSITIVE_KEYS.map((k) => k.toLowerCase()));
 const MAX_LOG_LENGTH = 1000;
 const SERVICE_NAME = 'gateway';
 
@@ -58,7 +69,7 @@ function redact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, val]) => [
         key,
-        SENSITIVE_KEYS.includes(key) ? '[REDACTED]' : redact(val),
+        SENSITIVE_KEYS_LOWER.has(key.toLowerCase()) ? '[REDACTED]' : redact(val),
       ]),
     );
   }
@@ -124,6 +135,7 @@ export class LoggerInterceptor implements NestInterceptor {
         ? stringifyForLog(body)
         : undefined;
     let errorMessage: string | undefined;
+    let errorStatus: number | undefined;
     let responseBody: string | undefined;
 
     if (requestBody) {
@@ -140,6 +152,8 @@ export class LoggerInterceptor implements NestInterceptor {
         },
         error: (err) => {
           errorMessage = (err as Error).message;
+          const status = (err as { getStatus?: () => number }).getStatus?.();
+          errorStatus = typeof status === 'number' ? status : 500;
           responseBody = previewError(err);
           this.logger.error(`[Error] ${trace}${method} ${url} - ${errorMessage}`);
         },
@@ -158,7 +172,7 @@ export class LoggerInterceptor implements NestInterceptor {
           type: 'HTTP',
           method,
           path: url,
-          statusCode: response.statusCode,
+          statusCode: errorStatus ?? response.statusCode,
           durationMs: duration,
           correlationId: ctx?.correlationId ?? 'unknown',
           traceId: ctx?.traceId ?? 'unknown',

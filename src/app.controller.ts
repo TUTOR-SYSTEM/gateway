@@ -1,7 +1,8 @@
-import { Controller, Get, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
-import { Public } from '@packages/decorators';
+import { Public, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import { RmqProducer } from './features/rabbitmq/rmq.producer';
 
 @ApiTags('Health')
@@ -13,6 +14,7 @@ export class AppController {
     private readonly rmqProducer: RmqProducer,
   ) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Health check', description: 'Returns a simple health check response' })
   @SwaggerResponse({
@@ -24,7 +26,9 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get('kafka/emit')
   @ApiOperation({
     summary: 'RabbitMQ emit health check',
@@ -40,7 +44,9 @@ export class AppController {
     return await this.rmqProducer.emit<unknown, number>('kafka.ping', 123);
   }
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get('kafka/send')
   @ApiOperation({
     summary: 'RabbitMQ send user data with response',
@@ -122,7 +128,9 @@ export class AppController {
     }
   }
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get('kafka/error')
   @ApiOperation({
     summary: 'RabbitMQ emit health check',
@@ -138,7 +146,9 @@ export class AppController {
     return await this.rmqProducer.send<unknown, number>('kafka.user.error', 123);
   }
 
-  @Public()
+  @ApiBearerAuth('access-token')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get('kafka/tutor/error')
   @ApiOperation({
     summary: 'RabbitMQ emit health check',

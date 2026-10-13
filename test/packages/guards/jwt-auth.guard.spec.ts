@@ -26,7 +26,11 @@ describe('JwtAuthGuard', () => {
 
   beforeEach(() => {
     jwt = { verify: jest.fn().mockReturnValue(validPayload) };
-    config = { get: jest.fn((key: string) => (key === 'JWT_ACCESS_SECRET' ? 'access-secret' : undefined)) };
+    config = {
+      get: jest.fn((key: string) =>
+        key === 'JWT_ACCESS_SECRET' ? 'access-secret' : key === 'JWT_REFRESH_SECRET' ? 'refresh-secret' : undefined,
+      ),
+    };
     reflector = new Reflector();
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
     rmq = { send: jest.fn().mockResolvedValue('{"ok":true}') };
@@ -93,12 +97,12 @@ describe('JwtAuthGuard', () => {
     expect(rmq.send).toHaveBeenCalledTimes(1);
   });
 
-  it('caches an invalid session and rejects without another RPC', async () => {
+  it('does not cache an invalid session (GW-13): each request re-checks', async () => {
     rmq.send.mockResolvedValue(null);
     const req = { headers: { authorization: 'Bearer t' } };
     await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
-    expect(rmq.send).toHaveBeenCalledTimes(1);
+    expect(rmq.send).toHaveBeenCalledTimes(2);
   });
 
   it('fails open when the session store is unreachable', async () => {

@@ -220,7 +220,7 @@ export class AuthController {
     return this.rmqProducer.send('auth.forgotPassword', forgotPasswordDto);
   }
 
-  @ApiBearerAuth('access-token')
+  @Public()
   @Post('/reset-password')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -335,6 +335,7 @@ export class AuthController {
     >('auth.facebookLogin', req.user);
 
     const redirectBase =
+      this.configService.get<string>('FACEBOOK_OAUTH_REDIRECT_URL') ??
       this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URL') ??
       'http://localhost:3000/oauth/callback';
     const redirectUrl = new URL(redirectBase);

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createNotificationSchema,
   getNotificationsQuerySchema,
@@ -30,6 +31,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class NotificationController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create notification' })

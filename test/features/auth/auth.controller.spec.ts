@@ -92,10 +92,22 @@ describe('AuthController', () => {
 
     // KNOWN BUG (see report): the Facebook callback reads GOOGLE_OAUTH_REDIRECT_URL, not a
     // Facebook-specific variable. This test pins the current behaviour so a change is deliberate.
-    it('currently reads the Google redirect URL for the Facebook callback', async () => {
+    it('reads FACEBOOK_OAUTH_REDIRECT_URL for the Facebook callback', async () => {
       const { send, controller } = setup({
         GOOGLE_OAUTH_REDIRECT_URL: 'https://google-only.example.com/cb',
         FACEBOOK_OAUTH_REDIRECT_URL: 'https://facebook.example.com/cb',
+      });
+      send.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+      const { res, redirect } = responseMock();
+
+      await controller.facebookAuthCallback({ user: {} } as never, res);
+
+      expect(redirectedUrl(redirect).origin).toBe('https://facebook.example.com');
+    });
+
+    it('falls back to GOOGLE_OAUTH_REDIRECT_URL when the Facebook one is unset', async () => {
+      const { send, controller } = setup({
+        GOOGLE_OAUTH_REDIRECT_URL: 'https://google-only.example.com/cb',
       });
       send.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
       const { res, redirect } = responseMock();

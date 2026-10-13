@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import {
   createChapterSchema,
@@ -32,6 +33,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class ChapterController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post(':curriculumId')
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create chapter', description: 'Create a new chapter for a curriculum' })
@@ -74,6 +77,8 @@ export class ChapterController {
     return this.rmqProducer.send('chapter.getById', { id: _id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Put(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update chapter' })
@@ -88,6 +93,8 @@ export class ChapterController {
     return this.rmqProducer.send('chapter.update', { userId: user.id, id: _id, data: _data });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Delete(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete chapter' })

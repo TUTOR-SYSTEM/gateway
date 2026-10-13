@@ -172,6 +172,28 @@ describe('RmqProducer', () => {
       });
     });
 
+    it('GW-06: does not retry a responder error that carries a statusCode', async () => {
+      user.send.mockReturnValue(throwError(() => ({ statusCode: 409, message: 'dup' })));
+      const err = (await producer.send('user.createUser', {}, 1000).catch((e: unknown) => e)) as HttpException;
+      expect(user.send).toHaveBeenCalledTimes(1);
+      expect(err.getStatus()).toBe(409);
+    });
+
+    it('GW-06: does not retry a timeout on a write pattern (504)', async () => {
+      user.send.mockReturnValue(throwError(() => timeoutError()));
+      const err = (await producer.send('user.createUser', {}, 1000).catch((e: unknown) => e)) as HttpException;
+      expect(user.send).toHaveBeenCalledTimes(1);
+      expect(err.getStatus()).toBe(HttpStatus.GATEWAY_TIMEOUT);
+    });
+
+    it('GW-06: retries a timeout on a read pattern', async () => {
+      user.send
+        .mockReturnValueOnce(throwError(() => timeoutError()))
+        .mockReturnValueOnce(of('ok'));
+      await expect(producer.send('user.getUsers', {}, 1000)).resolves.toBe('ok');
+      expect(user.send).toHaveBeenCalledTimes(2);
+    });
+
     it('performs no retries when maxRetries is 0', async () => {
       user.send.mockReturnValue(throwError(() => new Error('once')));
       await expect(producer.send('auth.login', {}, 1000, 0)).rejects.toBeInstanceOf(HttpException);

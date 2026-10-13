@@ -33,7 +33,10 @@ describe('JwtAuthGuard branch coverage', () => {
   let guard: JwtAuthGuard;
   let env: Record<string, string | undefined>;
 
-  function build(configValues: Record<string, string | undefined> = { JWT_ACCESS_SECRET: 'access-secret' }) {
+  function build(configValues: Record<string, string | undefined> = {
+      JWT_ACCESS_SECRET: 'access-secret',
+      JWT_REFRESH_SECRET: 'refresh-secret',
+    }) {
     config = { get: jest.fn((key: string) => configValues[key]) };
     guard = new JwtAuthGuard(
       jwt as unknown as JwtService,
@@ -147,15 +150,17 @@ describe('JwtAuthGuard branch coverage', () => {
     });
 
     it('falls back to JWT_SECRET when JWT_ACCESS_SECRET is absent', async () => {
-      build({ JWT_SECRET: 'legacy-secret' });
+      build({ JWT_SECRET: 'legacy-secret', JWT_REFRESH_SECRET: 'refresh-secret' });
       await guard.canActivate(buildContext({ headers: bearer() }));
       expect(jwt.verify).toHaveBeenCalledWith('t', { secret: 'legacy-secret' });
     });
 
-    it('uses the insecure built-in secret when no secret is configured', async () => {
+    it('throws (no insecure fallback) when no secret is configured', async () => {
       build({});
-      await guard.canActivate(buildContext({ headers: bearer() }));
-      expect(jwt.verify).toHaveBeenCalledWith('t', { secret: 'dev-insecure-jwt-secret' });
+      await expect(guard.canActivate(buildContext({ headers: bearer() }))).rejects.toThrow(
+        /JWT_ACCESS_SECRET/,
+      );
+      expect(jwt.verify).not.toHaveBeenCalled();
     });
   });
 
@@ -167,34 +172,33 @@ describe('JwtAuthGuard branch coverage', () => {
       expect(rmq.send).not.toHaveBeenCalled();
     });
 
-    it('rejects from cache without calling Redis after a recent null session', async () => {
+    it('does not cache a negative session result (GW-13), re-checks Redis', async () => {
       rmq.send.mockResolvedValueOnce(null);
       await expect(guard.canActivate(buildContext({ headers: bearer() }))).rejects.toThrow(
         'Session expired or not found ...',
       );
       rmq.send.mockClear();
-      await expect(guard.canActivate(buildContext({ headers: bearer() }))).rejects.toThrow(
-        'Session expired or not found ...',
-      );
-      expect(rmq.send).not.toHaveBeenCalled();
+      rmq.send.mockResolvedValueOnce('{"ok":true}');
+      await expect(guard.canActivate(buildContext({ headers: bearer() }))).resolves.toBe(true);
+      expect(rmq.send).toHaveBeenCalledTimes(1);
     });
 
-    it('re-checks Redis once the 30-second cache entry expires', async () => {
+    it('re-checks Redis once the 5-second cache entry expires', async () => {
       const now = jest.spyOn(Date, 'now');
       now.mockReturnValue(1_000_000);
       await guard.canActivate(buildContext({ headers: bearer() }));
       rmq.send.mockClear();
-      now.mockReturnValue(1_000_000 + 30_001);
+      now.mockReturnValue(1_000_000 + 5_001);
       await guard.canActivate(buildContext({ headers: bearer() }));
       expect(rmq.send).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps a cache entry alive exactly at the 30-second boundary', async () => {
+    it('keeps a cache entry alive exactly at the 5-second boundary', async () => {
       const now = jest.spyOn(Date, 'now');
       now.mockReturnValue(1_000_000);
       await guard.canActivate(buildContext({ headers: bearer() }));
       rmq.send.mockClear();
-      now.mockReturnValue(1_000_000 + 30_000);
+      now.mockReturnValue(1_000_000 + 5_000);
       await guard.canActivate(buildContext({ headers: bearer() }));
       expect(rmq.send).not.toHaveBeenCalled();
     });

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createCurriculumSchema,
   getCurriculumsQuerySchema,
@@ -40,6 +52,8 @@ export class CurriculumController {
     return this.rmqProducer.send('curriculum.generateCode', {});
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create curriculum' })
@@ -71,7 +85,12 @@ export class CurriculumController {
   @ApiOperation({ summary: 'Get all curriculum' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by subject or code' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search by subject or code',
+  })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum list fetched' })
   getAll(
     @Query(new ZodValidationPipe<GetCurriculumsQueryDto>(getCurriculumsQuerySchema))
@@ -90,6 +109,8 @@ export class CurriculumController {
     return this.rmqProducer.send('curriculum.getById', { userId: _user.id, id: _id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Put(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update curriculum' })
@@ -115,6 +136,8 @@ export class CurriculumController {
     return this.rmqProducer.send('curriculum.update', { userId: _user.id, id: _id, data: _dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Delete(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete curriculum' })

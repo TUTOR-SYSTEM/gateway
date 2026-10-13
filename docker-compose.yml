@@ -89,9 +89,9 @@ services:
 
   user:
     networks: [app-network]
-    build: ../USER
+    build: ../user
     restart: unless-stopped
-    env_file: ../USER/docker.env
+    env_file: ../user/docker.env
     environment:
       <<: *infra-env
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/user_db
@@ -102,9 +102,9 @@ services:
 
   tutor-service:
     networks: [app-network]
-    build: ../tutor-service
+    build: ../tutor
     restart: unless-stopped
-    env_file: ../tutor-service/docker.env
+    env_file: ../tutor/docker.env
     environment:
       <<: *infra-env
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/tutor_db
@@ -113,11 +113,11 @@ services:
     ports: ['4003:4003']
     depends_on: *service-deps
 
-  third-service:
+  third:
     networks: [app-network]
-    build: ../THIRD_SERVICE
+    build: ../third
     restart: unless-stopped
-    env_file: ../THIRD_SERVICE/docker.env
+    env_file: ../third/docker.env
     environment:
       <<: *infra-env
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/third_db
@@ -130,14 +130,14 @@ services:
   ui:
     networks: [app-network]
     build:
-      context: ../TUTOR-UI
+      context: ../ui
       args:
         # Baked at build time and used by the browser, so they must be host-reachable URLs.
         NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8888}
         NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
     restart: unless-stopped
     ports: ['3000:3000']
-    depends_on: [gateway, third-service]
+    depends_on: [gateway]
 
 # ============================================================================
 # Named Volumes

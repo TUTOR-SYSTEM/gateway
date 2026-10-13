@@ -28,12 +28,16 @@ describe('JwtAuthGuard', () => {
     jwt = { verify: jest.fn().mockReturnValue(validPayload) };
     config = {
       get: jest.fn((key: string) =>
-        key === 'JWT_ACCESS_SECRET' ? 'access-secret' : key === 'JWT_REFRESH_SECRET' ? 'refresh-secret' : undefined,
+        key === 'JWT_ACCESS_SECRET'
+          ? 'access-secret'
+          : key === 'JWT_REFRESH_SECRET'
+            ? 'refresh-secret'
+            : undefined,
       ),
     };
     reflector = new Reflector();
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
-    rmq = { send: jest.fn().mockResolvedValue('{"ok":true}') };
+    rmq = { send: jest.fn().mockResolvedValue(true) };
     guard = new JwtAuthGuard(
       jwt as unknown as JwtService,
       config as unknown as ConfigService,
@@ -49,12 +53,16 @@ describe('JwtAuthGuard', () => {
   });
 
   it('rejects a missing Authorization header', async () => {
-    await expect(guard.canActivate(buildContext({ headers: {} }))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(buildContext({ headers: {} }))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects a non-Bearer scheme', async () => {
     const req = { headers: { authorization: 'Basic abc' } };
-    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects a token that fails verification', async () => {
@@ -62,20 +70,24 @@ describe('JwtAuthGuard', () => {
       throw new Error('invalid signature');
     });
     const req = { headers: { authorization: 'Bearer bad' } };
-    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects a token that is not an access token (typ mismatch)', async () => {
     jwt.verify.mockReturnValue({ ...validPayload, typ: 'refresh' });
     const req = { headers: { authorization: 'Bearer t' } };
-    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('attaches the user and returns true when the Redis session exists', async () => {
     const req: Req = { headers: { authorization: 'Bearer t' } };
     await expect(guard.canActivate(buildContext(req))).resolves.toBe(true);
     expect(req.user).toEqual({ id: 'user-1', email: 'a@b.c', typ: 'access', role: 'TUTOR' });
-    expect(rmq.send).toHaveBeenCalledWith('redis.get', { key: 'session:user-1' });
+    expect(rmq.send).toHaveBeenCalledWith('redis.exists', { key: 'session:user-1' });
   });
 
   it('verifies with JWT_ACCESS_SECRET from config', async () => {
@@ -84,10 +96,12 @@ describe('JwtAuthGuard', () => {
     expect(jwt.verify).toHaveBeenCalledWith('t', { secret: 'access-secret' });
   });
 
-  it('rejects when Redis returns null (session deleted)', async () => {
-    rmq.send.mockResolvedValue(null);
+  it('rejects when Redis reports no session (deleted)', async () => {
+    rmq.send.mockResolvedValue(false);
     const req = { headers: { authorization: 'Bearer t' } };
-    await expect(guard.canActivate(buildContext(req))).rejects.toThrow('Session expired or not found ...');
+    await expect(guard.canActivate(buildContext(req))).rejects.toThrow(
+      'Session expired or not found ...',
+    );
   });
 
   it('caches a valid session result and skips the RPC on the next request', async () => {
@@ -100,8 +114,12 @@ describe('JwtAuthGuard', () => {
   it('does not cache an invalid session (GW-13): each request re-checks', async () => {
     rmq.send.mockResolvedValue(null);
     const req = { headers: { authorization: 'Bearer t' } };
-    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await expect(guard.canActivate(buildContext(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
     expect(rmq.send).toHaveBeenCalledTimes(2);
   });
 

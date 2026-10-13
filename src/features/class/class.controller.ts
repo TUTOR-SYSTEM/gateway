@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createClassSchema,
   getClassesQuerySchema,
@@ -34,9 +46,14 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class ClassController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
-  @ApiOperation({ summary: 'Create class', description: 'Create a new class (Stage 1: class info)' })
+  @ApiOperation({
+    summary: 'Create class',
+    description: 'Create a new class (Stage 1: class info)',
+  })
   @ApiBody({ schema: { type: 'object', required: ['name', 'subject', 'tutorId'] } })
   @SwaggerResponse({ status: 201, description: 'Class created' })
   create(
@@ -47,6 +64,8 @@ export class ClassController {
     return this.rmqProducer.send('class.create', { userId: user.id, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Put(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -66,7 +85,10 @@ export class ClassController {
 
   @Get('generate-code')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Generate class code', description: 'Generate a unique, unused class code' })
+  @ApiOperation({
+    summary: 'Generate class code',
+    description: 'Generate a unique, unused class code',
+  })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class code generated' })
   generateCode() {
     return this.rmqProducer.send('class.generateCode', {});
@@ -99,9 +121,14 @@ export class ClassController {
     return this.rmqProducer.send('class.getById', { userId: user.id, id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post(':id/students')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Add students', description: 'Enroll one student or many students into a single class' })
+  @ApiOperation({
+    summary: 'Add students',
+    description: 'Enroll one student or many students into a single class',
+  })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Students added' })
   addStudents(
@@ -124,7 +151,10 @@ export class ClassController {
 
   @Get(':id/materials')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Get class materials', description: 'List theory & exercise files of a class' })
+  @ApiOperation({
+    summary: 'Get class materials',
+    description: 'List theory & exercise files of a class',
+  })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class materials retrieved' })
   getMaterials(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
@@ -143,6 +173,8 @@ export class ClassController {
     return this.rmqProducer.send('class.getWatch', { userId: user.id, id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Delete(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete class' })

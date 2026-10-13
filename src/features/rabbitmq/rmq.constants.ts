@@ -14,7 +14,6 @@ export const RMQ_QUEUES: Record<RmqTarget, string> = {
 
 /** Full-pattern overrides, checked before the prefix map. */
 export const RMQ_PATTERN_ROUTES: Record<string, RmqTarget> = {
-  'kafka.tutor': TUTOR_SERVICE,
   'health.postgres': USER_SERVICE,
   'health.redis': THIRD_SERVICE,
 };
@@ -60,6 +59,14 @@ export interface RmqCallPolicy {
   maxRetries?: number;
 }
 
+/**
+ * Hot path: `redis.exists` runs on every authenticated request. Fail open after 2s with no retry
+ * instead of holding each request for the 10s default when THIRD is slow.
+ */
+const RMQ_FAST_PATTERN_POLICIES: Record<string, RmqCallPolicy> = {
+  'redis.exists': { timeoutMs: 2000, maxRetries: 0 },
+};
+
 /** Slow operations: longer per-call timeout and no retry (LLM, test runs, file transfer). */
 const RMQ_SLOW_PATTERN_POLICIES: Record<string, RmqCallPolicy> = {
   'ai.chat': { timeoutMs: 60000, maxRetries: 0 },
@@ -72,7 +79,10 @@ const RMQ_SLOW_PREFIX_POLICIES: Record<string, RmqCallPolicy> = {
 
 export function resolveRmqCallPolicy(pattern: string): RmqCallPolicy {
   return (
-    RMQ_SLOW_PATTERN_POLICIES[pattern] ?? RMQ_SLOW_PREFIX_POLICIES[pattern.split('.')[0]] ?? {}
+    RMQ_FAST_PATTERN_POLICIES[pattern] ??
+    RMQ_SLOW_PATTERN_POLICIES[pattern] ??
+    RMQ_SLOW_PREFIX_POLICIES[pattern.split('.')[0]] ??
+    {}
   );
 }
 

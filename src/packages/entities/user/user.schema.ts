@@ -217,6 +217,9 @@ export const updateSelfSchema = updateUserSchema.omit({
   userCode: true,
   googleId: true,
   facebookId: true,
+  // Class and grade membership are assigned by an admin/tutor, never by the user.
+  classId: true,
+  gradesId: true,
 });
 
 export const createUserSchema = z

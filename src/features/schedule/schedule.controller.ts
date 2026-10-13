@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
-import { CurrentUser } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import { RolesGuard } from '@packages/guards';
 import {
   createScheduleSchema,
   createSchedulesSchema,
@@ -34,10 +46,14 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class ScheduleController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create schedule', description: 'Create a single weekly class slot' })
-  @ApiBody({ schema: { type: 'object', required: ['classId', 'dayOfWeek', 'startTime', 'endTime'] } })
+  @ApiBody({
+    schema: { type: 'object', required: ['classId', 'dayOfWeek', 'startTime', 'endTime'] },
+  })
   @SwaggerResponse({ status: 201, description: 'Schedule created' })
   create(
     @Body(new ZodValidationPipe<CreateScheduleDto>(createScheduleSchema))
@@ -47,9 +63,14 @@ export class ScheduleController {
     return this.rmqProducer.send('schedule.create', { userId: user.id, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Post('bulk')
   @HttpCode(StatusCodes.CREATED)
-  @ApiOperation({ summary: 'Create schedules (bulk)', description: 'Create 1-7 weekly class slots at once' })
+  @ApiOperation({
+    summary: 'Create schedules (bulk)',
+    description: 'Create 1-7 weekly class slots at once',
+  })
   @SwaggerResponse({ status: 201, description: 'Schedules created' })
   createBulk(
     @Body(new ZodValidationPipe<CreateSchedulesDto>(createSchedulesSchema))
@@ -96,6 +117,8 @@ export class ScheduleController {
     return this.rmqProducer.send('schedule.getById', { userId: user.id, id });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Patch(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Update schedule' })
@@ -110,6 +133,8 @@ export class ScheduleController {
     return this.rmqProducer.send('schedule.update', { userId: user.id, id, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Delete(':id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete schedule' })

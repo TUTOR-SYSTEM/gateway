@@ -34,7 +34,10 @@ const SERVICE_NAME = 'gateway';
  * `correlationId` is reused from the current `RequestContext` for the whole distributed flow,
  * a fresh `traceId` identifies this hop, and `parentTraceId` links back to the hop that triggered it.
  */
-function withTraceHeaders<T>(message: T): {
+function withTraceHeaders<T>(
+  message: T,
+  expirationMs?: number,
+): {
   record: RmqRecord<T>;
   headers: Record<string, string>;
 } {
@@ -45,7 +48,10 @@ function withTraceHeaders<T>(message: T): {
     [PARENT_TRACE_ID_HEADER]: ctx?.traceId ?? '',
     [SERVICE_NAME_HEADER]: SERVICE_NAME,
   };
-  return { record: new RmqRecord<T>(message, { headers }), headers };
+  // `expiration` (AMQP per-message TTL) stops a request the caller already gave up on (504) from
+  // still running later in the responder's queue.
+  const options = expirationMs ? { headers, expiration: String(expirationMs) } : { headers };
+  return { record: new RmqRecord<T>(message, options), headers };
 }
 
 interface RpcErrorPayload {
@@ -120,13 +126,13 @@ export class RmqProducer implements OnModuleDestroy {
     maxRetriesOverride?: number,
   ): Promise<TResponse> {
     const client = this.clients[resolveRmqTarget(pattern)];
-    const { record, headers } = withTraceHeaders(message);
-    const correlationId = headers[CORRELATION_ID_HEADER];
-    const traceId = headers[TRACE_ID_HEADER];
     const totalStartTime = Date.now();
     const policy = resolveRmqCallPolicy(pattern);
     const finalTimeoutMs = timeoutMs ?? policy.timeoutMs ?? 10000;
     const maxRetries = maxRetriesOverride ?? policy.maxRetries ?? 2;
+    const { record, headers } = withTraceHeaders(message, finalTimeoutMs);
+    const correlationId = headers[CORRELATION_ID_HEADER];
+    const traceId = headers[TRACE_ID_HEADER];
 
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       const attemptStartTime = Date.now();
@@ -173,18 +179,29 @@ export class RmqProducer implements OnModuleDestroy {
             }`,
           );
 
+          // Server-side failures (5xx, timeouts, connection errors) carry raw internals: SQL with
+          // parameters, stack-ish text, or the broker URL. The client gets a fixed message; the
+          // detail stays in the [SEND-FAILED] log above.
+          const status = isTimeout
+            ? HttpStatus.GATEWAY_TIMEOUT
+            : (payload.statusCode ?? HttpStatus.INTERNAL_SERVER_ERROR);
+          const isServerError = status >= 500;
+          const clientMessage = isServerError
+            ? isTimeout
+              ? 'Upstream service timed out'
+              : 'Internal server error'
+            : (payload.message ?? 'Message queue service unavailable');
+
           throw new HttpException(
             {
-              message: payload.message ?? 'Message queue service unavailable',
-              errors: payload.errors,
+              message: clientMessage,
+              errors: isServerError ? undefined : payload.errors,
               serviceName: payload.serviceName,
               isTimeout,
               duration: totalDuration,
               attempts: attempt,
             },
-            isTimeout
-              ? HttpStatus.GATEWAY_TIMEOUT
-              : (payload.statusCode ?? HttpStatus.INTERNAL_SERVER_ERROR),
+            status,
           );
         }
 

@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -54,6 +60,7 @@ const SESSION_KEY_PREFIX = 'session:';
 // Only positive results are cached, briefly, so a logout/revocation takes effect quickly and a
 // transient miss (or fresh login) is never pinned as "invalid".
 const SESSION_CACHE_TTL_MS = 5_000;
+const SESSION_CACHE_MAX_ENTRIES = 10_000;
 
 interface CacheEntry {
   valid: boolean;
@@ -82,7 +89,22 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   private setCachedSession(userId: string, valid: boolean): void {
+    if (this.sessionCache.size >= SESSION_CACHE_MAX_ENTRIES) {
+      this.pruneSessionCache();
+    }
     this.sessionCache.set(userId, { valid, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+  }
+
+  /** Drops expired entries, then the oldest ones if the cache is still full. */
+  private pruneSessionCache(): void {
+    const now = Date.now();
+    for (const [userId, entry] of this.sessionCache) {
+      if (entry.expiresAt <= now) this.sessionCache.delete(userId);
+    }
+    for (const userId of this.sessionCache.keys()) {
+      if (this.sessionCache.size < SESSION_CACHE_MAX_ENTRIES) break;
+      this.sessionCache.delete(userId);
+    }
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -118,19 +140,20 @@ export class JwtAuthGuard implements CanActivate {
     // Verify the user has an active session in Redis via third-service over RabbitMQ.
     // A missing session means the user logged out or the session expired.
     // Fail open: if RabbitMQ/Redis is unreachable, let the request through (availability > security
-    // for infrastructure failures). Only block when Redis explicitly returns null (session deleted).
+    // for infrastructure failures). Only block when Redis explicitly reports the session key is gone (exists=false).
     // In-memory cache avoids a RabbitMQ round-trip on every request from the same user.
+    // Negative results are never cached: a missing session is re-checked (and rejected) on every
+    // request, so a revoked session cannot pass on a stale entry.
     const cached = this.getCachedSession(payload.id);
-    if (cached) {
+    if (cached?.valid) {
       return true;
     }
 
     try {
-      const session = await this.rmqProducer.send<string | null, { key: string }>(
-        'redis.get',
-        { key: `${SESSION_KEY_PREFIX}${payload.id}` },
-      );
-      if (!session) {
+      const sessionExists = await this.rmqProducer.send<boolean, { key: string }>('redis.exists', {
+        key: `${SESSION_KEY_PREFIX}${payload.id}`,
+      });
+      if (!sessionExists) {
         this.sessionCache.delete(payload.id);
         throw new UnauthorizedException('Session expired or not found ...');
       }
@@ -140,9 +163,7 @@ export class JwtAuthGuard implements CanActivate {
         throw error;
       }
       // Infrastructure failure (RabbitMQ down, third_service unreachable, etc.) — fail open
-      this.logger.warn(
-        `Redis session check failed for user ${payload.id}, failing open: ${error}`,
-      );
+      this.logger.warn(`Redis session check failed for user ${payload.id}, failing open: ${error}`);
     }
 
     return true;

@@ -33,10 +33,12 @@ describe('JwtAuthGuard branch coverage', () => {
   let guard: JwtAuthGuard;
   let env: Record<string, string | undefined>;
 
-  function build(configValues: Record<string, string | undefined> = {
+  function build(
+    configValues: Record<string, string | undefined> = {
       JWT_ACCESS_SECRET: 'access-secret',
       JWT_REFRESH_SECRET: 'refresh-secret',
-    }) {
+    },
+  ) {
     config = { get: jest.fn((key: string) => configValues[key]) };
     guard = new JwtAuthGuard(
       jwt as unknown as JwtService,
@@ -51,7 +53,7 @@ describe('JwtAuthGuard branch coverage', () => {
     jwt = { verify: jest.fn().mockReturnValue(access()) };
     reflector = new Reflector();
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
-    rmq = { send: jest.fn().mockResolvedValue('{"ok":true}') };
+    rmq = { send: jest.fn().mockResolvedValue(true) };
     env = {};
     build();
   });
@@ -208,18 +210,18 @@ describe('JwtAuthGuard branch coverage', () => {
       jwt.verify.mockReturnValue(access({ sub: 'user-2' }));
       rmq.send.mockClear();
       await guard.canActivate(buildContext({ headers: bearer() }));
-      expect(rmq.send).toHaveBeenCalledWith('redis.get', { key: 'session:user-2' });
+      expect(rmq.send).toHaveBeenCalledWith('redis.exists', { key: 'session:user-2' });
     });
   });
 
   describe('Redis session lookup', () => {
     it('queries the session key for the authenticated user', async () => {
       await guard.canActivate(buildContext({ headers: bearer() }));
-      expect(rmq.send).toHaveBeenCalledWith('redis.get', { key: 'session:user-1' });
+      expect(rmq.send).toHaveBeenCalledWith('redis.exists', { key: 'session:user-1' });
     });
 
     it('treats an empty-string session value as missing and rejects', async () => {
-      rmq.send.mockResolvedValueOnce('');
+      rmq.send.mockResolvedValueOnce(false);
       await expect(guard.canActivate(buildContext({ headers: bearer() }))).rejects.toBeInstanceOf(
         UnauthorizedException,
       );

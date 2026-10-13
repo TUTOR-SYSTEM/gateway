@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+/** Internal path (`/x`, not `//x` or `/\\x`) or an absolute `https://` URL — nothing else. */
+function isSafeRedirectUrl(value: string): boolean {
+  if (value.startsWith('/')) return !value.startsWith('//') && !value.startsWith('/\\');
+  return value.startsWith('https://');
+}
+
 export const notificationTypeEnum = z.enum(['SYSTEM', 'TUITION', 'STUDENT', 'TUTOR']);
 export const notificationActionEnum = z.enum(['VIEW', 'CONTACT', 'PAYMENT', 'UPDATE']);
 
@@ -15,7 +21,11 @@ export const createNotificationSchema = z.object({
   userId: z.string().uuid('userId must be uuid ...').optional().nullable(),
   classId: z.string().uuid('classId must be uuid ...').optional().nullable(),
   studentId: z.string().uuid('studentId must be uuid ...').optional().nullable(),
-  redirectUrl: z.string().max(500).optional(),
+  redirectUrl: z
+    .string()
+    .max(500)
+    .refine(isSafeRedirectUrl, 'redirectUrl must be an internal path or an https URL')
+    .optional(),
   actionLabel: z.string().max(100).optional(),
   actionType: notificationActionEnum.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),

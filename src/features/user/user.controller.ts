@@ -22,7 +22,6 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
-import { RolesGuard } from '@packages/guards';
 import {
   changePasswordSchema,
   getUsersQuerySchema,
@@ -39,6 +38,7 @@ import {
   type UserDataFieldDto,
 } from '@packages/entities/user';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
+import { RolesGuard } from '@packages/guards';
 import { USER_SWAGGER_MESSAGES } from 'src/data/swaggers/messages';
 import { USER_SWAGGERS_DATA } from 'src/data/swaggers/data/user.swagger';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
@@ -53,6 +53,8 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class UserController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Get()
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -88,8 +90,12 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.GET_USER_SUCCESSFULLY,
   })
-  getDetailUserController(@CurrentUser() _user: Record<string, string>) {
-    return this.rmqProducer.send('user.getDetailUser', { userId: _user.id });
+  getDetailUserController(@CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.getDetailUser', {
+      userId: _user.id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Get('/get-by-field')
@@ -113,6 +119,8 @@ export class UserController {
     return this.rmqProducer.send('user.getUserByField', _dataFieldDto);
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Post()
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -152,10 +160,15 @@ export class UserController {
     return this.rmqProducer.send('user.updateUser', {
       ..._updateUserDto,
       userId: _user.id,
+      // Trusted identity overrides any body field; the user service ignores `role` and reads actor.
       role: _user.role,
+      actorId: _user.id,
+      actorRole: _user.role,
     });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Put('/:id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -172,12 +185,20 @@ export class UserController {
   })
   updateUserByAdminController(
     @Param('id') _id: string,
+    @CurrentUser() _user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
   ) {
-    return this.rmqProducer.send('user.updateUserByAdmin', { ..._updateUserDto, id: _id });
+    return this.rmqProducer.send('user.updateUserByAdmin', {
+      ..._updateUserDto,
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Put('/:id/status')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -191,10 +212,16 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
   })
-  updateStatusUserController(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.updateStatusUser', { id: _id });
+  updateStatusUserController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.updateStatusUser', {
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
   @Delete('/:id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -208,8 +235,12 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
   })
-  deleteUserByAdminController(@Param('id') _id: string) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', { id: _id });
+  deleteUserByAdminController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('user.deleteUserByAdmin', {
+      id: _id,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Post('change-password')
@@ -228,6 +259,9 @@ export class UserController {
     @Body(new ZodValidationPipe(changePasswordSchema))
     _changePasswordDto: ChangePasswordValues,
   ) {
-    return this.rmqProducer.send('user.changePassword', { ..._changePasswordDto, userId: _user.id });
+    return this.rmqProducer.send('user.changePassword', {
+      ..._changePasswordDto,
+      userId: _user.id,
+    });
   }
 }

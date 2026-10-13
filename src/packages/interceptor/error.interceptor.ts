@@ -29,8 +29,10 @@ export class ErrorInterceptor implements NestInterceptor {
           return 'Value violates check constraint';
       }
     }
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    return message.startsWith('Failed query:') ? 'Database error' : message;
+    // Anything else (TypeError, driver text, etc.) stays server-side; the original message is
+    // still logged and kept on `originalError`, which the HTTP filter does not send to clients.
+    const message = error instanceof Error ? error.message : '';
+    return message.startsWith('Failed query:') ? 'Database error' : 'Internal server error';
   }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {

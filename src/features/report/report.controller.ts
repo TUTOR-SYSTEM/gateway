@@ -7,7 +7,8 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
-import { Roles } from '@packages/decorators';
+import { CurrentUser, Roles } from '@packages/decorators';
+import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { RolesGuard } from '@packages/guards';
 import { ZodValidationPipe } from '@packages/pipes';
 import {
@@ -32,11 +33,12 @@ export class ReportController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Learning report summary',
-    description: 'Active classes, average attendance, curriculum progress and submission rate (admin only)',
+    description:
+      'Active classes, average attendance, curriculum progress and submission rate (admin only)',
   })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
-  getSummary() {
-    return this.rmqProducer.send('report.summary', {});
+  getSummary(@CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('report.summary', { userId: user.id });
   }
 
   @Get('attendance-trend')
@@ -46,26 +48,33 @@ export class ReportController {
     description: 'Monthly attendance rate for the last 6 months (admin only)',
   })
   @SwaggerResponse({ status: 200, description: 'Attendance trend fetched' })
-  getAttendanceTrend() {
-    return this.rmqProducer.send('report.attendanceTrend', {});
+  getAttendanceTrend(@CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('report.attendanceTrend', { userId: user.id });
   }
 
   @Get('classes')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Class report list',
-    description: 'Paginated per-class report (attendance, curriculum progress, assignments) (admin only)',
+    description:
+      'Paginated per-class report (attendance, curriculum progress, assignments) (admin only)',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search name/code/subject' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search name/code/subject',
+  })
   @SwaggerResponse({ status: 200, description: 'Class reports fetched' })
   getClasses(
     @Query(
       new ZodValidationPipe<GetLearningClassReportsQueryDto>(getLearningClassReportsQuerySchema),
     )
     query: GetLearningClassReportsQueryDto,
+    @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('report.classList', { query });
+    return this.rmqProducer.send('report.classList', { query, userId: user.id });
   }
 }

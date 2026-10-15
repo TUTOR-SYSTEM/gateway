@@ -47,6 +47,19 @@ function sanitizeFilename(name: string): string {
   return base || 'download';
 }
 
+/** Printable-ASCII fallback for the legacy `filename=` param (non-ASCII and `\` become `_`). */
+function asciiFallbackFilename(name: string): string {
+  return name.replace(/[^\x20-\x7E]|\\/g, '_');
+}
+
+/** RFC 5987 `attr-char` encoding: encodeURIComponent plus ' ( ) * percent-encoded. */
+function encodeRfc5987(name: string): string {
+  return encodeURIComponent(name).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 
 /**
@@ -132,7 +145,7 @@ export class UploadController {
     const filename = sanitizeFilename(result.filename ?? key);
     res.set({
       'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${asciiFallbackFilename(filename)}"; filename*=UTF-8''${encodeRfc5987(filename)}`,
       'X-Content-Type-Options': 'nosniff',
     });
     res.send(fileBuffer);

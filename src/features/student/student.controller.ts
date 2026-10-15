@@ -164,7 +164,7 @@ export class StudentController {
     @Query(new ZodValidationPipe<GetStudentsQueryDto>(getStudentsQuerySchema))
     _query: GetStudentsQueryDto,
   ) {
-    return this.rmqProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'STUDENT' });
   }
 
   @Get(':id')

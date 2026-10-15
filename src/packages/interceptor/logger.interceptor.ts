@@ -11,6 +11,7 @@ const SENSITIVE_KEYS = [
   'password',
   'newPassword',
   'oldPassword',
+  'currentPassword',
   'confirmPassword',
   'token',
   'accessToken',

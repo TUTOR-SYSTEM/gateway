@@ -70,12 +70,17 @@ describe('JwtAuthGuard branch coverage', () => {
       expect(req.user).toMatchObject({ role });
     });
 
-    it('demotes an unknown string role to STUDENT instead of rejecting', async () => {
-      jwt.verify.mockReturnValue(access({ role: 'SUPERUSER' }));
-      const req: Req = { headers: bearer() };
-      await guard.canActivate(buildContext(req));
-      expect(req.user).toMatchObject({ role: 'STUDENT' });
-    });
+    it.each(['SUPERUSER', 'superadmin', 'SUPERADMIN'])(
+      'AUTH-04: rejects an unknown string role %s instead of demoting it to STUDENT',
+      async (role) => {
+        jwt.verify.mockReturnValue(access({ role }));
+        const req: Req = { headers: bearer() };
+        await expect(guard.canActivate(buildContext(req))).rejects.toThrow(
+          'Check role user failed ...',
+        );
+        expect(req.user).toBeUndefined();
+      },
+    );
 
     it('rejects a token whose role claim is not a string', async () => {
       jwt.verify.mockReturnValue(access({ role: 42 }));

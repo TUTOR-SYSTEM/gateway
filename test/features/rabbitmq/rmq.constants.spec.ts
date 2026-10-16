@@ -30,9 +30,8 @@ describe('resolveRmqTarget', () => {
     expect(resolveRmqTarget(pattern)).toBe(target);
   });
 
-  it('prefers a full-pattern override over the prefix map', () => {
-    expect(RMQ_PATTERN_ROUTES['kafka.tutor']).toBe(TUTOR_SERVICE);
-    expect(resolveRmqTarget('kafka.tutor')).toBe(TUTOR_SERVICE);
+  it('routes health full-pattern overrides and falls back to the prefix map for the rest', () => {
+    expect(Object.keys(RMQ_PATTERN_ROUTES).sort()).toEqual(['health.postgres', 'health.redis']);
     expect(resolveRmqTarget('kafka.other')).toBe(USER_SERVICE);
     expect(resolveRmqTarget('health.postgres')).toBe(USER_SERVICE);
     expect(resolveRmqTarget('health.redis')).toBe(THIRD_SERVICE);

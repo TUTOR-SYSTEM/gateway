@@ -22,7 +22,10 @@ describe('UploadController review fixes (group B)', () => {
   });
 
   it('delete requires ADMIN role', () => {
-    const roles = reflector.getAllAndOverride<string[]>(ROLES_KEY, [proto.delete, UploadController]);
+    const roles = reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      proto.delete,
+      UploadController,
+    ]);
     expect(roles).toEqual(['ADMIN']);
   });
 
@@ -35,7 +38,7 @@ describe('UploadController review fixes (group B)', () => {
     const imports = Reflect.getMetadata('imports', UploadModule) as any[];
     const providers = imports.flatMap((i) => i.providers ?? []);
     const prov = providers.find((p: any) => p.provide === 'MULTER_MODULE_OPTIONS');
-      const opts = prov?.useFactory ? prov.useFactory() : prov?.useValue;
+    const opts = prov?.useFactory ? prov.useFactory() : prov?.useValue;
     expect(opts?.limits?.fileSize).toBe(10 * 1024 * 1024);
     expect(opts?.limits?.files).toBe(10);
   });
@@ -43,7 +46,9 @@ describe('UploadController review fixes (group B)', () => {
   it.each(['../etc/passwd', 'other/abc.jpg', 'uploads/../secret', '/uploads/a.jpg', 'foo'])(
     'download rejects key %s with 400 and never calls RPC',
     async (key) => {
-      await expect((controller as any).download(key, res)).rejects.toBeInstanceOf(BadRequestException);
+      await expect((controller as any).download(key, res)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(send).not.toHaveBeenCalled();
     },
   );
@@ -51,9 +56,9 @@ describe('UploadController review fixes (group B)', () => {
   it.each(['../etc/passwd', 'other/abc.jpg', 'uploads/../secret'])(
     'delete rejects key %s with 400 and never calls RPC',
     async (key) => {
-      await expect(Promise.resolve().then(() => (controller as any).delete(key))).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        Promise.resolve().then(() => (controller as any).delete(key)),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(send).not.toHaveBeenCalled();
     },
   );
@@ -66,14 +71,21 @@ describe('UploadController review fixes (group B)', () => {
 
   it('delete accepts uploads/ key and forwards it', async () => {
     send.mockResolvedValue(undefined);
-    await controller.delete('uploads/abc.pdf');
-    expect(send).toHaveBeenCalledWith('upload.delete', { key: 'uploads/abc.pdf' });
+    await controller.delete('uploads/abc.pdf', { role: 'ADMIN' } as never);
+    expect(send).toHaveBeenCalledWith('upload.delete', { key: 'uploads/abc.pdf', role: 'ADMIN' });
   });
 
   it('download sanitizes filename in Content-Disposition (quotes, CR, LF) and sets nosniff', async () => {
-    send.mockResolvedValue({ buffer: Buffer.from('x').toString('base64'), filename: 'a"b\r\nSet-Cookie: x.pdf' });
+    send.mockResolvedValue({
+      buffer: Buffer.from('x').toString('base64'),
+      filename: 'a"b\r\nSet-Cookie: x.pdf',
+    });
     const headers: Record<string, string> = {};
-    const r = { set: jest.fn((h: any) => Object.assign(headers, h)), setHeader: jest.fn((k: string, v: string) => (headers[k] = v)), send: jest.fn() } as any;
+    const r = {
+      set: jest.fn((h: any) => Object.assign(headers, h)),
+      setHeader: jest.fn((k: string, v: string) => (headers[k] = v)),
+      send: jest.fn(),
+    } as any;
     await controller.download('uploads/abc.pdf', r);
     const cd = headers['Content-Disposition'];
     expect(cd).toMatch(/^attachment/);

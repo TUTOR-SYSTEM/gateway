@@ -153,20 +153,38 @@ describe('RmqProducer', () => {
       user.send
         .mockReturnValueOnce(throwError(() => new Error('flaky')))
         .mockReturnValueOnce(of('recovered'));
-      await expect(producer.send('auth.login', {}, 1000)).resolves.toBe('recovered');
+      await expect(producer.send('user.getUsers', {}, 1000)).resolves.toBe('recovered');
       expect(user.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('AUTH-02: does not retry a plain error on a non-idempotent write pattern', async () => {
+      user.send.mockReturnValue(throwError(() => new Error('Channel closed')));
+      const err = await producer
+        .send('auth.register', {}, 1000, 2)
+        .catch((e: unknown) => e as HttpException);
+      expect(user.send).toHaveBeenCalledTimes(1);
+      expect((err as HttpException).getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect((err as HttpException).getResponse()).toMatchObject({ attempts: 1 });
+    });
+
+    it('AUTH-02: does not retry a raw connection-failure object on a write pattern', async () => {
+      user.send.mockReturnValue(
+        throwError(() => ({ err: {}, url: 'amqp://guest:***@rabbit:5672' })),
+      );
+      await producer.send('auth.googleLogin', {}, 1000, 2).catch(() => undefined);
+      expect(user.send).toHaveBeenCalledTimes(1);
     });
 
     it('makes maxRetries + 1 attempts before throwing a 500 for a plain error', async () => {
       user.send.mockReturnValue(throwError(() => new Error('boom')));
       const err = await producer
-        .send('auth.login', {}, 1000, 2)
+        .send('user.getUsers', {}, 1000, 2)
         .catch((e: unknown) => e as HttpException);
       expect(user.send).toHaveBeenCalledTimes(3);
       expect(err).toBeInstanceOf(HttpException);
       expect((err as HttpException).getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect((err as HttpException).getResponse()).toMatchObject({
-        message: 'boom',
+        message: 'Internal server error',
         isTimeout: false,
         attempts: 3,
       });
@@ -174,22 +192,24 @@ describe('RmqProducer', () => {
 
     it('GW-06: does not retry a responder error that carries a statusCode', async () => {
       user.send.mockReturnValue(throwError(() => ({ statusCode: 409, message: 'dup' })));
-      const err = (await producer.send('user.createUser', {}, 1000).catch((e: unknown) => e)) as HttpException;
+      const err = (await producer
+        .send('user.createUser', {}, 1000)
+        .catch((e: unknown) => e)) as HttpException;
       expect(user.send).toHaveBeenCalledTimes(1);
       expect(err.getStatus()).toBe(409);
     });
 
     it('GW-06: does not retry a timeout on a write pattern (504)', async () => {
       user.send.mockReturnValue(throwError(() => timeoutError()));
-      const err = (await producer.send('user.createUser', {}, 1000).catch((e: unknown) => e)) as HttpException;
+      const err = (await producer
+        .send('user.createUser', {}, 1000)
+        .catch((e: unknown) => e)) as HttpException;
       expect(user.send).toHaveBeenCalledTimes(1);
       expect(err.getStatus()).toBe(HttpStatus.GATEWAY_TIMEOUT);
     });
 
     it('GW-06: retries a timeout on a read pattern', async () => {
-      user.send
-        .mockReturnValueOnce(throwError(() => timeoutError()))
-        .mockReturnValueOnce(of('ok'));
+      user.send.mockReturnValueOnce(throwError(() => timeoutError())).mockReturnValueOnce(of('ok'));
       await expect(producer.send('user.getUsers', {}, 1000)).resolves.toBe('ok');
       expect(user.send).toHaveBeenCalledTimes(2);
     });
@@ -236,7 +256,7 @@ describe('RmqProducer', () => {
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'no status' });
+      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
     });
 
     it('keeps an array validation message from the RPC payload', async () => {
@@ -250,42 +270,37 @@ describe('RmqProducer', () => {
       expect(err.getResponse()).toMatchObject({ message: ['email invalid', 'password short'] });
     });
 
-    it('surfaces a raw connection-failure object as a stringified 500 message', async () => {
+    it('hides a raw connection-failure object (broker URL) behind a generic 500 message', async () => {
       const connectionFailure = { err: {}, url: 'amqp://guest:***@rabbit:5672' };
       user.send.mockReturnValue(throwError(() => connectionFailure));
       const err = (await producer
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect((err.getResponse() as { message: string }).message).toBe(
-        JSON.stringify(connectionFailure),
-      );
+      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
+      expect(JSON.stringify(err.getResponse())).not.toContain('amqp://');
     });
 
-    it('stringifies a non-Error primitive failure', async () => {
+    it('uses a generic 500 message for a non-Error primitive failure', async () => {
       user.send.mockReturnValue(throwError(() => 'plain string'));
       const err = (await producer
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'plain string' });
+      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
     });
 
-    it('treats an object without a message as a connection failure: 500 with the JSON dump', async () => {
+    it('treats an object without a message as a connection failure: generic 500 message', async () => {
       user.send.mockReturnValue(throwError(() => ({ statusCode: 503 })));
       const err = (await producer
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({
-        message: JSON.stringify({ statusCode: 503 }),
-      });
+      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
     });
 
     it('treats a non-Error object that carries a message property as the RPC payload', async () => {
-      user.send.mockReturnValue(
-        throwError(() => ({ statusCode: 422, message: 'Unprocessable' })),
-      );
+      user.send.mockReturnValue(throwError(() => ({ statusCode: 422, message: 'Unprocessable' })));
       const err = (await producer
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
@@ -300,7 +315,7 @@ describe('RmqProducer', () => {
         return 0 as unknown as NodeJS.Timeout;
       }) as unknown as typeof setTimeout);
       user.send.mockReturnValue(throwError(() => new Error('down')));
-      await producer.send('auth.login', {}, 1000, 2).catch(() => undefined);
+      await producer.send('user.getUsers', {}, 1000, 2).catch(() => undefined);
       expect(sleeps).toEqual([100, 200]);
     });
 
@@ -309,9 +324,7 @@ describe('RmqProducer', () => {
       await producer.send('auth.login', {});
       const record = user.send.mock.calls[0][1];
       expect(record).toBeInstanceOf(RmqRecord);
-      expect(Logger.prototype.log).toHaveBeenCalledWith(
-        expect.stringContaining('timeoutMs=10000'),
-      );
+      expect(Logger.prototype.log).toHaveBeenCalledWith(expect.stringContaining('timeoutMs=10000'));
     });
 
     it('logs the attempt sequence on retry and on final failure', async () => {
@@ -320,7 +333,7 @@ describe('RmqProducer', () => {
         fn();
         return 0 as unknown as NodeJS.Timeout;
       }) as unknown as typeof setTimeout);
-      await producer.send('auth.login', {}, 1000, 1).catch(() => undefined);
+      await producer.send('user.getUsers', {}, 1000, 1).catch(() => undefined);
       const logCalls = (Logger.prototype.log as jest.Mock).mock.calls.map((c) => String(c[0]));
       expect(logCalls.some((m) => m.startsWith('[SEND-RETRY]'))).toBe(true);
       expect(Logger.prototype.warn).toHaveBeenCalledTimes(2);

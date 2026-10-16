@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, HttpException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  HttpException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { lastValueFrom, throwError, of } from 'rxjs';
 import { ErrorInterceptor } from 'src/packages/interceptor/error.interceptor';
 
@@ -65,10 +71,12 @@ describe('ErrorInterceptor', () => {
     expect(out.getResponse()).toEqual(expect.objectContaining({ message: 'Database error' }));
   });
 
-  it('keeps the original message for a plain Error and records the original error', async () => {
-    const out = (await catchFrom(handlerThrowing(new Error('boom')))) as InternalServerErrorException;
+  it('hides the original message of a plain Error from the client but records it', async () => {
+    const out = (await catchFrom(
+      handlerThrowing(new Error('boom')),
+    )) as InternalServerErrorException;
     expect(out.getResponse()).toEqual(
-      expect.objectContaining({ message: 'boom', originalError: 'boom' }),
+      expect.objectContaining({ message: 'Internal server error', originalError: 'boom' }),
     );
     expect(errorLog).toHaveBeenCalledWith('[ERROR-INTERCEPTOR] boom', expect.any(String));
   });
@@ -76,7 +84,10 @@ describe('ErrorInterceptor', () => {
   it('uses a generic message for non-Error throwables', async () => {
     const out = (await catchFrom(handlerThrowing('string thrown'))) as InternalServerErrorException;
     expect(out.getResponse()).toEqual(
-      expect.objectContaining({ message: 'Internal server error', originalError: 'Internal server error' }),
+      expect.objectContaining({
+        message: 'Internal server error',
+        originalError: 'Internal server error',
+      }),
     );
   });
 });

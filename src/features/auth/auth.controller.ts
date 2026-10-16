@@ -1,12 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse as SwaggerResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { StatusCodes } from 'http-status-codes';
 import type { Request, Response } from 'express';
 import {
@@ -41,11 +36,6 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 type RequestWithGoogleProfile = Request & { user: GoogleProfile };
 type RequestWithFacebookProfile = Request & { user: FacebookProfile };
 
-/**
- * Gateway is a thin HTTP edge for `auth`: it keeps validation, guards and Swagger metadata,
- * but every handler forwards to the `user` service over RabbitMQ via `RmqProducer.send` — no
- * local business logic or database access lives here anymore.
- */
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -55,7 +45,6 @@ export class AuthController {
   ) {}
 
   @Public()
-  @ApiBearerAuth('access-token')
   @Post('register')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -85,6 +74,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('login')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -97,7 +87,8 @@ export class AuthController {
       required: ['email', 'password'],
       properties: {
         email: { type: 'string', format: 'email', example: 'dang04223@gmail.com' },
-        password: { type: 'string', minLength: 6, maxLength: 25, example: 'Admin@123456' },
+        // Login does not re-check password strength (see loginPasswordFieldSchema).
+        password: { type: 'string', minLength: 1, example: 'Admin@123456' },
       },
     },
   })

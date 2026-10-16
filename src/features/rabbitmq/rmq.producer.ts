@@ -163,15 +163,16 @@ export class RmqProducer implements OnModuleDestroy {
         );
 
         // A responder business error (carries a statusCode) is deterministic: retrying only
-        // repeats side effects. A timeout on a non-idempotent call may have already executed.
+        // repeats side effects. For a non-idempotent call, any failure (timeout, dropped channel,
+        // lost reply) may still have executed on the responder, so it is never retried.
         const isRpcBusinessError =
           typeof error === 'object' &&
           error !== null &&
           !(error instanceof Error) &&
           typeof (error as { statusCode?: unknown }).statusCode === 'number';
-        const unsafeToRetryTimeout = isTimeout && !isIdempotentPattern(pattern);
+        const unsafeToRetry = !isIdempotentPattern(pattern);
 
-        if (attempt === maxRetries + 1 || isRpcBusinessError || unsafeToRetryTimeout) {
+        if (attempt === maxRetries + 1 || isRpcBusinessError || unsafeToRetry) {
           const payload = toRpcErrorPayload(error);
           this.logger.error(
             `[SEND-FAILED] ${pattern} correlationId=${correlationId} traceId=${traceId} attempts=${attempt} totalDuration=${totalDuration}ms error=${

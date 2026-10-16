@@ -25,17 +25,27 @@ const isPublic = (c: Ctor, name: string) =>
 
 describe('route guards (RolesGuard + @Roles)', () => {
   const adminOnly: Array<[string, Ctor, string[]]> = [
-    ['AppController', AppController, ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError', 'testError']],
-    ['UserController', UserController, [
-      'getUsers',
-      'getUserByField',
-      'createUser',
-      'updateUserByAdminController',
-      'updateStatusUserController',
-      'deleteUserByAdminController',
-    ]],
+    [
+      'AppController',
+      AppController,
+      ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError', 'testError'],
+    ],
+    [
+      'UserController',
+      UserController,
+      [
+        'getUsers',
+        'getUserByField',
+        'createUser',
+        'updateUserByAdminController',
+        'updateStatusUserController',
+        'deleteUserByAdminController',
+      ],
+    ],
     ['EmailController', EmailController, ['testSendEmail']],
     ['RedisController', RedisController, ['get']],
+    // Tutors may read a student but only ADMIN may change or delete one (see student.authz.spec).
+    ['StudentController', StudentController, ['update', 'delete']],
   ];
 
   describe.each(adminOnly)('%s admin-only routes', (_n, ctor, methods) => {
@@ -47,7 +57,7 @@ describe('route guards (RolesGuard + @Roles)', () => {
   });
 
   const adminOrTutor: Array<[string, Ctor, string[]]> = [
-    ['StudentController', StudentController, ['findById', 'update', 'delete']],
+    ['StudentController', StudentController, ['findById']],
     ['ChapterController', ChapterController, ['create', 'update', 'delete']],
     ['LessonController', LessonController, ['create', 'update', 'delete']],
     ['NotificationController', NotificationController, ['create']],
@@ -61,7 +71,11 @@ describe('route guards (RolesGuard + @Roles)', () => {
   });
 
   it('keeps the self-service user routes open to any authenticated user', () => {
-    for (const m of ['getDetailUserController', 'updateUserController', 'changePasswordController']) {
+    for (const m of [
+      'getDetailUserController',
+      'updateUserController',
+      'changePasswordController',
+    ]) {
       expect(roles(UserController, m)).toBeUndefined();
     }
   });
@@ -83,7 +97,12 @@ describe('@Public metadata', () => {
   });
 
   it('kafka debug routes are not public', () => {
-    for (const m of ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError', 'testError']) {
+    for (const m of [
+      'pingMsgFromKafkaController',
+      'sendMsgFromKafkaController',
+      'testMsgError',
+      'testError',
+    ]) {
       expect(isPublic(AppController, m)).toBe(false);
     }
   });

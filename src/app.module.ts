@@ -29,6 +29,7 @@ import { JwtAuthGuard, LanguageGuard } from '@packages/guards';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { RmqModule } from './features/rabbitmq/rmq.module';
+import { ThrottleModule } from './features/throttler/throttler.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { RmqModule } from './features/rabbitmq/rmq.module';
     AttendanceModule,
     ReportModule,
     AiChatModule,
+    ThrottleModule,
     NotificationModule,
     RedisModule,
     UploadModule,

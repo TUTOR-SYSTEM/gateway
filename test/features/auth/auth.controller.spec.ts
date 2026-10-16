@@ -19,6 +19,11 @@ function redirectedUrl(redirect: jest.Mock<void, [string]>): URL {
   return new URL(redirect.mock.calls[0][0]);
 }
 
+// Tokens travel in the URL fragment (not the query) so they never reach server or proxy logs.
+function fragmentParams(url: URL): URLSearchParams {
+  return new URLSearchParams(url.hash.slice(1));
+}
+
 describe('AuthController', () => {
   describe('RPC forwarding', () => {
     it.each([
@@ -33,9 +38,9 @@ describe('AuthController', () => {
       send.mockResolvedValue({ ok: true });
       const body = { email: 'a@b.c' };
 
-      const result = await (controller as unknown as Record<string, (b: unknown) => Promise<unknown>>)[
-        method
-      ](body);
+      const result = await (
+        controller as unknown as Record<string, (b: unknown) => Promise<unknown>>
+      )[method](body);
 
       expect(send).toHaveBeenCalledWith(pattern, body);
       expect(result).toEqual({ ok: true });
@@ -56,8 +61,8 @@ describe('AuthController', () => {
       expect(send).toHaveBeenCalledWith('auth.googleLogin', profile);
       const target = redirectedUrl(redirect);
       expect(target.origin + target.pathname).toBe('https://app.example.com/oauth/callback');
-      expect(target.searchParams.get('accessToken')).toBe('AT');
-      expect(target.searchParams.get('refreshToken')).toBe('RT');
+      expect(fragmentParams(target).get('accessToken')).toBe('AT');
+      expect(fragmentParams(target).get('refreshToken')).toBe('RT');
     });
 
     it('falls back to localhost when no redirect URL is configured', async () => {
@@ -68,7 +73,7 @@ describe('AuthController', () => {
       await controller.googleAuthCallback({ user: {} } as never, res);
 
       expect(redirect).toHaveBeenCalledWith(
-        expect.stringMatching(/^http:\/\/localhost:3000\/oauth\/callback\?/),
+        expect.stringMatching(/^http:\/\/localhost:3000\/oauth\/callback#/),
       );
     });
   });
@@ -86,8 +91,8 @@ describe('AuthController', () => {
 
       expect(send).toHaveBeenCalledWith('auth.facebookLogin', profile);
       const target = redirectedUrl(redirect);
-      expect(target.searchParams.get('accessToken')).toBe('AT2');
-      expect(target.searchParams.get('refreshToken')).toBe('RT2');
+      expect(fragmentParams(target).get('accessToken')).toBe('AT2');
+      expect(fragmentParams(target).get('refreshToken')).toBe('RT2');
     });
 
     // KNOWN BUG (see report): the Facebook callback reads GOOGLE_OAUTH_REDIRECT_URL, not a
@@ -125,7 +130,7 @@ describe('AuthController', () => {
       await controller.facebookAuthCallback({ user: {} } as never, res);
 
       expect(redirect).toHaveBeenCalledWith(
-        expect.stringMatching(/^http:\/\/localhost:3000\/oauth\/callback\?/),
+        expect.stringMatching(/^http:\/\/localhost:3000\/oauth\/callback#/),
       );
     });
 

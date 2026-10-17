@@ -32,6 +32,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-tutor_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    # Log every connect/disconnect with the client IP (%h) — view with `docker compose logs postgres`
+    command:
+      - postgres
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - log_hostname=off
+      - -c
+      - log_line_prefix=%m [%p] ip=%h user=%u db=%d app=%a
     ports: ['5432:5432']
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:

@@ -9,6 +9,18 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
 
+    # Log every connect/disconnect with the client IP (%h) — view with `docker compose -f docker-compose.infra.yml logs postgres`
+    command:
+      - postgres
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - log_hostname=off
+      - -c
+      - log_line_prefix=%m [%p] ip=%h user=%u db=%d app=%a
+
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
 

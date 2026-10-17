@@ -10,3 +10,6 @@ export const getRequestLogsQuerySchema = z.object({
   correlationId: z.string().optional(),
   search: z.string().trim().min(1).optional(),
 });
+
+/** `GET /log/trace/:correlationId` path param: a bounded, non-blank id (correlation ids are UUIDs). */
+export const correlationIdParamSchema = z.string().trim().min(1).max(128);

@@ -27,12 +27,15 @@ export type JwtAccessPayload = {
   email: string;
   typ: 'access';
   role: JwtUserRole;
+  /** Login session id (one per device); checked against `session:{sub}:{sid}`. */
+  sid: string;
 };
 
 export type JwtRefreshPayload = {
   sub: string;
   email: string;
   typ: 'refresh';
+  sid: string;
 };
 
 export type JwtPayload = JwtAccessPayload | JwtRefreshPayload;
@@ -47,7 +50,7 @@ export type JwtTokensConfig = {
 
 export async function signAccessToken(
   jwtService: JwtSignContract,
-  payload: Pick<JwtAccessPayload, 'sub' | 'email' | 'role'>,
+  payload: Pick<JwtAccessPayload, 'sub' | 'email' | 'role' | 'sid'>,
   config: JwtTokensConfig,
 ): Promise<string> {
   const body: JwtAccessPayload = { ...payload, typ: 'access' };
@@ -59,7 +62,7 @@ export async function signAccessToken(
 
 export async function signRefreshToken(
   jwtService: JwtSignContract,
-  payload: Pick<JwtRefreshPayload, 'sub' | 'email'>,
+  payload: Pick<JwtRefreshPayload, 'sub' | 'email' | 'sid'>,
   config: JwtTokensConfig,
 ): Promise<string> {
   const body: JwtRefreshPayload = { ...payload, typ: 'refresh' };

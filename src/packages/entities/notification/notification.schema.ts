@@ -1,9 +1,26 @@
 import { z } from 'zod';
 
-/** Internal path (`/x`, not `//x` or `/\\x`) or an absolute `https://` URL — nothing else. */
-function isSafeRedirectUrl(value: string): boolean {
-  if (value.startsWith('/')) return !value.startsWith('//') && !value.startsWith('/\\');
-  return value.startsWith('https://');
+/** Any control character (incl. tab/CR/LF, which browsers strip) or backslash. */
+const UNSAFE_REDIRECT_CHARS = /[\p{Cc}\\]/u;
+
+/**
+ * Internal path only (`/x`; never `//x`) or an absolute `https://` URL whose host is listed in
+ * `NOTIFICATION_REDIRECT_HOSTS` (comma-separated). Anything else (javascript:, protocol-relative,
+ * control characters, unknown hosts) is rejected.
+ */
+export function isSafeRedirectUrl(value: string): boolean {
+  if (UNSAFE_REDIRECT_CHARS.test(value)) return false;
+  if (value.startsWith('/')) return !value.startsWith('//');
+  if (!value.startsWith('https://')) return false;
+  const allowedHosts = (process.env.NOTIFICATION_REDIRECT_HOSTS ?? '')
+    .split(',')
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  try {
+    return allowedHosts.includes(new URL(value).hostname.toLowerCase());
+  } catch {
+    return false;
+  }
 }
 
 export const notificationTypeEnum = z.enum(['SYSTEM', 'TUITION', 'STUDENT', 'TUTOR']);
@@ -34,7 +51,12 @@ export const createNotificationSchema = z.object({
 export const getNotificationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
-  search: z.string().trim().min(1).optional(),
+  // An empty `search` means "no filter" rather than a 400.
+  search: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value ? value : undefined)),
   type: notificationTypeEnum.optional(),
   isRead: z
     .enum(['true', 'false'])

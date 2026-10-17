@@ -129,7 +129,12 @@ export class StudentController {
     _dto: CreateStudentDto,
     @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('user.createUser', { ..._dto, userId: _currentUser.id });
+    return this.rmqProducer.send(
+      'student.create',
+      { ..._dto, actorId: _currentUser.id, actorRole: _currentUser.role },
+      30000,
+      0,
+    );
   }
 
   @Roles('ADMIN')
@@ -163,8 +168,13 @@ export class StudentController {
   getAllStudents(
     @Query(new ZodValidationPipe<GetStudentsQueryDto>(getStudentsQuerySchema))
     _query: GetStudentsQueryDto,
+    @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('user.getUsers', { ..._query, role: 'STUDENT' });
+    return this.rmqProducer.send('student.findAll', {
+      ..._query,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
   }
 
   @Get(':id')
@@ -235,8 +245,8 @@ export class StudentController {
   })
   @SwaggerResponse({ status: 404, description: 'Student not found' })
   findById(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
-    return this.rmqProducer.send('user.getDetailUser', {
-      userId: _id,
+    return this.rmqProducer.send('student.findById', {
+      id: _id,
       actorId: _currentUser.id,
       actorRole: _currentUser.role,
     });
@@ -286,9 +296,9 @@ export class StudentController {
     _dto: UpdateStudentDto,
     @CurrentUser() _currentUser: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('user.updateUser', {
+    return this.rmqProducer.send('student.update', {
+      id: _id,
       ..._dto,
-      userId: _id,
       actorId: _currentUser.id,
       actorRole: _currentUser.role,
     });
@@ -302,7 +312,7 @@ export class StudentController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Student deleted' })
   delete(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
-    return this.rmqProducer.send('user.deleteUserByAdmin', {
+    return this.rmqProducer.send('student.delete', {
       id: _id,
       actorId: _currentUser.id,
       actorRole: _currentUser.role,

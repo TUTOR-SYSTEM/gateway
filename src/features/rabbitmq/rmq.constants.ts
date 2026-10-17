@@ -22,6 +22,8 @@ export const RMQ_PATTERN_ROUTES: Record<string, RmqTarget> = {
 export const RMQ_PREFIX_ROUTES: Record<string, RmqTarget> = {
   auth: USER_SERVICE,
   user: USER_SERVICE,
+  student: USER_SERVICE,
+  admin: USER_SERVICE,
   kafka: USER_SERVICE,
 
   redis: THIRD_SERVICE,

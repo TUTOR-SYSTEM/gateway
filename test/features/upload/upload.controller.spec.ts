@@ -1,58 +1,124 @@
 import { BadRequestException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Response } from 'express';
+import { IS_PUBLIC_KEY } from '@packages/decorators/public.decorator';
+import { ROLES_KEY } from '@packages/decorators/roles.decorator';
 import { UploadController } from 'src/features/upload/upload.controller';
+import { ERROR_MESSAGES } from 'src/data/constants';
 import type { RmqProducer } from 'src/features/rabbitmq/rmq.producer';
 
-function setup() {
-  const send = jest.fn();
-  return { send, controller: new UploadController({ send } as unknown as RmqProducer) };
-}
+const proto = UploadController.prototype;
+const actor = { id: 'u-1', email: 'a@b.c', typ: 'access', role: 'TUTOR', sid: 's' } as never;
+const file = (name: string) =>
+  ({
+    originalname: name,
+    mimetype: 'image/png',
+    size: 3,
+    buffer: Buffer.from('abc'),
+  }) as Express.Multer.File;
 
-function resMock() {
-  const set = jest.fn();
-  const sendFn = jest.fn();
-  return { res: { set, send: sendFn } as unknown as Response, set, sendFn };
+function setup() {
+  const send = jest.fn().mockResolvedValue({ ok: true });
+  const controller = new UploadController({ send } as unknown as RmqProducer);
+  const res = { redirect: jest.fn() } as unknown as Response;
+  return { send, controller, res };
 }
 
 describe('UploadController', () => {
-  it('GW-17: upload throws 400 when the file is missing', () => {
+  const reflector = new Reflector();
+
+  it('upload and uploadMultiple are open to ADMIN and TUTOR only (STUDENT/PARENT get 403)', () => {
+    for (const h of ['upload', 'uploadMultiple'] as const) {
+      expect(
+        reflector.getAllAndOverride<string[]>(ROLES_KEY, [proto[h], UploadController]),
+      ).toEqual(['ADMIN', 'TUTOR']);
+    }
+  });
+
+  it('delete is ADMIN only; every handler requires authentication', () => {
+    expect(
+      reflector.getAllAndOverride<string[]>(ROLES_KEY, [proto.delete, UploadController]),
+    ).toEqual(['ADMIN']);
+    for (const h of ['upload', 'uploadMultiple', 'download', 'delete'] as const) {
+      expect(reflector.getAllAndOverride(IS_PUBLIC_KEY, [proto[h], UploadController])).toBeFalsy();
+    }
+  });
+
+  it('upload with no file is a 400 and never reaches the service', () => {
     const { controller, send } = setup();
-    expect(() => controller.upload(undefined as never)).toThrow(BadRequestException);
+    expect(() => controller.upload(undefined as never, actor)).toThrow(BadRequestException);
+    expect(() => controller.upload(undefined as never, actor)).toThrow(
+      new BadRequestException(ERROR_MESSAGES.UPLOAD_FILE_REQUIRED).message,
+    );
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('GW-17: uploadMultiple throws 400 for undefined or empty files', () => {
+  it('uploadMultiple with no files is a 400 and never reaches the service', () => {
     const { controller, send } = setup();
-    expect(() => controller.uploadMultiple(undefined as never)).toThrow(BadRequestException);
-    expect(() => controller.uploadMultiple([])).toThrow(BadRequestException);
+    expect(() => controller.uploadMultiple(undefined as never, actor)).toThrow(BadRequestException);
+    expect(() => controller.uploadMultiple([], actor)).toThrow(BadRequestException);
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('forwards a file to upload.upload', () => {
+  it('upload forwards the file with the verified userId and role', async () => {
     const { controller, send } = setup();
-    send.mockResolvedValue('ok');
-    controller.upload({
-      originalname: 'a.png',
-      mimetype: 'image/png',
-      buffer: Buffer.from('x'),
-    } as never);
-    expect(send).toHaveBeenCalledWith('upload.upload', expect.objectContaining({ file: expect.any(Object) }));
+    await controller.upload(file('a.png'), actor);
+    expect(send).toHaveBeenCalledWith('upload.upload', {
+      userId: 'u-1',
+      role: 'TUTOR',
+      file: { originalname: 'a.png', mimetype: 'image/png', size: 3, buffer: 'YWJj' },
+    });
   });
 
-  it('download rejects an empty key', async () => {
-    const { controller } = setup();
-    await expect(controller.download('', resMock().res)).rejects.toBeInstanceOf(BadRequestException);
+  it('uploadMultiple forwards files with userId and role', async () => {
+    const { controller, send } = setup();
+    await controller.uploadMultiple([file('a.png'), file('b.png')], actor);
+    expect(send).toHaveBeenCalledWith('upload.uploadMultiple', {
+      userId: 'u-1',
+      role: 'TUTOR',
+      files: [
+        { originalname: 'a.png', mimetype: 'image/png', size: 3, buffer: 'YWJj' },
+        { originalname: 'b.png', mimetype: 'image/png', size: 3, buffer: 'YWJj' },
+      ],
+    });
   });
 
-  it('GW-17: download sanitizes the filename in Content-Disposition', async () => {
+  it('download rejects keys outside uploads/ with 400 and never calls the service', async () => {
+    const { controller, send, res } = setup();
+    for (const key of [
+      '',
+      '../etc/passwd',
+      'other/abc.jpg',
+      'uploads/../secret',
+      '/uploads/a.jpg',
+    ]) {
+      await expect(controller.download(key, actor, res)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    }
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('download asks third-service with userId/role and redirects to the presigned URL', async () => {
+    const { controller, send, res } = setup();
+    send.mockResolvedValue({
+      url: 'https://r2.example/presigned',
+      expiresIn: 300,
+      contentType: 'application/pdf',
+      filename: 'a.pdf',
+    });
+    await controller.download('uploads/abc.pdf', actor, res);
+    expect(send).toHaveBeenCalledWith('upload.download', {
+      key: 'uploads/abc.pdf',
+      userId: 'u-1',
+      role: 'TUTOR',
+    });
+    expect(res.redirect).toHaveBeenCalledWith(302, 'https://r2.example/presigned');
+  });
+
+  it('delete forwards key and role (ownership is not needed for ADMIN)', async () => {
     const { controller, send } = setup();
-    send.mockResolvedValue({ buffer: Buffer.from('hi').toString('base64') });
-    const { res, set, sendFn } = resMock();
-    await controller.download('uploads/ev"il\r\nname.jpg', res);
-    const header = set.mock.calls[0][0]['Content-Disposition'] as string;
-    expect(header).toContain('filename="ev_il__name.jpg"');
-    expect(header).not.toMatch(/[\r\n]/);
-    expect(header).not.toContain('uploads/');
-    expect(sendFn).toHaveBeenCalledWith(Buffer.from('hi'));
+    await controller.delete('uploads/abc.pdf', { role: 'ADMIN' } as never);
+    expect(send).toHaveBeenCalledWith('upload.delete', { key: 'uploads/abc.pdf', role: 'ADMIN' });
   });
 });

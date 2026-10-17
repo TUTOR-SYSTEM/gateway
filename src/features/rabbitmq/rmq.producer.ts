@@ -29,6 +29,14 @@ import {
 const SERVICE_NAME = 'gateway';
 
 /**
+ * Broker connection errors can embed the AMQP URL (with user:password) in their text. Strip the
+ * credentials before anything reaches a log line.
+ */
+export function redactConnectionSecrets(text: string): string {
+  return text.replace(/(amqps?:\/\/)[^\s"'/@]+@/gi, '$1***@');
+}
+
+/**
  * Wraps the payload in an `RmqRecord` so the trace headers ride as AMQP message headers
  * (`properties.headers`) instead of changing the payload any `@Payload()` handler receives.
  * `correlationId` is reused from the current `RequestContext` for the whole distributed flow,
@@ -69,10 +77,13 @@ function toRpcErrorPayload(raw: unknown): RpcErrorPayload {
     }
     // Not a real RPC error payload — e.g. an amqplib/amqp-connection-manager connection
     // failure shaped like `{ err: {}, url: '...' }` (wrong RABBITMQ_URL/credentials, broker
-    // down). Stringify it so the real cause surfaces instead of a generic fallback message.
-    return { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: JSON.stringify(obj) };
+    // down). Stringify it (credentials redacted) so the real cause surfaces in the logs.
+    return {
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: redactConnectionSecrets(JSON.stringify(obj)),
+    };
   }
-  const message = raw instanceof Error ? raw.message : String(raw);
+  const message = redactConnectionSecrets(raw instanceof Error ? raw.message : String(raw));
   return { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message };
 }
 
@@ -156,7 +167,9 @@ export class RmqProducer implements OnModuleDestroy {
         const attemptDuration = Date.now() - attemptStartTime;
         const totalDuration = Date.now() - totalStartTime;
         const isTimeout = error instanceof Error && error.name === 'TimeoutError';
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        const errorMessage = redactConnectionSecrets(
+          error instanceof Error ? error.message : JSON.stringify(error),
+        );
 
         this.logger.warn(
           `[SEND-ATTEMPT-FAILED] ${pattern} correlationId=${correlationId} traceId=${traceId} attempt=${attempt} attemptDuration=${attemptDuration}ms totalDuration=${totalDuration}ms isTimeout=${isTimeout} error=${errorMessage}`,
@@ -189,9 +202,9 @@ export class RmqProducer implements OnModuleDestroy {
           const isServerError = status >= 500;
           const clientMessage = isServerError
             ? isTimeout
-              ? 'Upstream service timed out'
-              : 'Internal server error'
-            : (payload.message ?? 'Message queue service unavailable');
+              ? 'UPSTREAM_TIMEOUT'
+              : 'INTERNAL_SERVER_ERROR'
+            : (payload.message ?? 'SERVICE_UNAVAILABLE');
 
           throw new HttpException(
             {

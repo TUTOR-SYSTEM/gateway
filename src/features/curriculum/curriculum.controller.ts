@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -45,11 +46,11 @@ export class CurriculumController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Get('generate-code')
-  @HttpCode(StatusCodes.CREATED)
+  @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Generate curriculum code' })
-  @SwaggerResponse({ status: 201, description: 'Curriculum code generated' })
-  generateCode() {
-    return this.rmqProducer.send('curriculum.generateCode', {});
+  @SwaggerResponse({ status: 200, description: 'Curriculum code generated' })
+  generateCode(@CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('curriculum.generateCode', { userId: user.id, role: user.role });
   }
 
   @UseGuards(RolesGuard)
@@ -60,7 +61,7 @@ export class CurriculumController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['subject', 'code', 'grade'],
+      required: ['subject', 'code', 'grade', 'courseTime'],
       properties: {
         subject: { type: 'string', example: 'Đại Số' },
         code: { type: 'string', example: 'FDV643' },
@@ -77,7 +78,11 @@ export class CurriculumController {
     _dto: CreateCurriculumDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('curriculum.create', { userId: _user.id, createCurriculum: _dto });
+    return this.rmqProducer.send('curriculum.create', {
+      userId: _user.id,
+      role: _user.role,
+      createCurriculum: _dto,
+    });
   }
 
   @Get()
@@ -97,7 +102,11 @@ export class CurriculumController {
     _query: GetCurriculumsQueryDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('curriculum.getAll', { userId: _user.id, query: _query });
+    return this.rmqProducer.send('curriculum.getAll', {
+      userId: _user.id,
+      role: _user.role,
+      query: _query,
+    });
   }
 
   @Get(':id')
@@ -105,8 +114,12 @@ export class CurriculumController {
   @ApiOperation({ summary: 'Get curriculum by id' })
   @ApiParam({ name: 'id', description: 'Curriculum ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum detail fetched' })
-  getById(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.rmqProducer.send('curriculum.getById', { userId: _user.id, id: _id });
+  getById(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('curriculum.getById', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -128,12 +141,17 @@ export class CurriculumController {
   })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum updated' })
   update(
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe<UpdateCurriculumDto>(updateCurriculumSchema))
     _dto: UpdateCurriculumDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('curriculum.update', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('curriculum.update', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+      data: _dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -143,7 +161,11 @@ export class CurriculumController {
   @ApiOperation({ summary: 'Delete curriculum' })
   @ApiParam({ name: 'id', description: 'Curriculum ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Curriculum deleted' })
-  delete(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.rmqProducer.send('curriculum.delete', { userId: _user.id, id: _id });
+  delete(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('curriculum.delete', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+    });
   }
 }

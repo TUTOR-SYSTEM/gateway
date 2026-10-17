@@ -4,3 +4,4 @@ export * from './generate.helper';
 export * from './checkEnv.helper';
 export * from './file.helper';
 export * from './route-catalog.helper';
+export * from './security-headers.helper';

@@ -184,7 +184,7 @@ describe('RmqProducer', () => {
       expect(err).toBeInstanceOf(HttpException);
       expect((err as HttpException).getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect((err as HttpException).getResponse()).toMatchObject({
-        message: 'Internal server error',
+        message: 'INTERNAL_SERVER_ERROR',
         isTimeout: false,
         attempts: 3,
       });
@@ -256,7 +256,7 @@ describe('RmqProducer', () => {
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
+      expect(err.getResponse()).toMatchObject({ message: 'INTERNAL_SERVER_ERROR' });
     });
 
     it('keeps an array validation message from the RPC payload', async () => {
@@ -277,7 +277,7 @@ describe('RmqProducer', () => {
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
+      expect(err.getResponse()).toMatchObject({ message: 'INTERNAL_SERVER_ERROR' });
       expect(JSON.stringify(err.getResponse())).not.toContain('amqp://');
     });
 
@@ -287,7 +287,7 @@ describe('RmqProducer', () => {
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
+      expect(err.getResponse()).toMatchObject({ message: 'INTERNAL_SERVER_ERROR' });
     });
 
     it('treats an object without a message as a connection failure: generic 500 message', async () => {
@@ -296,7 +296,7 @@ describe('RmqProducer', () => {
         .send('user.get', {}, 1000, 0)
         .catch((e: unknown) => e)) as HttpException;
       expect(err.getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(err.getResponse()).toMatchObject({ message: 'Internal server error' });
+      expect(err.getResponse()).toMatchObject({ message: 'INTERNAL_SERVER_ERROR' });
     });
 
     it('treats a non-Error object that carries a message property as the RPC payload', async () => {

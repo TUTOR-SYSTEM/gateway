@@ -1,5 +1,10 @@
 import { Controller, Get, HttpCode, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse as SwaggerResponse,
+} from '@nestjs/swagger';
 import { StatusCodes } from 'http-status-codes';
 import { Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
@@ -19,9 +24,12 @@ export class EmailController {
   @Roles('ADMIN')
   @Get()
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Test email', description: 'Send a test email through the third-service' })
+  @ApiOperation({
+    summary: 'Test email',
+    description: 'Send a test email through the third-service',
+  })
   @SwaggerResponse({ status: 200, description: 'Test email sent' })
   testSendEmail() {
-    return this.rmqProducer.send('email.test', {});
+    return this.rmqProducer.send('email.test', {}, 30000, 0);
   }
 }

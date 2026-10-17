@@ -38,7 +38,7 @@ export class ReportController {
   })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
   getSummary(@CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('report.summary', { userId: user.id });
+    return this.rmqProducer.send('report.summary', { userId: user.id, role: user.role }, 15000);
   }
 
   @Get('attendance-trend')
@@ -49,7 +49,11 @@ export class ReportController {
   })
   @SwaggerResponse({ status: 200, description: 'Attendance trend fetched' })
   getAttendanceTrend(@CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('report.attendanceTrend', { userId: user.id });
+    return this.rmqProducer.send(
+      'report.attendanceTrend',
+      { userId: user.id, role: user.role },
+      15000,
+    );
   }
 
   @Get('classes')
@@ -75,6 +79,10 @@ export class ReportController {
     query: GetLearningClassReportsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('report.classList', { query, userId: user.id });
+    return this.rmqProducer.send(
+      'report.classList',
+      { query, userId: user.id, role: user.role },
+      15000,
+    );
   }
 }

@@ -68,7 +68,7 @@ describe('ErrorInterceptor', () => {
   it('replaces drizzle "Failed query:" messages with a generic database error', async () => {
     const err = new Error('Failed query: select * from users');
     const out = (await catchFrom(handlerThrowing(err))) as InternalServerErrorException;
-    expect(out.getResponse()).toEqual(expect.objectContaining({ message: 'Database error' }));
+    expect(out.getResponse()).toEqual(expect.objectContaining({ message: 'DATABASE_ERROR' }));
   });
 
   it('hides the original message of a plain Error from the client but records it', async () => {
@@ -76,7 +76,7 @@ describe('ErrorInterceptor', () => {
       handlerThrowing(new Error('boom')),
     )) as InternalServerErrorException;
     expect(out.getResponse()).toEqual(
-      expect.objectContaining({ message: 'Internal server error', originalError: 'boom' }),
+      expect.objectContaining({ message: 'INTERNAL_SERVER_ERROR', originalError: 'boom' }),
     );
     expect(errorLog).toHaveBeenCalledWith('[ERROR-INTERCEPTOR] boom', expect.any(String));
   });
@@ -85,7 +85,7 @@ describe('ErrorInterceptor', () => {
     const out = (await catchFrom(handlerThrowing('string thrown'))) as InternalServerErrorException;
     expect(out.getResponse()).toEqual(
       expect.objectContaining({
-        message: 'Internal server error',
+        message: 'INTERNAL_SERVER_ERROR',
         originalError: 'Internal server error',
       }),
     );

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Put,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -32,8 +41,15 @@ export class AttendanceController {
   })
   @ApiParam({ name: 'sessionId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Attendance fetched' })
-  getBySession(@Param('sessionId') sessionId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('attendance.getBySession', { userId: user.id, sessionId });
+  getBySession(
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @CurrentUser() user: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('attendance.getBySession', {
+      userId: user.id,
+      role: user.role,
+      sessionId,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -50,6 +66,10 @@ export class AttendanceController {
     dto: UpsertAttendanceDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('attendance.upsert', { userId: user.id, data: dto });
+    return this.rmqProducer.send('attendance.upsert', {
+      userId: user.id,
+      role: user.role,
+      data: dto,
+    });
   }
 }

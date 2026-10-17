@@ -19,7 +19,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // handle response from exception
     const exceptionResponse = exception.getResponse?.() ?? null;
 
-    let message = 'Internal server error';
+    let message = 'INTERNAL_SERVER_ERROR';
 
     if (exceptionResponse === null) {
       message = exception.message || message;
@@ -67,7 +67,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.url,
       correlationId: getRequestContext()?.correlationId,
       ...(serviceName && { serviceName }),
-      ...(status >= 500 && process.env.NODE_ENV !== 'production' && { trace: exception.stack }),
+      ...(status >= 500 && process.env.NODE_ENV === 'development' && { trace: exception.stack }),
       timestamp: new Date().toISOString(),
     });
   }

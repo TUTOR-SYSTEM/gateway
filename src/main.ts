@@ -6,6 +6,7 @@
 import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from '@packages/interceptor/response.interceptor';
@@ -14,11 +15,19 @@ import { HttpExceptionFilter } from '@packages/filters';
 import { requestContextMiddleware } from '@packages/context/request-context.middleware';
 import { setLogSink } from '@packages/context/log-sink';
 import { RmqProducer } from './features/rabbitmq/rmq.producer';
+import { securityHeaders } from '@packages/helpers/security-headers.helper';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+  // Behind the platform proxy (Railway), req.ip is the proxy address unless the hop count is set:
+  // without this, every client shares one rate-limit bucket. TRUST_PROXY_HOPS defaults to 1.
+  const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+  app.set(
+    'trust proxy',
+    Number.isInteger(trustProxyHops) && trustProxyHops >= 0 ? trustProxyHops : 1,
+  );
   // Lets Nest run onModuleDestroy (RMQ clients close) on SIGTERM/SIGINT instead of dropping
   // in-flight requests.
   app.enableShutdownHooks();
@@ -26,6 +35,7 @@ async function bootstrap() {
   // First in the chain: opens the AsyncLocalStorage context (correlationId/traceId/serviceName)
   // that every interceptor, guard, controller, and `RmqProducer.send()` call below reads from.
   app.use(requestContextMiddleware);
+  app.use(securityHeaders);
 
   // Origin whitelist from CORS_ORIGINS (comma-separated). Dev default: local frontends only.
   const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173')

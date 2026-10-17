@@ -42,9 +42,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     if (!email) {
       throw new BadRequestException('Google account has no public email');
     }
-    // Only an explicit `false` is rejected; the claim is absent for some account types.
+    // Fail closed: only an explicit `true` lets the email be used to link or create an account.
     const raw = (profile as Profile & { _json?: { email_verified?: boolean } })._json;
-    if (raw?.email_verified === false) {
+    if (raw?.email_verified !== true) {
       throw new BadRequestException('Google account email is not verified');
     }
 

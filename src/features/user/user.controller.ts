@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -35,6 +36,8 @@ import {
   updateUserSchema,
   updateSelfSchema,
   type UpdateSelfDto,
+  updateUserStatusSchema,
+  type UpdateUserStatusDto,
   type UserDataFieldDto,
 } from '@packages/entities/user';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
@@ -53,11 +56,9 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class UserController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
-  @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.GET_USERS_SUCCESSFULLY,
@@ -74,10 +75,15 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.GET_USERS_SUCCESSFULLY,
   })
   getUsers(
+    @CurrentUser() _user: JwtGuardUser,
     @Query(new ZodValidationPipe<GetUsersQueryDto>(getUsersQuerySchema))
     _query: GetUsersQueryDto,
   ) {
-    return this.rmqProducer.send('user.getUsers', _query);
+    return this.rmqProducer.send('user.getUsers', {
+      ..._query,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
   @Get('/detail-user')
@@ -113,17 +119,20 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.GET_USER_BY_FIELD_SUCCESSFULLY,
   })
   getUserByField(
+    @CurrentUser() _user: JwtGuardUser,
     @Query(new ZodValidationPipe(dataFieldSchema))
     _dataFieldDto: UserDataFieldDto,
   ): Promise<unknown> {
-    return this.rmqProducer.send('user.getUserByField', _dataFieldDto);
+    return this.rmqProducer.send('user.getUserByField', {
+      ..._dataFieldDto,
+      actorId: _user.id,
+      actorRole: _user.role,
+    });
   }
 
-  @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.CREATE_USER_SUCCESSFULLY,
@@ -135,10 +144,20 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.CREATE_USER_SUCCESSFULLY,
   })
   createUser(
+    @CurrentUser() _user: JwtGuardUser,
     @Body(new ZodValidationPipe(createUserSchema))
     _createUserDto: CreateUserDto,
   ): Promise<CreateUserResponseDto> {
-    return this.rmqProducer.send('user.createUser', _createUserDto);
+    return this.rmqProducer.send(
+      'user.createUser',
+      {
+        ..._createUserDto,
+        actorId: _user.id,
+        actorRole: _user.role,
+      },
+      30000,
+      0,
+    );
   }
 
   @Put('')
@@ -167,11 +186,9 @@ export class UserController {
     });
   }
 
-  @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Put('/:id')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.UPDATE_USER_SUCCESSFULLY,
@@ -184,7 +201,7 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_SUCCESSFULLY,
   })
   updateUserByAdminController(
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @CurrentUser() _user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
     _updateUserDto: UpdateUserDto,
@@ -197,11 +214,9 @@ export class UserController {
     });
   }
 
-  @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Put('/:id/status')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
@@ -212,19 +227,23 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
   })
-  updateStatusUserController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+  updateStatusUserController(
+    @Param('id', ParseUUIDPipe) _id: string,
+    @CurrentUser() _user: JwtGuardUser,
+    @Body(new ZodValidationPipe<UpdateUserStatusDto>(updateUserStatusSchema))
+    _body: UpdateUserStatusDto,
+  ) {
     return this.rmqProducer.send('user.updateStatusUser', {
       id: _id,
+      isActive: _body.isActive,
       actorId: _user.id,
       actorRole: _user.role,
     });
   }
 
-  @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Delete('/:id')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
@@ -235,7 +254,10 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
   })
-  deleteUserByAdminController(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
+  deleteUserByAdminController(
+    @Param('id', ParseUUIDPipe) _id: string,
+    @CurrentUser() _user: JwtGuardUser,
+  ) {
     return this.rmqProducer.send('user.deleteUserByAdmin', {
       id: _id,
       actorId: _user.id,

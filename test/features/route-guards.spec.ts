@@ -92,6 +92,10 @@ describe('@Public metadata', () => {
     expect(isPublic(AuthController, 'resetPassword')).toBe(true);
   });
 
+  it('POST /auth/verify-email is public', () => {
+    expect(isPublic(AuthController, 'verifyEmail')).toBe(true);
+  });
+
   it('GW-25: GET / health check is public', () => {
     expect(isPublic(AppController, 'getHello')).toBe(true);
   });

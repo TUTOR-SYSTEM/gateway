@@ -1,0 +1,16 @@
+# Local debugging override: publishes the internal services to the host.
+# Never use this file for a production or shared deployment (it bypasses the gateway).
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  postgres:
+    ports: ['5432:5432']
+  redis:
+    ports: ['6380:6379']
+  rabbitmq:
+    ports: ['5672:5672', '15672:15672']
+  user:
+    ports: ['4002:4002']
+  tutor-service:
+    ports: ['4003:4003']
+  third:
+    ports: ['4001:4001']

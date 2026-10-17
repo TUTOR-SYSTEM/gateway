@@ -41,14 +41,22 @@ describe('TestScenarioController fixtures', () => {
     const send = jest.fn().mockReturnValue('ok');
     const controller = new TestScenarioController({ send } as never, {} as never);
     void controller.resolveFixture('f1', 'Bearer abc');
-    expect(send).toHaveBeenCalledWith('testscenario.fixtures.resolve', { id: 'f1', accessToken: 'abc' });
+    expect(send).toHaveBeenCalledWith(
+      'testscenario.fixtures.resolve',
+      { id: 'f1', accessToken: 'abc' },
+      30000,
+      0,
+    );
   });
 
   it('wraps the update dto with its id', () => {
     const send = jest.fn();
     const controller = new TestScenarioController({ send } as never, {} as never);
     void controller.updateFixture('f1', { value: '42' });
-    expect(send).toHaveBeenCalledWith('testscenario.fixtures.update', { id: 'f1', dto: { value: '42' } });
+    expect(send).toHaveBeenCalledWith('testscenario.fixtures.update', {
+      id: 'f1',
+      dto: { value: '42' },
+    });
   });
 });
 
@@ -56,15 +64,20 @@ describe('TestScenarioController.generate', () => {
   const route = (method: string, path: string, params: string[] = []) => ({ method, path, params });
 
   it('sends the requested routes (or all but its own) with the list routes for fixtures', () => {
-    jest.mocked(listHttpRoutes).mockReturnValue([
-      route('GET', '/classes'),
-      route('GET', '/classes/:id', ['id']),
-      route('POST', '/test-scenarios'),
-    ] as never);
+    jest
+      .mocked(listHttpRoutes)
+      .mockReturnValue([
+        route('GET', '/classes'),
+        route('GET', '/classes/:id', ['id']),
+        route('POST', '/test-scenarios'),
+      ] as never);
     const send = jest.fn<unknown, [string, { routes: { path: string }[] }]>();
     const controller = new TestScenarioController({ send } as never, {} as never);
 
-    void controller.generate({ routes: [{ method: 'GET', path: '/classes/:id' }], categories: ['auth'] });
+    void controller.generate({
+      routes: [{ method: 'GET', path: '/classes/:id' }],
+      categories: ['auth'],
+    });
     expect(send).toHaveBeenLastCalledWith('testscenario.generate', {
       routes: [route('GET', '/classes/:id', ['id'])],
       listRoutes: [route('GET', '/classes')],

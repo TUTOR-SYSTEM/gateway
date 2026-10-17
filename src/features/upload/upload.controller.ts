@@ -29,6 +29,7 @@ import { StatusCodes } from 'http-status-codes';
 import { CurrentUser, Roles } from '@packages/decorators';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { RolesGuard } from '@packages/guards';
+import { Throttle } from '@nestjs/throttler';
 import { ERROR_MESSAGES } from 'src/data/constants';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
@@ -41,26 +42,9 @@ function assertValidKey(key: string): void {
   }
 }
 
-/** Basename only, with quotes / CR / LF replaced by `_`, safe for a Content-Disposition filename. */
-function sanitizeFilename(name: string): string {
-  const base = (name.split(/[\\/]/).pop() ?? '').replace(/["\r\n]/g, '_');
-  return base || 'download';
-}
-
-/** Printable-ASCII fallback for the legacy `filename=` param (non-ASCII and `\` become `_`). */
-function asciiFallbackFilename(name: string): string {
-  return name.replace(/[^\x20-\x7E]|\\/g, '_');
-}
-
-/** RFC 5987 `attr-char` encoding: encodeURIComponent plus ' ( ) * percent-encoded. */
-function encodeRfc5987(name: string): string {
-  return encodeURIComponent(name).replace(
-    /['()*]/g,
-    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-}
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+/** Upper bound on files per multipart request (also enforced by the multer interceptor). */
+export const MAX_FILES_PER_REQUEST = 5;
 
 /**
  * Gateway is a thin HTTP edge for file uploads (Cloudflare R2): the multipart body is parsed
@@ -74,6 +58,9 @@ export class UploadController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @Throttle({ medium: { limit: 20, ttl: 60000 } })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE } }))
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Upload file', description: 'Upload a file to Cloudflare R2' })
@@ -86,9 +73,11 @@ export class UploadController {
     },
   })
   @SwaggerResponse({ status: 201, description: 'File uploaded' })
-  upload(@UploadedFile() file: Express.Multer.File) {
+  upload(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: JwtGuardUser) {
     if (!file) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_FILE_REQUIRED);
     return this.rmqProducer.send('upload.upload', {
+      userId: user.id,
+      role: user.role,
       file: {
         originalname: file.originalname,
         mimetype: file.mimetype,
@@ -99,7 +88,12 @@ export class UploadController {
   }
 
   @Post('multiple')
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: MAX_FILE_SIZE } }))
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @Throttle({ medium: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(
+    FilesInterceptor('files', MAX_FILES_PER_REQUEST, { limits: { fileSize: MAX_FILE_SIZE } }),
+  )
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Upload multiple files' })
   @ApiConsumes('multipart/form-data')
@@ -113,9 +107,11 @@ export class UploadController {
     },
   })
   @SwaggerResponse({ status: 201, description: 'Files uploaded' })
-  uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {
+  uploadMultiple(@UploadedFiles() files: Express.Multer.File[], @CurrentUser() user: JwtGuardUser) {
     if (!files?.length) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_FILES_REQUIRED);
     return this.rmqProducer.send('upload.uploadMultiple', {
+      userId: user.id,
+      role: user.role,
       files: files.map((file) => ({
         originalname: file.originalname,
         mimetype: file.mimetype,
@@ -134,21 +130,19 @@ export class UploadController {
   @SwaggerResponse({ status: 200, description: 'File stream' })
   @SwaggerResponse({ status: 400, description: 'key query param missing' })
   @SwaggerResponse({ status: 404, description: 'File not found in R2' })
-  async download(@Query('key') key: string, @Res() res: Response): Promise<void> {
+  async download(
+    @Query('key') key: string,
+    @CurrentUser() user: JwtGuardUser,
+    @Res() res: Response,
+  ): Promise<void> {
     if (!key) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_KEY_REQUIRED);
     assertValidKey(key);
+    // third-service enforces ownership (the uploader, or ADMIN) and returns a short-lived presigned URL.
     const result = await this.rmqProducer.send<
-      { buffer: string; filename?: string },
-      { key: string }
-    >('upload.download', { key });
-    const fileBuffer = Buffer.from(result.buffer, 'base64');
-    const filename = sanitizeFilename(result.filename ?? key);
-    res.set({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${asciiFallbackFilename(filename)}"; filename*=UTF-8''${encodeRfc5987(filename)}`,
-      'X-Content-Type-Options': 'nosniff',
-    });
-    res.send(fileBuffer);
+      { url: string; expiresIn: number; contentType: string; filename: string },
+      { key: string; userId: string; role: JwtGuardUser['role'] }
+    >('upload.download', { key, userId: user.id, role: user.role });
+    res.redirect(302, result.url);
   }
 
   @UseGuards(RolesGuard)

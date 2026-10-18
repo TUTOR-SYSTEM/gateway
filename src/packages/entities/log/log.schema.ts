@@ -11,5 +11,10 @@ export const getRequestLogsQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
 });
 
+/** `GET /logs/trace/:correlationId?limit=` — how many hops to return (default 500, max 1000). */
+export const traceLogsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(1000).default(500),
+});
+
 /** `GET /log/trace/:correlationId` path param: a bounded, non-blank id (correlation ids are UUIDs). */
 export const correlationIdParamSchema = z.string().trim().min(1).max(128);

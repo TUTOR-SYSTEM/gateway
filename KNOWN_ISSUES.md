@@ -7,7 +7,7 @@ smoke **350/353**, regression **309/309**. Các case dưới đây còn FAIL và
 
 | Case | Kết quả | Nguyên nhân | Loại |
 | --- | --- | --- | --- |
-| `GET /emails` | 500 | Resend từ chối gửi: domain `gmail.com` chưa verify. Route gửi mail thật. | Cấu hình bên ngoài |
+| `POST /emails/test` (trước là `GET /emails`) | 500 | Resend từ chối gửi: domain `gmail.com` chưa verify. Route gửi mail thật. | Cấu hình bên ngoài |
 | `GET /students/get-student-code` | 400 | Gateway gọi `user.getUserByField({})`. USER không có RPC sinh mã học sinh (chỉ có HTTP trong USER). Cần thêm pattern RPC bên USER rồi nối gateway. | Thiếu RPC |
 | `GET /upload/download` | 400 | Case `valid` không có `key` hợp lệ. Cần một object thật trong R2 (hoặc case riêng cho 404). | Thiếu dữ liệu test |
 

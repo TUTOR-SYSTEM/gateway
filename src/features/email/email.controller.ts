@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, UseGuards } from '@nestjs/common';
+import { Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -22,7 +22,7 @@ export class EmailController {
   @ApiBearerAuth('access-token')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Get()
+  @Post('test')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Test email',

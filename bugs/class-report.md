@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/class.service.ts`) → gateway (`gateway/src/features/class/class.controller.ts`) → RMQ `class.*` → `tutor/src/features/class/{class.rpc.controller,class.service}.ts`.
 - Phương pháp: sub agent `flow-review-class`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 3 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -30,9 +30,7 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | `@ApiBody` create `required: ['name','subject','tutorId']` (`class.controller.ts:58`) thiếu `code`, `startTime`, `endTime` mà Zod bắt buộc. |
-| — | Minor | `tutor/src/features/class/class.controller.ts` HTTP trùng lặp, không có `RolesGuard` ở create/update/delete (service tự chặn). Chưa xác minh tutor có mở HTTP. |
-| — | Minor | `studentIds` trong `updateClassSchema` dùng `syncStudents` thay cả roster; UI `edit-class-dialog.tsx:283` đang gửi đủ danh sách. Cần xác nhận đây là ý đồ. |
+| — | Minor | `tutor/src/features/class/class.controller.ts` HTTP trùng lặp, không có `RolesGuard` ở create/update/delete (service tự chặn). Thuộc repo `tutor`; tutor có mở HTTP (`main.ts:112`). Cần quyết định hạ tầng: có expose port HTTP của tutor hay không. |
 
 ## Sạch
 Payload khớp 10/10 pattern; read endpoint qua `loadAccessibleClass` (404 thay vì 403); roster/detail ẩn email/phone với người không phải chủ lớp; ADMIN bypass ownership ở service; update schema không dính `.default()`.

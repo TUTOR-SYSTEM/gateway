@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // PreToolUse hook (Write|Edit): deny edits to protected files.
-//   - .env / .env.* — hold secrets, must be edited by a human.
+//   - .env / .env.* — hold secrets; Claude asks before editing them.
 //   - drizzle/**    — generated migrations; edit src/database/schema.ts, then run
 //                      `bun run db:generate`. Gateway owns the canonical schema + migration
 //                      history for the shared Postgres DB (2026-09-28 consolidation).
-// Emits a PreToolUse permission "deny" as JSON; otherwise stays silent and allows the edit.
+// Emits a PreToolUse permission decision ("ask" or "deny") as JSON; otherwise allows the edit silently.
 let input = '';
 process.stdin.on('data', (c) => (input += c));
 process.stdin.on('end', () => {
@@ -21,11 +21,13 @@ process.stdin.on('end', () => {
   const rules = [
     {
       re: /(^|\/)\.env(\.[^/]+)?$/,
-      why: '.env files hold secrets — edit them manually, never through Claude.',
+      why: '.env files hold secrets — confirm before Claude edits them.',
+      decision: 'ask',
     },
     {
       re: /(^|\/)drizzle\//,
       why: 'drizzle/ migrations are generated. Edit src/database/schema.ts, then run `bun run db:generate`.',
+      decision: 'deny',
     },
   ];
 
@@ -35,7 +37,7 @@ process.stdin.on('end', () => {
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
-            permissionDecision: 'deny',
+            permissionDecision: rule.decision,
             permissionDecisionReason: rule.why,
           },
         }),

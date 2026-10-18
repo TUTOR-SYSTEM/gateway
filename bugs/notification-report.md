@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/notification.service.ts`, `ui/types/notification.types.ts`) → gateway (`gateway/src/features/notification/notification.controller.ts`, `packages/entities/notification/notification.schema.ts`) → RMQ `notification.*` → `third/src/features/notification/{notification.rpc.controller,notification.service,notification.repository}.ts`.
 - Phương pháp: sub agent `flow-review-notification`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 2 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -26,7 +26,6 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | Quyền không đối xứng: `findById` cho người nhận lẫn người gửi (`notification.repository.ts:87`), `markAsRead`/`delete` chỉ người nhận (`:127`) → người gửi thấy trong list nhưng không xóa được (404). Cần xác nhận chủ ý. |
 | — | Minor | `third/src/features/notification/notification.controller.ts` HTTP trùng route `/notifications` (đăng ký `notification.module.ts:9`); nếu third mở HTTP công khai thì bypass `RolesGuard` gateway. Chưa xác minh. |
 
 ## Sạch

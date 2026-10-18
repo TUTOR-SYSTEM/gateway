@@ -40,7 +40,7 @@ export const submitExerciseSchema = z.object({
 
 /** Tutor grading payload. Score is on a 0–10 scale. */
 export const gradeExerciseSchema = z.object({
-  score: z.coerce
+  score: z
     .number({ message: 'score must be a number' })
     .min(0, 'Điểm tối thiểu là 0')
     .max(10, 'Điểm tối đa là 10'),

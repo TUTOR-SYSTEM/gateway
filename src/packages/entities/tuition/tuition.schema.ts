@@ -27,3 +27,7 @@ export const getTuitionsQuerySchema = z.object({
   studentId: z.string().uuid().optional(),
   status: tuitionStatusEnum.optional(),
 });
+
+export const getTuitionSummaryQuerySchema = z.object({
+  classId: z.string().uuid('Invalid class ID').optional(),
+});

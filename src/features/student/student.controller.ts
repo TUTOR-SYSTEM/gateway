@@ -7,7 +7,6 @@ import {
   Param,
   Post,
   Put,
-  NotImplementedException,
   ParseUUIDPipe,
   Query,
   UseGuards,
@@ -24,7 +23,6 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser, Roles } from '@packages/decorators';
-import { ERROR_MESSAGES } from 'src/data/constants';
 import {
   createStudentSchema,
   type CreateStudentDto,
@@ -47,19 +45,17 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class StudentController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
-  // No user-service handler generates a student code yet (`user.getUserByField({})` was a 400).
-  // Answer 501 explicitly until one exists, instead of forwarding a broken call.
   @Get('get-student-code')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'TUTOR')
-  @HttpCode(StatusCodes.NOT_IMPLEMENTED)
+  @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Generate student code for new student ...',
     description: 'Generate student code ...',
   })
-  @SwaggerResponse({ status: 201, description: 'Student created' })
+  @SwaggerResponse({ status: StatusCodes.OK, description: 'Student code generated' })
   generateStudentCodeController() {
-    throw new NotImplementedException(ERROR_MESSAGES.STUDENT_CODE_NOT_IMPLEMENTED);
+    return this.rmqProducer.send('student.generateCode', {});
   }
 
   @Post()

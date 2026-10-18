@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/dashboard.service.ts`, `ui/types/dashboard.types.ts`, `ui/app/(app)/page.tsx`) → gateway (`gateway/src/features/dashboard/dashboard.controller.ts`) → RMQ `dashboard.overview` → `tutor/src/features/dashboard/{dashboard.rpc.controller,dashboard.service}.ts`.
 - Phương pháp: sub agent `flow-review-dashboard`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 2 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -21,7 +21,6 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | `getOverview` gọi `userService.getUserRoleById` (`tutor/src/features/dashboard/dashboard.service.ts:78`): thêm một truy vấn DB mỗi request dù JWT có role; có thể truyền `role` từ gateway. |
 | — | Minor | `tutor/src/features/dashboard/dashboard.controller.ts` (`@Controller('dashboard')`) HTTP trùng route `dashboard/overview`, song song `DashboardRpcController`; thừa nếu tutor không phơi HTTP. |
 
 ## Sạch

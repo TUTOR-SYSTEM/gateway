@@ -97,25 +97,6 @@ export const dataFieldSchema = z.object({
   value: z.string({ message: 'Value must be string ...' }).nonempty(),
 });
 
-export const updateUserGradesSchema = z.object({
-  gradesId: z
-    .array(z.string({ message: 'Grade ID must be a string' }).uuid({ message: 'Invalid grade ID' }))
-    .min(1, { message: 'At least one grade is required' }),
-});
-
-export const updateGradeSchema = z.object({
-  name: z
-    .string({ message: 'Grade name is required' })
-    .trim()
-    .min(1, { message: 'Grade name must be at least 1 character' })
-    .max(50, { message: 'Grade name must be at most 50 characters' }),
-  level: z.coerce
-    .number({ message: 'Level is required' })
-    .int({ message: 'Level must be an integer' })
-    .min(1, { message: 'Level must be at least 1' })
-    .max(12, { message: 'Level must be at most 12' }),
-});
-
 /**
  * Update user — every column in the `users` table is updatable, all fields optional.
  * `password` is intentionally excluded: it must go through the dedicated

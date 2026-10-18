@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/schedule.service.ts`, `ui/types/schedule.types.ts`) → gateway (`gateway/src/features/schedule/schedule.controller.ts`, `packages/entities/schedule`) → RMQ `schedule.*` → `tutor/src/features/schedule/{schedule.rpc.controller,schedule.service}.ts`.
 - Phương pháp: sub agent `flow-review-schedule`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 2 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -27,8 +27,7 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | `UpdateScheduleDto = Partial<z.infer<typeof createScheduleSchema>>` (`tutor/src/packages/entities/schedule/schedule.dto.ts:7`) không khớp `updateScheduleSchema` (đã omit `classId`). |
-| — | Minor | Không kiểm tra trùng slot ở bulk; update một nửa `startTime`/`endTime` không đối chiếu giá trị đã lưu. |
+| — | Minor | Không kiểm tra trùng slot ở bulk (`tutor/src/features/schedule/schedule.service.ts:87-105`). |
 
 ## Sạch
 `userId` từ `@CurrentUser()` cho mọi route; ADMIN được bypass ownership; `updateScheduleSchema` redeclare `format` nên `.partial()` không kéo `.default('ONLINE')`; `startTime < endTime` được kiểm tra; `:id`/`:classId` qua `ParseUUIDPipe`; UI unwrap `data.schedules` đúng.

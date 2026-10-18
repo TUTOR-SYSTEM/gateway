@@ -21,10 +21,6 @@ export const ERROR_TRANSLATIONS = {
   UPLOAD_KEY_REQUIRED: { vi: 'Thiếu tham số key', en: 'The key query parameter is required' },
   UPLOAD_KEY_INVALID: { vi: 'Khóa tệp không hợp lệ', en: 'Invalid file key' },
   UPLOAD_FILE_REQUIRED: { vi: 'Vui lòng chọn tệp để tải lên', en: 'A file is required' },
-  STUDENT_CODE_NOT_IMPLEMENTED: {
-    vi: 'Chưa hỗ trợ tạo mã học sinh tự động',
-    en: 'Automatic student code generation is not available yet',
-  },
   OAUTH_STATE_INVALID: {
     vi: 'Phiên đăng nhập OAuth không hợp lệ hoặc đã hết hạn',
     en: 'Invalid or expired OAuth session',

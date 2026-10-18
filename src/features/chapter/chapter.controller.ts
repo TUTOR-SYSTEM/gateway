@@ -41,7 +41,7 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
  */
 @ApiTags('Chapter')
 @ApiBearerAuth('access-token')
-@Controller('chapter')
+@Controller('chapters')
 export class ChapterController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
@@ -51,19 +51,29 @@ export class ChapterController {
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create chapter', description: 'Create a new chapter for a curriculum' })
   @ApiParam({ name: 'curriculumId', description: 'Curriculum ID', type: 'string' })
-  @ApiBody({ schema: { type: 'object', required: ['title'] } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['title'],
+      properties: {
+        title: { type: 'string', example: 'Chương 1: Hàm số', maxLength: 255 },
+        description: { type: 'string', example: '' },
+        order: { type: 'number', example: 0 },
+      },
+    },
+  })
   @SwaggerResponse({ status: 201, description: 'Chapter created' })
   create(
     @CurrentUser() user: JwtGuardUser,
-    @Param('curriculumId', ParseUUIDPipe) _curriculumId: string,
+    @Param('curriculumId', ParseUUIDPipe) curriculumId: string,
     @Body(new ZodValidationPipe<CreateChapterDto>(createChapterSchema))
-    _data: CreateChapterDto,
+    data: CreateChapterDto,
   ) {
     return this.rmqProducer.send('chapter.create', {
       userId: user.id,
       role: user.role,
-      curriculumId: _curriculumId,
-      data: _data,
+      curriculumId,
+      data,
     });
   }
 
@@ -77,12 +87,12 @@ export class ChapterController {
   getAll(
     @CurrentUser() user: JwtGuardUser,
     @Query(new ZodValidationPipe<GetChaptersQueryDto>(getChaptersQuerySchema))
-    _query: GetChaptersQueryDto,
+    query: GetChaptersQueryDto,
   ) {
     return this.rmqProducer.send('chapter.getAll', {
       userId: user.id,
       role: user.role,
-      query: _query,
+      query,
     });
   }
 
@@ -91,8 +101,8 @@ export class ChapterController {
   @ApiOperation({ summary: 'Get chapter by id' })
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter fetched' })
-  getById(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
-    return this.rmqProducer.send('chapter.getById', { userId: user.id, role: user.role, id: _id });
+  getById(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.rmqProducer.send('chapter.getById', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -104,15 +114,15 @@ export class ChapterController {
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter updated' })
   update(
     @CurrentUser() user: JwtGuardUser,
-    @Param('id', ParseUUIDPipe) _id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe<UpdateChapterDto>(updateChapterSchema))
-    _data: UpdateChapterDto,
+    data: UpdateChapterDto,
   ) {
     return this.rmqProducer.send('chapter.update', {
       userId: user.id,
       role: user.role,
-      id: _id,
-      data: _data,
+      id,
+      data,
     });
   }
 
@@ -123,7 +133,7 @@ export class ChapterController {
   @ApiOperation({ summary: 'Delete chapter' })
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter deleted' })
-  delete(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
-    return this.rmqProducer.send('chapter.delete', { userId: user.id, role: user.role, id: _id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.rmqProducer.send('chapter.delete', { userId: user.id, role: user.role, id });
   }
 }

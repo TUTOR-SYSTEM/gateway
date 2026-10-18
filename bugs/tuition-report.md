@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/tuition.service.ts`, `ui/types/tuition.types.ts`) → gateway (`gateway/src/features/tuition/tuition.controller.ts`, `packages/entities/tuition/tuition.schema.ts`) → RMQ `tuition.*` → `tutor/src/features/tuition/{tuition.rpc.controller,tuition.service}.ts`.
 - Phương pháp: sub agent `flow-review-tuition`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 2 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -26,7 +26,6 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | `classId` (`@Query`) của `GET /tuitions/summary` đọc thô, không qua Zod/pipe (`tuition.controller.ts:71`); service kiểm UUID trả 400. |
 | — | Minor | `tutor/src/features/tuition/tuition.controller.ts` HTTP trùng route `tuitions`; chưa xác minh được mount. |
 
 ## Sạch

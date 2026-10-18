@@ -4,8 +4,6 @@ import {
   createUserSchema,
   dataFieldSchema,
   getUsersQuerySchema,
-  updateGradeSchema,
-  updateUserGradesSchema,
   updateSelfSchema,
   updateUserSchema,
 } from './user.schema';
@@ -57,9 +55,6 @@ export type UserListResponseDto = {
   };
   data: User[];
 };
-
-export type UpdateGradeDto = z.infer<typeof updateGradeSchema>;
-export type UpdateUserGradesDto = z.infer<typeof updateUserGradesSchema>;
 
 export type CreateUserResponseDto = {
   message: string;

@@ -12,7 +12,7 @@
 | `apiDownloadFile` + 6 component | GET /upload/download?key= | `upload.download` | Có |
 | (không có UI) | DELETE /upload/:key (ADMIN) | `upload.delete` `{key, role}` | Có, UI không dùng |
 
-4/4 pattern khớp. `upload` → `THIRD_SERVICE` (`rmq.constants.ts:30`); override timeout 60000ms, `maxRetries 0` (`rmq.constants.ts:77`). `apiUploadAvatar` (`POST /users/avatar`) không thuộc module này (route không tồn tại, xem `user-report.md` M-USR-5).
+4/4 pattern khớp. `upload` → `THIRD_SERVICE` (`rmq.constants.ts:30`); override timeout 60000ms, `maxRetries 0` (`rmq.constants.ts:77`). Avatar của settings page đi qua `POST /upload` rồi `PUT /users` `{avatar}` (không thuộc module này).
 
 ## Critical
 Không còn bug mở.

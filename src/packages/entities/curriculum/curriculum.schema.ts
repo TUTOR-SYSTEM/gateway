@@ -79,6 +79,12 @@ export const createLessonBodySchema = createLessonSchema.omit({
   chapterId: true,
 });
 
+/** Target curriculum/chapter for `POST /curriculum/lessons`, sent as query params. */
+export const createLessonQuerySchema = z.object({
+  curriculumId: z.string().uuid('Invalid curriculum ID'),
+  chapterId: z.string().uuid('Invalid chapter ID').optional(),
+});
+
 export const getChaptersQuerySchema = z.object({
   curriculumId: z.string().uuid('Invalid curriculum ID'),
   page: z.coerce.number().int().min(1).default(1),

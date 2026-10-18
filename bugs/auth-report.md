@@ -5,7 +5,7 @@
 - Phương pháp: 4 sub agent đọc code (mục 1–4; mục 5 dùng 21 agent `flow-review-*`), **chỉ đọc, không sửa, không chạy test**. Mọi mục là "đã đọc code", chưa tái hiện bằng test trừ khi ghi rõ.
 - Thư mục thực tế của repo: `ui/`, `gateway/`, `user/`, `tutor/`, `third/` (CLAUDE.md ghi `USER/`, `THIRD_SERVICE/`, `TUTOR-UI/` là tên cũ).
 - Báo cáo này nằm trong `gateway/bugs/`. Mỗi bug được xếp vào thư mục chứa đoạn code cần sửa. Bug liên quan nhiều repo được ghi ở repo chính và tham chiếu chéo.
-- Chỉ chứa bug **còn mở** (đợt fix 2026-10-17 đã xóa phần đã sửa; typecheck + test các repo xanh, chưa chạy e2e/runtime). **Verdict: 0 Critical, 4 Major, còn lại là High/Medium/Low hạ tầng và Minor** (xem từng mục).
+- Chỉ chứa bug **còn mở** (đợt fix 2026-10-17 đã xóa phần đã sửa; typecheck + test các repo xanh, chưa chạy e2e/runtime). **Verdict: 0 Critical, 1 Major, còn lại là High/Medium/Low hạ tầng và Minor** (xem từng mục).
 
 Mức độ: **High** = chiếm tài khoản / leo quyền / bypass xác thực. **Medium** = lộ thông tin, fail-open, thiếu giới hạn. **Low** = phòng thủ chiều sâu, không nhất quán.
 
@@ -14,6 +14,7 @@ Việc thủ công sau đợt fix (không thuộc bug, cần làm khi deploy):
 - Redis key đổi sang `session:{id}:{sid}`, `refresh:{id}:{sid}`: mọi user phải đăng nhập lại. Email cũ có chữ hoa cần chuẩn hóa một lần. Migration `0005` (`email_verified`) cần `db:migrate`.
 - `NEXT_PUBLIC_THIRD_SERVICE_URL` của UI trỏ cổng 4001 không còn publish ở compose production; dùng `docker-compose.dev.yml` hoặc đi qua gateway.
 - CORS R2 phải cho origin UI nếu UI tải file qua presigned URL (gateway trả 302).
+- Khóa đăng nhập theo tài khoản: `LOGIN_MAX_ATTEMPTS` (mặc định 5), `LOGIN_ATTEMPT_WINDOW_SECONDS` (mặc định 900) ở `user`. Deploy `third` trước `user` vì `user` gọi RPC mới `redis.getdel`/`redis.incr`.
 
 ---
 
@@ -22,9 +23,8 @@ Việc thủ công sau đợt fix (không thuộc bug, cần làm khi deploy):
 | ID | Mức | Tiêu đề | Chi tiết |
 |---|---|---|---|
 | M-USER-1 | Medium | Tin tưởng actor trong payload RPC | • `actorId`/`actorRole` do gateway forward trong payload; service đã kiểm tra role và Zod-validate payload, nhưng publisher nào trên `user_queue` vẫn giả được actor.<br>• Sửa còn lại (hạ tầng): ACL broker theo service (user RabbitMQ riêng mỗi queue) hoặc ký actor (HMAC). Compose đã bỏ publish 5672/15672. |
-| M-USER-3 | Medium | Thiếu khóa tài khoản trong service | • Gateway throttle theo IP; user service không có khóa theo tài khoản/email. `userCode` 6 ký tự brute-force được qua nhiều IP; forgot-password không cooldown theo tài khoản.<br>• Sửa: bộ đếm Redis (`INCR` + TTL) theo email/userCode, cần RPC `redis.incr` ở third. |
-| M-USER-5 | Medium | Token reset không chắc chắn dùng một lần | • `redis.get` → cập nhật mật khẩu → `redis.del` không atomic; hai request đồng thời cùng `jti` đều thành công.<br>• Sửa: RPC atomic get-and-delete (`GETDEL`) ở third. |
-| M-USER-6 | Medium, cần xác minh hạ tầng | HTTP port của USER có thể public | • CORS đã siết bằng whitelist. Compose không còn publish user ra host.<br>• Callback Google/Facebook của user vẫn không kiểm tra `state` (gateway có `oauth-state.guard.ts`); `user` không có `ThrottlerModule`. Nếu port này public thì bypass bảo vệ của gateway. **Xác minh deploy thật; nếu public, nâng lên High.** |
+| M-USER-3 | Medium | Forgot-password không có cooldown theo tài khoản | • Đăng nhập đã có khóa theo tài khoản (5 lần sai/15 phút, `login-fail:`). Còn lại: `forgot-password` chưa có cooldown theo email, nên có thể spam mail reset tới một hộp thư.<br>• Sửa: dùng `redis.incr` (đã có ở third) với cửa sổ ngắn theo email cho `forgot-password`. |
+| M-USER-6 | Medium, cần xác minh hạ tầng | HTTP port của USER có thể public | • CORS đã siết bằng whitelist. Compose không còn publish user ra host. Callback Google/Facebook của user đã kiểm tra `state` (cookie HttpOnly, như gateway).<br>• `user` không có `ThrottlerModule`. Nếu port này public thì bypass được throttle IP của gateway. **Xác minh deploy thật; nếu public, nâng lên High.**<br>• Callback Google/Facebook của user (`user/src/features/auth/auth.controller.ts:299-300,340-341`) vẫn đưa `accessToken` và `refreshToken` vào query string, trong khi gateway dùng fragment + cookie HttpOnly. Sửa: bỏ route OAuth HTTP ở user (gateway đã xử lý), hoặc đổi sang fragment + cookie. |
 
 ---
 
@@ -82,7 +82,7 @@ Chưa kiểm tra: cấu hình production thực tế (có expose 4001/4003 khôn
 ## 5. Flow review UI → gateway → service theo module (cập nhật 2026-10-17)
 
 - Phạm vi: 21 module, mỗi module một sub agent `flow-review-<module>` (`.claude/agents/flow-review-*.md`, giao thức `.claude/skills/flow-review/PROTOCOL.md`, chạy bằng `/flow-review`). **Chưa chạy test/runtime**, mọi mục là suy luận từ code.
-- Kết quả còn mở: **0 Critical / 4 Major / Minor còn lại ở 5.4** (đợt fix 2026-10-17 sửa toàn bộ Critical và 32/35 Major; typecheck + test xanh, chưa e2e).
+- Kết quả còn mở: **0 Critical / 1 Major / Minor còn lại ở 5.4** (đợt fix 2026-10-17 sửa toàn bộ Critical và 32/35 Major; typecheck + test xanh, chưa e2e).
 - Mức độ riêng của mục này (về tính đúng của luồng, không phải bảo mật): **Critical** = luồng hỏng hẳn. **Major** = sai hành vi, quyền hoặc contract. **Minor** = lệch quy ước, Swagger, validate muộn.
 - Chi tiết từng module nằm ở `gateway/bugs/<module>-report.md`. Module `auth` nằm trong chính file này.
 - Tiền tố ID: `C-` Critical, `M-` Major; theo sau là viết tắt module.
@@ -95,28 +95,23 @@ Chưa kiểm tra: cấu hình production thực tế (có expose 4001/4003 khôn
 
 Không còn bug mở.
 
-### 5.3 Major (4)
+### 5.3 Major (1)
 
 | ID | Mức | Module | Nội dung |
 |---|---|---|---|
-| M-STU-2 | Major | student | `GET /students/get-student-code` luôn 501 (`gateway/src/features/student/student.controller.ts:52-63`), UI vẫn gọi (`ui/lib/services/student.service.ts:88`). `student.rpc.controller.ts` đã có `student.generateCode` nhưng gateway chưa gọi. Sửa: `rmqProducer.send('student.generateCode', …)` và bỏ `HttpCode(501)`. |
 | M-USR-3 | Major | user | STUDENT tự đổi tên bị 400 `STUDENT_CANNOT_UPDATE_NAME` (giữ có chủ đích vì lý do bảo mật), nhưng cần xác nhận UI self-update không còn gửi `firstName/lastName/email`/restricted fields (`user.schema.ts:214-223`, `user.service.ts`). `parentId`/`tutorId` đã bỏ khỏi `updateSelfSchema`. |
-| M-USR-5 | Major | user | `ui/app/(app)/settings/page.tsx` vẫn gọi `POST /users/avatar` và `PUT /users/grade`, gateway không có route (rơi vào `PUT /:id` ADMIN). Avatar upload hỏng. Sửa: nối route thật (upload + `PUT /users`) hoặc bỏ tính năng. |
-| M-EXE-1 | Major | exercise | Service coi student là bên nộp (`studentId === userId`) nhưng gateway `POST /exercises` chỉ cho `ADMIN, TUTOR` (RolesGuard chặn STUDENT) → học sinh không nộp được bài; UI nộp bài học sinh còn dùng `POST /upload` nay chỉ ADMIN/TUTOR. Cần chốt flow: mở route nộp bài + upload cho STUDENT, hoặc giữ tutor nộp thay. |
 
-### 5.4 Minor còn lại (13 nhóm)
+### 5.4 Minor còn lại (12 nhóm)
 
-- **Swagger sai/thiếu** còn ở session, class, chapter, admin (password max), ai-chat ("history is DB-backed" nhưng in-memory).
-- **Quy ước**: `/chapter` số ít; tên pattern `auth.refresh`/`auth.login` lệch `<feature>.<methodName>`; `generate-code` GET của class dùng `HttpCode(201)`; tham số `_id/_dto` đang dùng.
-- **Dead code**: `AdminRoleGuard`, `updateGradeSchema`, `updateUserGradesSchema`; HTTP controller trùng route (5.1 #1).
+- **Quy ước**: tên pattern `auth.refresh`/`auth.login` lệch `<feature>.<methodName>`; `generate-code` GET của class dùng `HttpCode(201)`.
+- **Dead code**: `AdminRoleGuard`; HTTP controller trùng route (5.1 #1).
 - **Type UI**: `CreateStudentPayload.classCode`, `UpdateStudentPayload.classId` không có trong schema gateway; `reports-page` gọi `useGet` trong component.
-- **Timeout/retry**: `email` gửi mail thật (`GET /emails`) chưa có `maxRetries: 0` nên retry có thể gửi trùng; `API_ENDPOINTS.md` ghi Public nhưng code là `@Roles('ADMIN')`.
-- **Ngữ nghĩa cần xác nhận**: người gửi notification xem được nhưng không xóa/đánh dấu đọc được (sau fix, người gửi chỉ thấy row không có người nhận); `exercise.grade` vẫn cho chấm lại bài GRADED; ai-chat history in-memory, UI không gửi `history` nữa; `stats` log gộp theo path thô; log trả `requestBody/responseBody`, chưa xác nhận redaction lúc ghi.
+- **Ngữ nghĩa cần xác nhận**: ai-chat history in-memory, UI không gửi `history` nữa; log trả `requestBody/responseBody`, chưa xác nhận redaction lúc ghi.
 - **Khác**: `ui` — các Minor UI còn lại của 5.4 chưa rà hết; lint `test/` ở các repo báo parse error có sẵn (tsconfig không include `test/`); lint `src/database/database.module.ts` (`_default`), `src/app.controller.ts`, `rmq.producer.ts` có lỗi có sẵn; test `rpc-exception.filter.spec.ts` (user) fail có sẵn ("db exploded").
 
 ### 5.5 Module OK (chỉ Minor)
 
-- **email**: xem Minor ở 5.4.
+- **email**: không còn bug mở.
 - **attendance**, **report**, **log**, **test-scenario**: pattern và payload khớp 1-1, không có pattern mồ côi, ownership/role đúng.
 
 ### 5.6 Chưa xác minh (cần kiểm tra thủ công)
@@ -131,7 +126,7 @@ Không còn bug mở.
 ## Thứ tự ưu tiên sửa
 
 1. **H-TUT-2 + M-USER-1** (trust boundary RMQ): ACL broker theo service hoặc ký actor.
-2. **M-USER-6** (USER HTTP có public không, callback OAuth không `state`). Nếu public thì nâng thành High.
-3. **M-USER-3 + M-GW-3** (khóa theo tài khoản, cần `redis.incr`) và **M-USER-5** (`GETDEL` atomic cho token reset).
-4. **M-EXE-1** (chốt flow học sinh nộp bài/upload), **M-USR-5** (avatar/grade), **M-USR-3** (xác nhận UI).
+2. **M-USER-6** (xác minh USER HTTP có public không). Nếu public thì nâng thành High.
+3. **M-USER-3 + M-GW-3** (cooldown theo tài khoản cho forgot-password/register/refresh).
+4. **M-USR-3** (xác nhận UI).
 5. Chạy e2e toàn flow auth mới; dọn Minor 5.4 và HTTP controller trùng (5.1 #1).

@@ -27,11 +27,11 @@ function setup() {
 describe('UploadController', () => {
   const reflector = new Reflector();
 
-  it('upload and uploadMultiple are open to ADMIN and TUTOR only (STUDENT/PARENT get 403)', () => {
+  it('upload and uploadMultiple are open to ADMIN, TUTOR and STUDENT only (PARENT gets 403)', () => {
     for (const h of ['upload', 'uploadMultiple'] as const) {
       expect(
         reflector.getAllAndOverride<string[]>(ROLES_KEY, [proto[h], UploadController]),
-      ).toEqual(['ADMIN', 'TUTOR']);
+      ).toEqual(['ADMIN', 'TUTOR', 'STUDENT']);
     }
   });
 

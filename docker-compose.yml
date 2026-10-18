@@ -28,6 +28,11 @@ x-infra-env: &infra-env
   TUTOR_QUEUE: tutor_queue
   THIRD_QUEUE: third_queue
 
+# One shared Postgres database for user, tutor-service and third. Every service reads the same
+# DATABASE_URL built from POSTGRES_* here, and the postgres container creates the same POSTGRES_DB.
+x-db-env: &db-env
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tutor_db}
+
 x-service-deps: &service-deps
   postgres: { condition: service_healthy }
   redis: { condition: service_healthy }
@@ -131,8 +136,7 @@ services:
     restart: unless-stopped
     env_file: ../user/docker.env
     environment:
-      <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
+      <<: [*infra-env, *db-env]
       PORT: "4002"
       NODE_ENV: production
     depends_on: *service-deps
@@ -143,8 +147,7 @@ services:
     restart: unless-stopped
     env_file: ../tutor/docker.env
     environment:
-      <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
+      <<: [*infra-env, *db-env]
       PORT: "4003"
       NODE_ENV: production
     depends_on: *service-deps
@@ -155,8 +158,7 @@ services:
     restart: unless-stopped
     env_file: ../third/docker.env
     environment:
-      <<: *infra-env
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backends_db}
+      <<: [*infra-env, *db-env]
       PORT: "4001"
       NODE_ENV: production
       GATEWAY_BASE_URL: http://gateway:8888

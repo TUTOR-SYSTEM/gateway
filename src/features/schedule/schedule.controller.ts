@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -60,7 +61,11 @@ export class ScheduleController {
     dto: CreateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.create', { userId: user.id, data: dto });
+    return this.rmqProducer.send('schedule.create', {
+      userId: user.id,
+      role: user.role,
+      data: dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -77,7 +82,11 @@ export class ScheduleController {
     dto: CreateSchedulesDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.createBulk', { userId: user.id, data: dto });
+    return this.rmqProducer.send('schedule.createBulk', {
+      userId: user.id,
+      role: user.role,
+      data: dto,
+    });
   }
 
   @Get()
@@ -96,7 +105,7 @@ export class ScheduleController {
     query: GetSchedulesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.getAll', { userId: user.id, query });
+    return this.rmqProducer.send('schedule.getAll', { userId: user.id, role: user.role, query });
   }
 
   @Get('class/:classId')
@@ -104,8 +113,12 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Get schedules by class' })
   @ApiParam({ name: 'classId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedules fetched' })
-  getByClass(@Param('classId') classId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('schedule.getByClass', { userId: user.id, classId });
+  getByClass(@Param('classId', ParseUUIDPipe) classId: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('schedule.getByClass', {
+      userId: user.id,
+      role: user.role,
+      classId,
+    });
   }
 
   @Get(':id')
@@ -113,8 +126,8 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Get schedule detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedule fetched' })
-  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('schedule.getById', { userId: user.id, id });
+  getById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('schedule.getById', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -125,12 +138,17 @@ export class ScheduleController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedule updated' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe<UpdateScheduleDto>(updateScheduleSchema))
     dto: UpdateScheduleDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('schedule.update', { userId: user.id, id, data: dto });
+    return this.rmqProducer.send('schedule.update', {
+      userId: user.id,
+      role: user.role,
+      id,
+      data: dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -140,7 +158,7 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Delete schedule' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Schedule deleted' })
-  del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('schedule.delete', { userId: user.id, id });
+  del(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('schedule.delete', { userId: user.id, role: user.role, id });
   }
 }

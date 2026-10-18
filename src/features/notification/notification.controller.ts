@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -112,7 +113,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get notification detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification detail' })
-  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+  getById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
     return this.rmqProducer.send('notification.getById', {
       id,
       userId: user.id,
@@ -125,7 +126,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark notification as read' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Marked as read' })
-  markAsRead(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+  markAsRead(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
     return this.rmqProducer.send('notification.markAsRead', {
       id,
       userId: user.id,
@@ -138,7 +139,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Delete notification' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Notification deleted' })
-  delete(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
+  delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
     return this.rmqProducer.send('notification.delete', {
       id,
       userId: user.id,

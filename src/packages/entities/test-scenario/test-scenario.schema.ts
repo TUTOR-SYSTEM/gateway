@@ -8,7 +8,14 @@ export const testScenarioCategorySchema = z.enum([
   'domain',
 ]);
 
-export const testAuthProfileSchema = z.enum(['caller', 'admin', 'tutor', 'student', 'parent', 'none']);
+export const testAuthProfileSchema = z.enum([
+  'caller',
+  'admin',
+  'tutor',
+  'student',
+  'parent',
+  'none',
+]);
 
 /** Request fired at the gateway. Path, header values and body strings may contain `{{variables}}`
  * (`{{accessToken}}`, `{{token.<role>}}`, `{{fixture.<key>}}`, `{{uuid}}`, …). */
@@ -77,7 +84,11 @@ const fixtureFields = {
 export const createTestFixtureSchema = z
   .object(fixtureFields)
   .refine((f) => f.value != null || f.resolver != null, 'a fixture needs a value or a resolver');
-export const updateTestFixtureSchema = z.object(fixtureFields).partial();
+export const updateTestFixtureSchema = z
+  .object(fixtureFields)
+  .partial()
+  // An empty PATCH used to be saved as a no-op update; reject it instead.
+  .refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required' });
 
 /** `POST /test-scenarios/generate`: which routes (default: all) and which kinds of case. */
 export const generateTestScenariosSchema = z.object({
@@ -92,3 +103,6 @@ export const generateTestScenariosSchema = z.object({
 export const bulkCreateTestScenariosSchema = z.object({
   scenarios: z.array(createTestScenarioSchema).min(1).max(500),
 });
+
+/** `GET /test-scenarios/:id/runs?limit=` — bounded so one request cannot ask for unbounded rows. */
+export const testRunsLimitSchema = z.coerce.number().int().min(1).max(100);

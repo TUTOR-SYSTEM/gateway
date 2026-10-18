@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -58,7 +59,7 @@ export class SessionController {
     dto: CreateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.create', { userId: user.id, data: dto });
+    return this.rmqProducer.send('session.create', { userId: user.id, role: user.role, data: dto });
   }
 
   @UseGuards(RolesGuard)
@@ -75,7 +76,11 @@ export class SessionController {
     dto: CreateSessionsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.createBulk', { userId: user.id, data: dto });
+    return this.rmqProducer.send('session.createBulk', {
+      userId: user.id,
+      role: user.role,
+      data: dto,
+    });
   }
 
   @Get()
@@ -99,7 +104,7 @@ export class SessionController {
     query: GetSessionsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.getAll', { userId: user.id, query });
+    return this.rmqProducer.send('session.getAll', { userId: user.id, role: user.role, query });
   }
 
   @Get('class/:classId')
@@ -107,8 +112,12 @@ export class SessionController {
   @ApiOperation({ summary: 'Get sessions by class' })
   @ApiParam({ name: 'classId', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Sessions fetched' })
-  getByClass(@Param('classId') classId: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('session.getByClass', { userId: user.id, classId });
+  getByClass(@Param('classId', ParseUUIDPipe) classId: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('session.getByClass', {
+      userId: user.id,
+      role: user.role,
+      classId,
+    });
   }
 
   @Get(':id')
@@ -116,8 +125,8 @@ export class SessionController {
   @ApiOperation({ summary: 'Get session detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Session detail fetched' })
-  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('session.getById', { userId: user.id, id });
+  getById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('session.getById', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -128,12 +137,17 @@ export class SessionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Session updated' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe<UpdateSessionDto>(updateSessionSchema))
     dto: UpdateSessionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('session.update', { userId: user.id, id, data: dto });
+    return this.rmqProducer.send('session.update', {
+      userId: user.id,
+      role: user.role,
+      id,
+      data: dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -143,7 +157,7 @@ export class SessionController {
   @ApiOperation({ summary: 'Delete session' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Session deleted' })
-  del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('session.delete', { userId: user.id, id });
+  del(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('session.delete', { userId: user.id, role: user.role, id });
   }
 }

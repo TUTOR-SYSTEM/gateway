@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { AppThrottlerGuard } from "./throttler.guard";
 
 @Module({
     imports : [
@@ -13,7 +14,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
     providers: [
         {
             provide : APP_GUARD,
-            useClass : ThrottlerGuard
+            useClass : AppThrottlerGuard
         }
     ]
 })

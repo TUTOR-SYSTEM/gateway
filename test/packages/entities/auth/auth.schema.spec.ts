@@ -7,10 +7,14 @@ import {
   refreshTokenBodySchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
 } from 'src/packages/entities/auth/auth.schema';
 import { ERROR_MESSAGES } from 'src/data/constants';
 
-function messagesOf(result: { success: boolean; error?: { issues: { message: string; path: PropertyKey[] }[] } }) {
+function messagesOf(result: {
+  success: boolean;
+  error?: { issues: { message: string; path: PropertyKey[] }[] };
+}) {
   return result.success ? [] : result.error!.issues.map((i) => i.message);
 }
 
@@ -19,50 +23,64 @@ describe('passwordFieldSchema', () => {
     expect(passwordFieldSchema.safeParse('Abcdef1!').success).toBe(true);
   });
 
-  it('accepts a password exactly 6 characters long (lower bound)', () => {
-    expect(passwordFieldSchema.safeParse('Abc1!x').success).toBe(true);
+  it('accepts a password exactly 8 characters long (lower bound)', () => {
+    expect(passwordFieldSchema.safeParse('Abcde1!x').success).toBe(true);
   });
 
-  it('accepts a password exactly 25 characters long (upper bound)', () => {
-    expect(passwordFieldSchema.safeParse(`Aa1!${'x'.repeat(21)}`).success).toBe(true);
+  it('accepts a password exactly 100 characters long (upper bound)', () => {
+    expect(passwordFieldSchema.safeParse(`Aa1!${'x'.repeat(96)}`).success).toBe(true);
   });
 
   it('rejects a missing password with the required message', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse(undefined))).toContain(AUTH_MESSAGES.PASSWORD_REQUIRED);
+    expect(messagesOf(passwordFieldSchema.safeParse(undefined))).toContain(
+      AUTH_MESSAGES.PASSWORD_REQUIRED,
+    );
   });
 
   it('rejects a non-string password with the required message', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse(123456))).toContain(AUTH_MESSAGES.PASSWORD_REQUIRED);
+    expect(messagesOf(passwordFieldSchema.safeParse(123456))).toContain(
+      AUTH_MESSAGES.PASSWORD_REQUIRED,
+    );
   });
 
-  it('rejects 5 characters with the min-length message', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('Ab1!x'))).toContain(AUTH_MESSAGES.PASSWORD_MIN);
+  it('rejects 7 characters with the min-length message', () => {
+    expect(messagesOf(passwordFieldSchema.safeParse('Ab1!xyz'))).toContain(
+      AUTH_MESSAGES.PASSWORD_MIN,
+    );
   });
 
-  it('rejects 26 characters with the max-length message', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse(`Aa1!${'x'.repeat(22)}`))).toContain(
+  it('rejects 101 characters with the max-length message', () => {
+    expect(messagesOf(passwordFieldSchema.safeParse(`Aa1!${'x'.repeat(97)}`))).toContain(
       AUTH_MESSAGES.PASSWORD_MAX,
     );
   });
 
   it('reports the missing lowercase letter', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('ABCDEF1!'))).toEqual([AUTH_MESSAGES.PASSWORD_LOWERCASE]);
+    expect(messagesOf(passwordFieldSchema.safeParse('ABCDEF1!'))).toEqual([
+      AUTH_MESSAGES.PASSWORD_LOWERCASE,
+    ]);
   });
 
   it('reports the missing uppercase letter', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('abcdef1!'))).toEqual([AUTH_MESSAGES.PASSWORD_UPPERCASE]);
+    expect(messagesOf(passwordFieldSchema.safeParse('abcdef1!'))).toEqual([
+      AUTH_MESSAGES.PASSWORD_UPPERCASE,
+    ]);
   });
 
   it('reports the missing digit', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('Abcdefg!'))).toEqual([AUTH_MESSAGES.PASSWORD_DIGIT]);
+    expect(messagesOf(passwordFieldSchema.safeParse('Abcdefg!'))).toEqual([
+      AUTH_MESSAGES.PASSWORD_DIGIT,
+    ]);
   });
 
   it('reports the missing special character', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('Abcdef12'))).toEqual([AUTH_MESSAGES.PASSWORD_SPECIAL]);
+    expect(messagesOf(passwordFieldSchema.safeParse('Abcdef12'))).toEqual([
+      AUTH_MESSAGES.PASSWORD_SPECIAL,
+    ]);
   });
 
   it('reports every failing composition rule at once', () => {
-    expect(messagesOf(passwordFieldSchema.safeParse('abcdef'))).toEqual([
+    expect(messagesOf(passwordFieldSchema.safeParse('abcdefgh'))).toEqual([
       AUTH_MESSAGES.PASSWORD_UPPERCASE,
       AUTH_MESSAGES.PASSWORD_DIGIT,
       AUTH_MESSAGES.PASSWORD_SPECIAL,
@@ -189,9 +207,9 @@ describe('loginByUserCodeSchema', () => {
   });
 
   it('rejects a userCode longer than 6 characters', () => {
-    expect(messagesOf(loginByUserCodeSchema.safeParse({ ...valid, userCode: 'ABC1234' }))).toContain(
-      ERROR_MESSAGES.AUTH_USER_CODE_LENGTH,
-    );
+    expect(
+      messagesOf(loginByUserCodeSchema.safeParse({ ...valid, userCode: 'ABC1234' })),
+    ).toContain(ERROR_MESSAGES.AUTH_USER_CODE_LENGTH);
   });
 
   it('rejects a missing userCode with the required message', () => {
@@ -297,7 +315,11 @@ describe('resetPasswordSchema', () => {
   it('rejects a non-UUID jti with the reset-token-invalid message', () => {
     expect(
       messagesOf(
-        resetPasswordSchema.safeParse({ jti: 'not-a-uuid', password: strong, confirmPassword: strong }),
+        resetPasswordSchema.safeParse({
+          jti: 'not-a-uuid',
+          password: strong,
+          confirmPassword: strong,
+        }),
       ),
     ).toContain(AUTH_MESSAGES.RESET_TOKEN_INVALID);
   });
@@ -308,16 +330,16 @@ describe('resetPasswordSchema', () => {
     );
   });
 
-  it('rejects a confirmation shorter than 6 characters', () => {
+  it('rejects a confirmation shorter than 8 characters', () => {
     expect(
       messagesOf(resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: 'abc' })),
     ).toContain(AUTH_MESSAGES.CONFIRM_PASSWORD_MIN);
   });
 
-  it('rejects a confirmation longer than 25 characters', () => {
+  it('rejects a confirmation longer than 100 characters', () => {
     expect(
       messagesOf(
-        resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: 'x'.repeat(26) }),
+        resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: 'x'.repeat(101) }),
       ),
     ).toContain(AUTH_MESSAGES.CONFIRM_PASSWORD_MAX);
   });
@@ -329,5 +351,35 @@ describe('resetPasswordSchema', () => {
 
   it('does not rewrite an array body', () => {
     expect(resetPasswordSchema.safeParse([]).success).toBe(false);
+  });
+});
+
+describe('verifyEmailSchema', () => {
+  const VALID_JTI = '3f2a8c1e-9b4d-4e6a-8f00-1234567890ab';
+
+  it('accepts a UUID jti', () => {
+    expect(verifyEmailSchema.safeParse({ jti: VALID_JTI }).success).toBe(true);
+  });
+
+  it('rejects a missing jti with the reset-token-required message', () => {
+    expect(messagesOf(verifyEmailSchema.safeParse({}))).toContain(
+      AUTH_MESSAGES.RESET_TOKEN_REQUIRED,
+    );
+  });
+
+  it('rejects a non-string jti with the reset-token-required message', () => {
+    expect(messagesOf(verifyEmailSchema.safeParse({ jti: 42 }))).toContain(
+      AUTH_MESSAGES.RESET_TOKEN_REQUIRED,
+    );
+  });
+
+  it('rejects a non-UUID jti with the reset-token-invalid message', () => {
+    expect(messagesOf(verifyEmailSchema.safeParse({ jti: 'abc' }))).toContain(
+      AUTH_MESSAGES.RESET_TOKEN_INVALID,
+    );
+  });
+
+  it('rejects an empty string jti', () => {
+    expect(verifyEmailSchema.safeParse({ jti: '' }).success).toBe(false);
   });
 });

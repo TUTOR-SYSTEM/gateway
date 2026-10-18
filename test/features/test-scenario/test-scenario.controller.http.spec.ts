@@ -21,7 +21,10 @@ describe('TestScenarioController over HTTP', () => {
 
   beforeEach(async () => {
     rmq = { send: jest.fn().mockResolvedValue({ ok: true }) };
-    discovery = { getControllers: jest.fn().mockReturnValue([]), getProviders: jest.fn().mockReturnValue([]) };
+    discovery = {
+      getControllers: jest.fn().mockReturnValue([]),
+      getProviders: jest.fn().mockReturnValue([]),
+    };
     jest.mocked(listHttpRoutes).mockReturnValue([]);
 
     const moduleRef = await Test.createTestingModule({
@@ -34,7 +37,12 @@ describe('TestScenarioController over HTTP', () => {
       .overrideGuard(RolesGuard)
       .useValue({
         canActivate: (ctx: ExecutionContext) => {
-          ctx.switchToHttp().getRequest().user = { id: 'admin-1', email: 'admin@x.io', typ: 'access', role: 'ADMIN' };
+          ctx.switchToHttp().getRequest().user = {
+            id: 'admin-1',
+            email: 'admin@x.io',
+            typ: 'access',
+            role: 'ADMIN',
+          };
           return true;
         },
       })
@@ -53,7 +61,9 @@ describe('TestScenarioController over HTTP', () => {
 
   describe('GET /test-scenarios/routes and /meta', () => {
     it('returns the route catalogue from the discovery service', async () => {
-      jest.mocked(listHttpRoutes).mockReturnValueOnce([{ method: 'GET', path: '/classes', params: [] }] as never);
+      jest
+        .mocked(listHttpRoutes)
+        .mockReturnValueOnce([{ method: 'GET', path: '/classes', params: [] }] as never);
       const res = await request(server()).get('/test-scenarios/routes').expect(200);
       expect(res.body).toEqual([{ method: 'GET', path: '/classes', params: [] }]);
     });
@@ -82,8 +92,14 @@ describe('TestScenarioController over HTTP', () => {
       await request(server()).post('/test-scenarios/generate').send({}).expect(200);
       const [pattern, payload] = rmq.send.mock.calls[0];
       expect(pattern).toBe('testscenario.generate');
-      expect(payload.routes.map((r: { path: string }) => r.path)).toEqual(['/classes', '/classes/:id']);
-      expect(payload.listRoutes.map((r: { path: string }) => r.path)).toEqual(['/classes', '/test-scenarios/meta']);
+      expect(payload.routes.map((r: { path: string }) => r.path)).toEqual([
+        '/classes',
+        '/classes/:id',
+      ]);
+      expect(payload.listRoutes.map((r: { path: string }) => r.path)).toEqual([
+        '/classes',
+        '/test-scenarios/meta',
+      ]);
       expect(payload.categories).toBeUndefined();
     });
 
@@ -94,7 +110,10 @@ describe('TestScenarioController over HTTP', () => {
       ] as never);
       await request(server())
         .post('/test-scenarios/generate')
-        .send({ routes: [{ method: 'POST', path: '/classes' }], categories: ['auth', 'validation'] })
+        .send({
+          routes: [{ method: 'POST', path: '/classes' }],
+          categories: ['auth', 'validation'],
+        })
         .expect(200);
       expect(rmq.send.mock.calls[0][1]).toMatchObject({
         routes: [{ method: 'POST', path: '/classes', params: [] }],
@@ -103,7 +122,9 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('treats an explicit empty routes array as "no routes selected"', async () => {
-      jest.mocked(listHttpRoutes).mockReturnValue([{ method: 'GET', path: '/a', params: [] }] as never);
+      jest
+        .mocked(listHttpRoutes)
+        .mockReturnValue([{ method: 'GET', path: '/a', params: [] }] as never);
       await request(server()).post('/test-scenarios/generate').send({ routes: [] }).expect(200);
       expect(rmq.send.mock.calls[0][1].routes).toEqual([]);
     });
@@ -114,7 +135,10 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('rejects an unknown category with 400', async () => {
-      await request(server()).post('/test-scenarios/generate').send({ categories: ['nope'] }).expect(422);
+      await request(server())
+        .post('/test-scenarios/generate')
+        .send({ categories: ['nope'] })
+        .expect(422);
       expect(rmq.send).not.toHaveBeenCalled();
     });
 
@@ -136,11 +160,14 @@ describe('TestScenarioController over HTTP', () => {
 
     it('POST /test-scenarios creates with defaults applied by the schema', async () => {
       await request(server()).post('/test-scenarios').send(validScenario).expect(201);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.create', expect.objectContaining({
-        category: 'valid',
-        authProfile: 'caller',
-        requestTemplate: {},
-      }));
+      expect(rmq.send).toHaveBeenCalledWith(
+        'testscenario.create',
+        expect.objectContaining({
+          category: 'valid',
+          authProfile: 'caller',
+          requestTemplate: {},
+        }),
+      );
     });
 
     it('POST /test-scenarios rejects a protocol-relative path', async () => {
@@ -152,20 +179,35 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('POST /test-scenarios rejects a path without a leading slash', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, path: 'classes' }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, path: 'classes' })
+        .expect(422);
     });
 
     it('POST /test-scenarios rejects an HTTP method outside the allowlist', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, method: 'TRACE' }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, method: 'TRACE' })
+        .expect(422);
     });
 
     it('POST /test-scenarios rejects an out-of-range expected status', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, expectedStatus: 600 }).expect(422);
-      await request(server()).post('/test-scenarios').send({ ...validScenario, expectedStatus: 99 }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, expectedStatus: 600 })
+        .expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, expectedStatus: 99 })
+        .expect(422);
     });
 
     it('POST /test-scenarios rejects a non-integer expected status', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, expectedStatus: 200.5 }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, expectedStatus: 200.5 })
+        .expect(422);
     });
 
     it('POST /test-scenarios rejects a whitespace-only expectedMessage', async () => {
@@ -176,20 +218,35 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('POST /test-scenarios accepts a nullable expectedMessage', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, expectedMessage: null }).expect(201);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, expectedMessage: null })
+        .expect(201);
     });
 
     it('POST /test-scenarios rejects an unknown auth profile', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, authProfile: 'root' }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, authProfile: 'root' })
+        .expect(422);
     });
 
     it('POST /test-scenarios rejects an empty name', async () => {
-      await request(server()).post('/test-scenarios').send({ ...validScenario, name: '' }).expect(422);
+      await request(server())
+        .post('/test-scenarios')
+        .send({ ...validScenario, name: '' })
+        .expect(422);
     });
 
     it('PATCH /test-scenarios/:id forwards the id and only the supplied fields', async () => {
-      await request(server()).patch(`/test-scenarios/${UUID}`).send({ name: 'renamed' }).expect(200);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.update', { id: UUID, dto: { name: 'renamed' } });
+      await request(server())
+        .patch(`/test-scenarios/${UUID}`)
+        .send({ name: 'renamed' })
+        .expect(200);
+      expect(rmq.send).toHaveBeenCalledWith('testscenario.update', {
+        id: UUID,
+        dto: { name: 'renamed' },
+      });
     });
 
     it('PATCH /test-scenarios/:id rejects a non-UUID id before reaching RMQ', async () => {
@@ -217,7 +274,10 @@ describe('TestScenarioController over HTTP', () => {
 
     it('GET /test-scenarios forwards validated filters', async () => {
       await request(server()).get('/test-scenarios?service=gateway&category=auth').expect(200);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.list', { service: 'gateway', category: 'auth' });
+      expect(rmq.send).toHaveBeenCalledWith('testscenario.list', {
+        service: 'gateway',
+        category: 'auth',
+      });
     });
 
     it('GET /test-scenarios rejects an unknown category filter', async () => {
@@ -228,7 +288,10 @@ describe('TestScenarioController over HTTP', () => {
     it('GET /test-scenarios/stats and /auth-profiles delegate to RMQ', async () => {
       await request(server()).get('/test-scenarios/stats').expect(200);
       await request(server()).get('/test-scenarios/auth-profiles').expect(200);
-      expect(rmq.send.mock.calls.map((c) => c[0])).toEqual(['testscenario.stats', 'testscenario.authprofiles']);
+      expect(rmq.send.mock.calls.map((c) => c[0])).toEqual([
+        'testscenario.stats',
+        'testscenario.authprofiles',
+      ]);
     });
 
     it('POST /test-scenarios/bulk rejects an empty scenario list', async () => {
@@ -237,11 +300,13 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('POST /test-scenarios/bulk forwards valid scenarios with 201', async () => {
-      await request(server()).post('/test-scenarios/bulk').send({ scenarios: [validScenario] }).expect(201);
-      expect(rmq.send).toHaveBeenCalledWith(
-        'testscenario.createMany',
-        { scenarios: [expect.objectContaining({ name: 'list classes', category: 'valid' })] },
-      );
+      await request(server())
+        .post('/test-scenarios/bulk')
+        .send({ scenarios: [validScenario] })
+        .expect(201);
+      expect(rmq.send).toHaveBeenCalledWith('testscenario.createMany', {
+        scenarios: [expect.objectContaining({ name: 'list classes', category: 'valid' })],
+      });
     });
 
     it('POST /test-scenarios/bulk rejects a batch containing one invalid scenario', async () => {
@@ -264,8 +329,8 @@ describe('TestScenarioController over HTTP', () => {
       expect(rmq.send).toHaveBeenCalledWith('testscenario.runs', { id: UUID, limit: 5 });
     });
 
-    it('rejects a non-integer limit with 400', async () => {
-      await request(server()).get(`/test-scenarios/${UUID}/runs?limit=abc`).expect(400);
+    it('rejects a non-integer limit with 422', async () => {
+      await request(server()).get(`/test-scenarios/${UUID}/runs?limit=abc`).expect(422);
       expect(rmq.send).not.toHaveBeenCalled();
     });
 
@@ -323,8 +388,14 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('POST /fixtures accepts a fixed value', async () => {
-      await request(server()).post('/test-scenarios/fixtures').send({ key: 'classId', value: 'abc' }).expect(201);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.create', { key: 'classId', value: 'abc' });
+      await request(server())
+        .post('/test-scenarios/fixtures')
+        .send({ key: 'classId', value: 'abc' })
+        .expect(201);
+      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.create', {
+        key: 'classId',
+        value: 'abc',
+      });
     });
 
     it('POST /fixtures accepts a resolver and defaults its method and auth profile', async () => {
@@ -336,7 +407,12 @@ describe('TestScenarioController over HTTP', () => {
         })
         .expect(201);
       const dto = rmq.send.mock.calls[0][1];
-      expect(dto.resolver).toEqual({ method: 'GET', path: '/classes', authProfile: 'admin', extract: 'data.0.id' });
+      expect(dto.resolver).toEqual({
+        method: 'GET',
+        path: '/classes',
+        authProfile: 'admin',
+        extract: 'data.0.id',
+      });
     });
 
     it('POST /fixtures rejects a fixture with neither value nor resolver', async () => {
@@ -345,11 +421,17 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('POST /fixtures rejects a key that starts with a digit', async () => {
-      await request(server()).post('/test-scenarios/fixtures').send({ key: '1bad', value: 'x' }).expect(422);
+      await request(server())
+        .post('/test-scenarios/fixtures')
+        .send({ key: '1bad', value: 'x' })
+        .expect(422);
     });
 
     it('POST /fixtures rejects a key containing a hyphen', async () => {
-      await request(server()).post('/test-scenarios/fixtures').send({ key: 'bad-key', value: 'x' }).expect(422);
+      await request(server())
+        .post('/test-scenarios/fixtures')
+        .send({ key: 'bad-key', value: 'x' })
+        .expect(422);
     });
 
     it('POST /fixtures rejects a resolver with a non-GET method', async () => {
@@ -367,12 +449,21 @@ describe('TestScenarioController over HTTP', () => {
     });
 
     it('PATCH /fixtures/:id forwards id and dto', async () => {
-      await request(server()).patch(`/test-scenarios/fixtures/${UUID}`).send({ value: 'new' }).expect(200);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.update', { id: UUID, dto: { value: 'new' } });
+      await request(server())
+        .patch(`/test-scenarios/fixtures/${UUID}`)
+        .send({ value: 'new' })
+        .expect(200);
+      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.update', {
+        id: UUID,
+        dto: { value: 'new' },
+      });
     });
 
     it('PATCH /fixtures/:id rejects a non-UUID id', async () => {
-      await request(server()).patch('/test-scenarios/fixtures/abc').send({ value: 'x' }).expect(400);
+      await request(server())
+        .patch('/test-scenarios/fixtures/abc')
+        .send({ value: 'x' })
+        .expect(400);
     });
 
     it('DELETE /fixtures/:id forwards the id', async () => {
@@ -385,12 +476,22 @@ describe('TestScenarioController over HTTP', () => {
         .post(`/test-scenarios/fixtures/${UUID}/resolve`)
         .set('Authorization', 'Bearer tok')
         .expect(200);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.resolve', { id: UUID, accessToken: 'tok' });
+      expect(rmq.send).toHaveBeenCalledWith(
+        'testscenario.fixtures.resolve',
+        { id: UUID, accessToken: 'tok' },
+        30000,
+        0,
+      );
     });
 
     it('POST /fixtures/:id/resolve sends an undefined token when no header is present', async () => {
       await request(server()).post(`/test-scenarios/fixtures/${UUID}/resolve`).expect(200);
-      expect(rmq.send).toHaveBeenCalledWith('testscenario.fixtures.resolve', { id: UUID, accessToken: undefined });
+      expect(rmq.send).toHaveBeenCalledWith(
+        'testscenario.fixtures.resolve',
+        { id: UUID, accessToken: undefined },
+        30000,
+        0,
+      );
     });
   });
 });

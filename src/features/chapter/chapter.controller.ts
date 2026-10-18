@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -43,12 +55,13 @@ export class ChapterController {
   @SwaggerResponse({ status: 201, description: 'Chapter created' })
   create(
     @CurrentUser() user: JwtGuardUser,
-    @Param('curriculumId') _curriculumId: string,
+    @Param('curriculumId', ParseUUIDPipe) _curriculumId: string,
     @Body(new ZodValidationPipe<CreateChapterDto>(createChapterSchema))
     _data: CreateChapterDto,
   ) {
     return this.rmqProducer.send('chapter.create', {
       userId: user.id,
+      role: user.role,
       curriculumId: _curriculumId,
       data: _data,
     });
@@ -62,10 +75,15 @@ export class ChapterController {
   @ApiQuery({ name: 'limit', description: 'Items per page', type: 'number', required: false })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapters fetched' })
   getAll(
+    @CurrentUser() user: JwtGuardUser,
     @Query(new ZodValidationPipe<GetChaptersQueryDto>(getChaptersQuerySchema))
     _query: GetChaptersQueryDto,
   ) {
-    return this.rmqProducer.send('chapter.getAll', { query: _query });
+    return this.rmqProducer.send('chapter.getAll', {
+      userId: user.id,
+      role: user.role,
+      query: _query,
+    });
   }
 
   @Get(':id')
@@ -73,8 +91,8 @@ export class ChapterController {
   @ApiOperation({ summary: 'Get chapter by id' })
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter fetched' })
-  getById(@Param('id') _id: string) {
-    return this.rmqProducer.send('chapter.getById', { id: _id });
+  getById(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
+    return this.rmqProducer.send('chapter.getById', { userId: user.id, role: user.role, id: _id });
   }
 
   @UseGuards(RolesGuard)
@@ -86,11 +104,16 @@ export class ChapterController {
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter updated' })
   update(
     @CurrentUser() user: JwtGuardUser,
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe<UpdateChapterDto>(updateChapterSchema))
     _data: UpdateChapterDto,
   ) {
-    return this.rmqProducer.send('chapter.update', { userId: user.id, id: _id, data: _data });
+    return this.rmqProducer.send('chapter.update', {
+      userId: user.id,
+      role: user.role,
+      id: _id,
+      data: _data,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -100,7 +123,7 @@ export class ChapterController {
   @ApiOperation({ summary: 'Delete chapter' })
   @ApiParam({ name: 'id', description: 'Chapter ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Chapter deleted' })
-  delete(@CurrentUser() user: JwtGuardUser, @Param('id') _id: string) {
-    return this.rmqProducer.send('chapter.delete', { userId: user.id, id: _id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
+    return this.rmqProducer.send('chapter.delete', { userId: user.id, role: user.role, id: _id });
   }
 }

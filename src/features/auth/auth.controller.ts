@@ -1,6 +1,22 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiBearerAuth,
+  ApiResponse as SwaggerResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StatusCodes } from 'http-status-codes';
 import type { Request, Response } from 'express';
@@ -8,7 +24,6 @@ import {
   forgotPasswordSchema,
   loginSchema,
   loginByUserCodeSchema,
-  refreshTokenBodySchema,
   type RegisterDto,
   RegisterResponseDto,
   registerSchema,
@@ -21,8 +36,17 @@ import {
   resetPasswordSchema,
   type ResetPasswordDto,
   ResetPasswordResponseDto,
+  type VerifyEmailDto,
+  type VerifyEmailResponseDto,
+  verifyEmailSchema,
 } from '@packages/entities/auth';
-import { ApiResponse, Public } from '@packages/decorators';
+import { ApiResponse, CurrentUser, Public } from '@packages/decorators';
+import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
+import {
+  clearRefreshCookie,
+  readRefreshCookie,
+  setRefreshCookie,
+} from '@packages/helpers/refresh-cookie.helper';
 import { ZodValidationPipe } from '@packages/pipes';
 import type { FacebookProfile, GoogleProfile } from '@packages/strategy';
 import {
@@ -36,6 +60,10 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 type RequestWithGoogleProfile = Request & { user: GoogleProfile };
 type RequestWithFacebookProfile = Request & { user: FacebookProfile };
 
+/** Login/refresh bodies never carry the refresh token: it is set as an httpOnly cookie instead. */
+type LoginSessionResponse = Omit<LoginResponseDto, 'refreshToken'>;
+type RefreshSessionResponse = { accessToken: string };
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -45,8 +73,9 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('register')
-  @HttpCode(StatusCodes.OK)
+  @HttpCode(StatusCodes.CREATED)
   @ApiOperation({
     summary: 'Register a new user',
     description: 'Create a new user account with email and password',
@@ -57,15 +86,15 @@ export class AuthController {
       required: ['email', 'password', 'firstName', 'lastName'],
       properties: {
         email: { type: 'string', format: 'email', example: 'user@example.com' },
-        username: { type: 'string', example: 'johndoe' },
-        password: { type: 'string', minLength: 6, maxLength: 25, example: 'Password123!' },
+        username: { type: 'string', maxLength: 50, example: 'johndoe' },
+        password: { type: 'string', minLength: 8, maxLength: 100, example: 'Password123!' },
         firstName: { type: 'string', minLength: 1, maxLength: 25, example: 'John' },
         lastName: { type: 'string', minLength: 1, maxLength: 25, example: 'Doe' },
       },
     },
   })
-  @SwaggerResponse({ status: 200, description: 'Registration successful' })
-  @ApiResponse({ statusCode: StatusCodes.OK, message: 'Login successful' })
+  @SwaggerResponse({ status: 201, description: 'Registration successful' })
+  @ApiResponse({ statusCode: StatusCodes.CREATED, message: 'Registration successful' })
   register(
     @Body(new ZodValidationPipe<RegisterDto>(registerSchema))
     registerDto: RegisterDto,
@@ -114,11 +143,17 @@ export class AuthController {
   })
   @SwaggerResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ statusCode: StatusCodes.OK, message: 'Login successful' })
-  login(
+  async login(
     @Body(new ZodValidationPipe<LoginDto>(loginSchema))
     loginDto: LoginDto,
-  ): Promise<LoginResponseDto> {
-    return this.rmqProducer.send('auth.login', loginDto);
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginSessionResponse> {
+    const { refreshToken, ...body } = await this.rmqProducer.send<LoginResponseDto, LoginDto>(
+      'auth.login',
+      loginDto,
+    );
+    setRefreshCookie(res, refreshToken, this.configService);
+    return body;
   }
 
   @Public()
@@ -161,40 +196,70 @@ export class AuthController {
   })
   @SwaggerResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ statusCode: StatusCodes.OK, message: 'Login successful' })
-  loginByUserCode(
+  async loginByUserCode(
     @Body(new ZodValidationPipe<LoginByUserCodeDto>(loginByUserCodeSchema))
     dto: LoginByUserCodeDto,
-  ): Promise<LoginResponseDto> {
-    return this.rmqProducer.send('auth.loginByUserCode', dto);
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginSessionResponse> {
+    const { refreshToken, ...body } = await this.rmqProducer.send<
+      LoginResponseDto,
+      LoginByUserCodeDto
+    >('auth.loginByUserCode', dto);
+    setRefreshCookie(res, refreshToken, this.configService);
+    return body;
   }
 
   @Public()
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Post('refresh')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Refresh tokens',
-    description: 'Get new access and refresh tokens using a valid refresh token',
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['refreshToken'],
-      properties: {
-        refreshToken: { type: 'string', description: 'Refresh token issued during login' },
-      },
-    },
+    description:
+      'Rotate the refresh token. The refresh token is read from the httpOnly cookie `refresh_token` (no body); a new cookie is set and a new access token is returned.',
   })
   @SwaggerResponse({ status: 200, description: 'Token refreshed successfully' })
-  @SwaggerResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  @SwaggerResponse({ status: 401, description: 'Missing, invalid or expired refresh cookie' })
   @ApiResponse({ statusCode: StatusCodes.OK, message: 'Token refreshed' })
-  refresh(
-    @Body(new ZodValidationPipe<RefreshTokenBodyDto>(refreshTokenBodySchema))
-    body: RefreshTokenBodyDto,
-  ): Promise<LoginResponseDto> {
-    return this.rmqProducer.send('auth.refresh', body);
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<RefreshSessionResponse> {
+    const refreshToken = readRefreshCookie(req);
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token missing ...');
+    }
+    const result = await this.rmqProducer.send<LoginResponseDto, RefreshTokenBodyDto>(
+      'auth.refresh',
+      { refreshToken },
+    );
+    setRefreshCookie(res, result.refreshToken, this.configService);
+    return { accessToken: result.accessToken };
+  }
+
+  @HttpCode(StatusCodes.OK)
+  @Post('logout')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Logout',
+    description:
+      'Revoke the current login session (this device only) and clear the refresh cookie. Other devices stay signed in.',
+  })
+  @SwaggerResponse({ status: 200, description: 'Logged out' })
+  async logout(
+    @CurrentUser() user: JwtGuardUser,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
+    const result = await this.rmqProducer.send<
+      { message: string },
+      { userId: string; sid: string }
+    >('auth.logout', { userId: user.id, sid: user.sid });
+    clearRefreshCookie(res);
+    return result;
   }
 
   @Public()
+  @Throttle({ short: { limit: 3, ttl: 60000 } })
   @Post('forgot-password')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Forgot password', description: 'Request a password reset email' })
@@ -217,6 +282,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('/reset-password')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -255,6 +321,37 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @Post('verify-email')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({
+    summary: 'Verify email',
+    description: 'Mark the account email as verified using the token from the verification email',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['jti'],
+      properties: {
+        jti: {
+          type: 'string',
+          format: 'uuid',
+          description: 'Verification token (JWT ID) from the verification email',
+        },
+      },
+    },
+  })
+  @SwaggerResponse({ status: 200, description: 'Email verified' })
+  @SwaggerResponse({ status: 422, description: 'Validation failed or token invalid' })
+  @ApiResponse({ statusCode: StatusCodes.OK, message: 'Email verified successfully' })
+  verifyEmail(
+    @Body(new ZodValidationPipe<VerifyEmailDto>(verifyEmailSchema))
+    verifyEmailDto: VerifyEmailDto,
+  ): Promise<VerifyEmailResponseDto> {
+    return this.rmqProducer.send('auth.verifyEmail', verifyEmailDto);
+  }
+
+  @Public()
   @Get('google')
   @UseGuards(GoogleOAuthStartGuard)
   @ApiOperation({
@@ -275,7 +372,8 @@ export class AuthController {
   })
   @SwaggerResponse({
     status: 302,
-    description: 'Redirects to frontend with tokens in query params',
+    description:
+      'Redirects to the frontend with the access token in the URL fragment (#accessToken=...). The refresh token is set as an httpOnly cookie.',
   })
   async googleAuthCallback(
     @Req() req: RequestWithGoogleProfile,
@@ -289,8 +387,10 @@ export class AuthController {
     const redirectBase =
       this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URL') ??
       'http://localhost:3000/oauth/callback';
+    // Refresh token never travels in the URL: it is set as an httpOnly cookie on this response.
+    setRefreshCookie(res, refreshToken, this.configService);
     const redirectUrl = new URL(redirectBase);
-    redirectUrl.hash = new URLSearchParams({ accessToken, refreshToken }).toString();
+    redirectUrl.hash = new URLSearchParams({ accessToken }).toString();
 
     res.redirect(redirectUrl.toString());
   }
@@ -318,7 +418,8 @@ export class AuthController {
   })
   @SwaggerResponse({
     status: 302,
-    description: 'Redirects to frontend with tokens in query params',
+    description:
+      'Redirects to the frontend with the access token in the URL fragment (#accessToken=...). The refresh token is set as an httpOnly cookie.',
   })
   async facebookAuthCallback(
     @Req() req: RequestWithFacebookProfile,
@@ -333,8 +434,10 @@ export class AuthController {
       this.configService.get<string>('FACEBOOK_OAUTH_REDIRECT_URL') ??
       this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URL') ??
       'http://localhost:3000/oauth/callback';
+    // Refresh token never travels in the URL: it is set as an httpOnly cookie on this response.
+    setRefreshCookie(res, refreshToken, this.configService);
     const redirectUrl = new URL(redirectBase);
-    redirectUrl.hash = new URLSearchParams({ accessToken, refreshToken }).toString();
+    redirectUrl.hash = new URLSearchParams({ accessToken }).toString();
 
     res.redirect(redirectUrl.toString());
   }

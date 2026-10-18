@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import {
+  updateUserStatusSchema,
   createUserSchema,
   dataFieldSchema,
   getUsersQuerySchema,
@@ -68,3 +69,5 @@ export type CreateUserResponseDto = {
     password: string;
   };
 };
+
+export type UpdateUserStatusDto = z.infer<typeof updateUserStatusSchema>;

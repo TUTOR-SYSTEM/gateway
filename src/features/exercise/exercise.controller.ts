@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -58,7 +59,11 @@ export class ExerciseController {
     _dto: CreateExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.create', { userId: _user.id, data: _dto });
+    return this.rmqProducer.send('exercise.create', {
+      userId: _user.id,
+      role: _user.role,
+      data: _dto,
+    });
   }
 
   @Get()
@@ -79,7 +84,11 @@ export class ExerciseController {
     _query: getExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.getAll', { userId: _user.id, query: _query });
+    return this.rmqProducer.send('exercise.getAll', {
+      userId: _user.id,
+      role: _user.role,
+      query: _query,
+    });
   }
 
   @Get(':id')
@@ -87,8 +96,12 @@ export class ExerciseController {
   @ApiOperation({ summary: 'Get exercise detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise fetched' })
-  getById(@Param('id') _id: string, @CurrentUser() _user: JwtGuardUser) {
-    return this.rmqProducer.send('exercise.getById', { userId: _user.id, id: _id });
+  getById(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _user: JwtGuardUser) {
+    return this.rmqProducer.send('exercise.getById', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+    });
   }
 
   @Patch(':id/submit')
@@ -100,12 +113,17 @@ export class ExerciseController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise re-submitted' })
   submit(
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe<SubmitExerciseDto>(submitExerciseSchema))
     _dto: SubmitExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.submit', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('exercise.submit', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+      data: _dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -119,11 +137,16 @@ export class ExerciseController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Exercise graded' })
   grade(
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe<GradeExerciseDto>(gradeExerciseSchema))
     _dto: GradeExerciseDto,
     @CurrentUser() _user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('exercise.grade', { userId: _user.id, id: _id, data: _dto });
+    return this.rmqProducer.send('exercise.grade', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+      data: _dto,
+    });
   }
 }

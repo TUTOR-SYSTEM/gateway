@@ -24,10 +24,11 @@ export class DashboardController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Get dashboard overview',
-    description: 'Role-aware aggregate: stats, today schedule, monthly revenue/sessions and recent notifications',
+    description:
+      'Role-aware aggregate: stats, today schedule, monthly revenue/sessions and recent notifications',
   })
   @SwaggerResponse({ status: 200, description: 'Dashboard overview fetched' })
   overview(@CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('dashboard.overview', { userId: user.id });
+    return this.rmqProducer.send('dashboard.overview', { userId: user.id, role: user.role }, 15000);
   }
 }

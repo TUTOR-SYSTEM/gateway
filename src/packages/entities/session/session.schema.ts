@@ -20,7 +20,7 @@ const sessionAgendaItemSchema = z.object({
   description: z.string().optional(),
 });
 
-export const createSessionSchema = z.object({
+const sessionBaseSchema = z.object({
   classId: z.string().uuid('Invalid class ID'),
   lessonId: z.string().uuid('Invalid lesson ID').optional().nullable(),
   tutorId: z.string().uuid('Invalid tutor ID').optional().nullable(),
@@ -41,10 +41,14 @@ export const createSessionSchema = z.object({
   exerciseDueAt: z.coerce.date().optional().nullable(),
 });
 
+const SESSION_RANGE_ISSUE = { message: 'endAt must be after startAt', path: ['endAt'] };
+const endsAfterStart = (v: { startAt?: Date; endAt?: Date }): boolean =>
+  !v.startAt || !v.endAt || v.endAt > v.startAt;
+
 export const createSessionsSchema = z.object({
   classId: z.string().uuid('Invalid class ID'),
   sessions: z
-    .array(createSessionSchema.omit({ classId: true }))
+    .array(sessionBaseSchema.omit({ classId: true }).refine(endsAfterStart, SESSION_RANGE_ISSUE))
     .min(1, 'At least 1 session is required')
     .max(50, 'At most 50 sessions allowed'),
 });
@@ -65,7 +69,7 @@ export const getSessionsSchema = z.object({
  * (theoryUrls/exerciseUrls -> [], status -> 'SCHEDULED'), which the repository then
  * writes, silently wiping existing materials/status on a partial update.
  */
-export const updateSessionSchema = z.object({
+const sessionUpdateBaseSchema = z.object({
   lessonId: z.string().uuid('Invalid lesson ID').optional().nullable(),
   tutorId: z.string().uuid('Invalid tutor ID').optional().nullable(),
   title: z.string().max(255, 'Title too long').optional(),
@@ -84,3 +88,9 @@ export const updateSessionSchema = z.object({
   agenda: z.array(sessionAgendaItemSchema).optional(),
   exerciseDueAt: z.coerce.date().optional().nullable(),
 });
+
+export const createSessionSchema = sessionBaseSchema.refine(endsAfterStart, SESSION_RANGE_ISSUE);
+export const updateSessionSchema = sessionUpdateBaseSchema.refine(
+  endsAfterStart,
+  SESSION_RANGE_ISSUE,
+);

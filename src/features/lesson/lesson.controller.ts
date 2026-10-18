@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -39,7 +51,12 @@ export class LessonController {
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create lesson', description: 'Create a new lesson' })
   @ApiQuery({ name: 'curriculumId', description: 'Curriculum ID', type: 'string' })
-  @ApiQuery({ name: 'chapterId', description: 'Chapter ID (optional)', type: 'string', required: false })
+  @ApiQuery({
+    name: 'chapterId',
+    description: 'Chapter ID (optional)',
+    type: 'string',
+    required: false,
+  })
   @ApiBody({ schema: { type: 'object', required: ['title'] } })
   @SwaggerResponse({ status: 201, description: 'Lesson created' })
   create(
@@ -51,6 +68,7 @@ export class LessonController {
   ) {
     return this.rmqProducer.send('lesson.create', {
       userId: user.id,
+      role: user.role,
       curriculumId: _curriculumId,
       chapterId: _chapterId,
       data: _data,
@@ -65,10 +83,15 @@ export class LessonController {
   })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lessons fetched' })
   getAll(
+    @CurrentUser() user: JwtGuardUser,
     @Query(new ZodValidationPipe<GetLessonsQueryDto>(getLessonsQuerySchema))
     _query: GetLessonsQueryDto,
   ) {
-    return this.rmqProducer.send('lesson.getAll', { query: _query });
+    return this.rmqProducer.send('lesson.getAll', {
+      userId: user.id,
+      role: user.role,
+      query: _query,
+    });
   }
 
   @Get(':id')
@@ -76,8 +99,8 @@ export class LessonController {
   @ApiOperation({ summary: 'Get lesson by id' })
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson fetched' })
-  getById(@Param('id') _id: string) {
-    return this.rmqProducer.send('lesson.getById', { id: _id });
+  getById(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
+    return this.rmqProducer.send('lesson.getById', { userId: user.id, role: user.role, id: _id });
   }
 
   @UseGuards(RolesGuard)
@@ -89,11 +112,16 @@ export class LessonController {
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson updated' })
   update(
     @CurrentUser() user: JwtGuardUser,
-    @Param('id') _id: string,
+    @Param('id', ParseUUIDPipe) _id: string,
     @Body(new ZodValidationPipe<UpdateLessonDto>(updateLessonSchema))
     _data: UpdateLessonDto,
   ) {
-    return this.rmqProducer.send('lesson.update', { userId: user.id, id: _id, data: _data });
+    return this.rmqProducer.send('lesson.update', {
+      userId: user.id,
+      role: user.role,
+      id: _id,
+      data: _data,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -103,7 +131,7 @@ export class LessonController {
   @ApiOperation({ summary: 'Delete lesson' })
   @ApiParam({ name: 'id', description: 'Lesson ID', type: 'string' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Lesson deleted' })
-  delete(@CurrentUser() user: JwtGuardUser, @Param('id') _id: string) {
-    return this.rmqProducer.send('lesson.delete', { userId: user.id, id: _id });
+  delete(@CurrentUser() user: JwtGuardUser, @Param('id', ParseUUIDPipe) _id: string) {
+    return this.rmqProducer.send('lesson.delete', { userId: user.id, role: user.role, id: _id });
   }
 }

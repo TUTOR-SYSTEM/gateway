@@ -9,6 +9,7 @@ import { AuthGuard, type IAuthModuleOptions } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { ERROR_MESSAGES } from 'src/data/constants';
+import { isSecureCookie } from '@packages/helpers/refresh-cookie.helper';
 
 /** Long enough to finish the provider's consent screen, short enough to limit replay. */
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -46,7 +47,7 @@ function createOAuthStartGuard(provider: string): Type<CanActivate> {
       res.cookie(stateCookieName(provider), state, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        secure: isSecureCookie(),
         path: COOKIE_PATH,
         maxAge: OAUTH_STATE_TTL_MS,
       });

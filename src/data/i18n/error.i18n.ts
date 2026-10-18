@@ -51,14 +51,18 @@ export const ERROR_TRANSLATIONS = {
   AUTH_EMAIL_REQUIRED: { vi: 'Vui lòng nhập email', en: 'Email is required' },
   AUTH_EMAIL_INVALID: { vi: 'Email không hợp lệ', en: 'Invalid email address' },
   AUTH_USERNAME_REQUIRED: { vi: 'Vui lòng nhập tên đăng nhập', en: 'Username is required' },
+  AUTH_USERNAME_MAX: {
+    vi: 'Tên đăng nhập không được quá 50 ký tự',
+    en: 'Username must be at most 50 characters long',
+  },
   AUTH_PASSWORD_REQUIRED: { vi: 'Vui lòng nhập mật khẩu', en: 'Password is required' },
   AUTH_PASSWORD_MIN: {
-    vi: 'Mật khẩu phải có ít nhất 6 ký tự',
-    en: 'Password must be at least 6 characters long',
+    vi: 'Mật khẩu phải có ít nhất 8 ký tự',
+    en: 'Password must be at least 8 characters long',
   },
   AUTH_PASSWORD_MAX: {
-    vi: 'Mật khẩu không được quá 25 ký tự',
-    en: 'Password must be less than 25 characters long',
+    vi: 'Mật khẩu không được quá 100 ký tự',
+    en: 'Password must be at most 100 characters long',
   },
   AUTH_PASSWORD_LOWERCASE: {
     vi: 'Mật khẩu phải có ít nhất một chữ thường (a-z)',
@@ -103,12 +107,12 @@ export const ERROR_TRANSLATIONS = {
     en: 'Confirm password is required',
   },
   AUTH_CONFIRM_PASSWORD_MIN: {
-    vi: 'Mật khẩu xác nhận phải có ít nhất 6 ký tự',
-    en: 'Confirm password must be at least 6 characters long',
+    vi: 'Mật khẩu xác nhận phải có ít nhất 8 ký tự',
+    en: 'Confirm password must be at least 8 characters long',
   },
   AUTH_CONFIRM_PASSWORD_MAX: {
-    vi: 'Mật khẩu xác nhận không được quá 25 ký tự',
-    en: 'Confirm password must be less than 25 characters long',
+    vi: 'Mật khẩu xác nhận không được quá 100 ký tự',
+    en: 'Confirm password must be at most 100 characters long',
   },
   AUTH_CONFIRM_PASSWORD_MISMATCH: {
     vi: 'Mật khẩu xác nhận không khớp với mật khẩu',
@@ -297,6 +301,71 @@ export const ERROR_TRANSLATIONS = {
   TOO_MANY_REQUESTS: {
     vi: 'Bạn đã gửi quá nhiều yêu cầu, vui lòng thử lại sau',
     en: 'Too many requests, please try again later',
+  },
+
+  // Auth / session / account — mirrors user/src/data/i18n/error.i18n.ts (keep in sync).
+  EMAIL_NOT_FOUND: { vi: 'Email không tồn tại', en: 'Email does not exist' },
+  USER_CODE_NOT_FOUND: { vi: 'Mã người dùng không tồn tại', en: 'User code does not exist' },
+  ACCOUNT_NO_PASSWORD: {
+    vi: 'Tài khoản này đăng nhập bằng Google/Facebook, không có mật khẩu',
+    en: 'This account signs in with Google or Facebook and has no password',
+  },
+  INVALID_CREDENTIALS: {
+    vi: 'Thông tin đăng nhập không đúng',
+    en: 'Invalid credentials',
+  },
+  ACCOUNT_DEACTIVATED: { vi: 'Tài khoản đã bị vô hiệu hóa', en: 'Account has been deactivated' },
+  ACCOUNT_ALREADY_EXISTS: {
+    vi: 'Không thể tạo tài khoản với thông tin này',
+    en: 'An account cannot be created with these details',
+  },
+  INVALID_SESSION: {
+    vi: 'Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại',
+    en: 'Session is no longer valid, please sign in again',
+  },
+  SESSION_CHECK_UNAVAILABLE: {
+    vi: 'Không thể xác minh phiên đăng nhập lúc này, vui lòng thử lại',
+    en: 'Could not verify the session right now, please try again',
+  },
+  INVALID_VERIFY_EMAIL_TOKEN: {
+    vi: 'Mã xác minh email không hợp lệ hoặc đã hết hạn',
+    en: 'Invalid or expired email verification token',
+  },
+  INVALID_LINK_TARGET: {
+    vi: 'Tài khoản liên kết không hợp lệ (sai vai trò hoặc không tồn tại)',
+    en: 'Invalid linked account (wrong role or not found)',
+  },
+  FORBIDDEN_USER_ACTION: {
+    vi: 'Bạn không có quyền thực hiện thao tác này trên người dùng này',
+    en: 'You are not allowed to perform this action on this user',
+  },
+  CANNOT_MODIFY_OWN_STATUS: {
+    vi: 'Không thể khoá hoặc xoá chính tài khoản của bạn',
+    en: 'You cannot deactivate or delete your own account',
+  },
+  CANNOT_UPDATE_RESTRICTED_FIELDS: {
+    vi: 'Bạn không được tự thay đổi các trường này (vai trò, trạng thái, mã, liên kết)',
+    en: 'You are not allowed to update restricted fields (role, status, code, links) on your own account',
+  },
+  LAST_ADMIN_CANNOT_BE_REMOVED: {
+    vi: 'Không thể khoá hoặc xoá quản trị viên hoạt động cuối cùng',
+    en: 'Cannot deactivate or delete the last active admin',
+  },
+  USER_HAS_LINKED_ACCOUNTS: {
+    vi: 'Không thể xoá: tài khoản đang được liên kết với học sinh hoặc phụ huynh khác',
+    en: 'Cannot delete: the account is still linked to other students or parents',
+  },
+
+  // Generic server-side failures (never leak internals; the client gets one of these codes)
+  INTERNAL_SERVER_ERROR: { vi: 'Lỗi hệ thống, vui lòng thử lại sau', en: 'Internal server error' },
+  DATABASE_ERROR: { vi: 'Lỗi cơ sở dữ liệu', en: 'Database error' },
+  UPSTREAM_TIMEOUT: {
+    vi: 'Dịch vụ phản hồi quá chậm, vui lòng thử lại',
+    en: 'Upstream service timed out',
+  },
+  SERVICE_UNAVAILABLE: {
+    vi: 'Dịch vụ tạm thời không khả dụng, vui lòng thử lại sau',
+    en: 'Service temporarily unavailable',
   },
 
   // Hasher

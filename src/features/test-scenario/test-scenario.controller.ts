@@ -7,7 +7,6 @@ import {
   Headers,
   HttpCode,
   Param,
-  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -42,6 +41,7 @@ import {
   type GetTestScenariosQueryDto,
   type UpdateTestFixtureDto,
   type UpdateTestScenarioDto,
+  testRunsLimitSchema,
 } from '@packages/entities/test-scenario';
 import { DiscoveryService } from '@nestjs/core';
 import { listHttpRoutes } from '@packages/helpers';
@@ -79,7 +79,7 @@ export class TestScenarioController {
   @ApiOperation({
     summary: 'Propose test cases for gateway routes (admin only)',
     description:
-      'Reads each route\'s metadata here (`@Public`, `@Roles`, `ParseUUIDPipe` params, body/query Zod schemas) and lets third-service derive the auth/validation/not-found/valid case matrix. Nothing is saved — send the chosen ones to `POST /test-scenarios/bulk`. Defaults to every route except this monitor\'s own.',
+      "Reads each route's metadata here (`@Public`, `@Roles`, `ParseUUIDPipe` params, body/query Zod schemas) and lets third-service derive the auth/validation/not-found/valid case matrix. Nothing is saved — send the chosen ones to `POST /test-scenarios/bulk`. Defaults to every route except this monitor's own.",
   })
   @SwaggerResponse({ status: 200, description: 'Proposed scenarios + fixtures they need' })
   generate(
@@ -176,7 +176,8 @@ export class TestScenarioController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Resolve a test fixture now (admin only)',
-    description: 'Refetches a resolver fixture and caches the new value; a fixed fixture is returned as is.',
+    description:
+      'Refetches a resolver fixture and caches the new value; a fixed fixture is returned as is.',
   })
   @ApiParam({ name: 'id', type: String })
   @SwaggerResponse({ status: 200, description: 'Fixture resolved' })
@@ -186,7 +187,7 @@ export class TestScenarioController {
     @Headers('authorization') authorization?: string,
   ) {
     const accessToken = authorization?.replace(/^Bearer\s+/i, '');
-    return this.rmqProducer.send('testscenario.fixtures.resolve', { id, accessToken });
+    return this.rmqProducer.send('testscenario.fixtures.resolve', { id, accessToken }, 30000, 0);
   }
 
   @Post()
@@ -254,7 +255,8 @@ export class TestScenarioController {
   @SwaggerResponse({ status: 200, description: 'Runs fetched' })
   runs(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(20), new ZodValidationPipe(testRunsLimitSchema))
+    limit: number,
   ) {
     return this.rmqProducer.send('testscenario.runs', { id, limit });
   }
@@ -286,9 +288,9 @@ export class TestScenarioController {
   @ApiOperation({
     summary: 'Run a test scenario against this gateway (admin only)',
     description:
-      'Fires the scenario\'s request for real with a fresh x-correlation-id, so it appears in ' +
+      "Fires the scenario's request for real with a fresh x-correlation-id, so it appears in " +
       '/logs like any other request. `{{accessToken}}` in template headers is replaced by the ' +
-      'caller\'s token. Returns the recorded run (incl. correlationId and pass/fail).',
+      "caller's token. Returns the recorded run (incl. correlationId and pass/fail).",
   })
   @ApiParam({ name: 'id', type: String })
   @ApiQuery({

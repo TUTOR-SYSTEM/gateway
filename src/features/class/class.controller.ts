@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -61,7 +62,7 @@ export class ClassController {
     dto: CreateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.create', { userId: user.id, data: dto });
+    return this.rmqProducer.send('class.create', { userId: user.id, role: user.role, data: dto });
   }
 
   @UseGuards(RolesGuard)
@@ -75,12 +76,17 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Class updated' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe<UpdateClassDto>(updateClassSchema))
     dto: UpdateClassDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.update', { userId: user.id, id, data: dto });
+    return this.rmqProducer.send('class.update', {
+      userId: user.id,
+      role: user.role,
+      id,
+      data: dto,
+    });
   }
 
   @Get('generate-code')
@@ -90,8 +96,8 @@ export class ClassController {
     description: 'Generate a unique, unused class code',
   })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class code generated' })
-  generateCode() {
-    return this.rmqProducer.send('class.generateCode', {});
+  generateCode(@CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.generateCode', { userId: user.id, role: user.role });
   }
 
   @Get()
@@ -109,7 +115,7 @@ export class ClassController {
     query: GetClassesQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.getAll', { userId: user.id, query });
+    return this.rmqProducer.send('class.getAll', { userId: user.id, role: user.role, query });
   }
 
   @Get(':id')
@@ -117,8 +123,8 @@ export class ClassController {
   @ApiOperation({ summary: 'Get class detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class detail fetched' })
-  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getById', { userId: user.id, id });
+  getById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.getById', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -132,12 +138,17 @@ export class ClassController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Students added' })
   addStudents(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe<AddStudentsDto>(addStudentsSchema))
     dto: AddStudentsDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('class.addStudents', { userId: user.id, classId: id, data: dto });
+    return this.rmqProducer.send('class.addStudents', {
+      userId: user.id,
+      role: user.role,
+      classId: id,
+      data: dto,
+    });
   }
 
   @Get(':id/students')
@@ -145,8 +156,8 @@ export class ClassController {
   @ApiOperation({ summary: 'Get students in class' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Students fetched' })
-  getStudents(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getStudents', { userId: user.id, id });
+  getStudents(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.getStudents', { userId: user.id, role: user.role, id });
   }
 
   @Get(':id/materials')
@@ -157,8 +168,8 @@ export class ClassController {
   })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class materials retrieved' })
-  getMaterials(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getMaterials', { userId: user.id, id });
+  getMaterials(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.getMaterials', { userId: user.id, role: user.role, id });
   }
 
   @Get(':id/watches')
@@ -169,8 +180,8 @@ export class ClassController {
   })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class watch overview retrieved' })
-  getWatch(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.getWatch', { userId: user.id, id });
+  getWatch(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.getWatch', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -180,7 +191,7 @@ export class ClassController {
   @ApiOperation({ summary: 'Delete class' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class deleted' })
-  del(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('class.delete', { userId: user.id, id });
+  del(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('class.delete', { userId: user.id, role: user.role, id });
   }
 }

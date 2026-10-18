@@ -1,18 +1,29 @@
+import { UnprocessableEntityException } from '@nestjs/common';
+import { HTTP_CODE_METADATA, ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthController } from 'src/features/auth/auth.controller';
 import type { RmqProducer } from 'src/features/rabbitmq/rmq.producer';
+import { IS_PUBLIC_KEY } from '@packages/decorators';
 
 function setup(configValues: Record<string, string | undefined> = {}) {
   const send = jest.fn();
   const rmq = { send } as unknown as RmqProducer;
-  const config = { get: jest.fn((key: string) => configValues[key]) } as unknown as ConfigService;
+  const defaults = {
+    JWT_ACCESS_SECRET: 'access-secret',
+    JWT_REFRESH_SECRET: 'refresh-secret',
+    JWT_REFRESH_EXPIRES_SECONDS: '604800',
+  };
+  const merged = { ...defaults, ...configValues };
+  const config = { get: jest.fn((key: string) => merged[key]) } as unknown as ConfigService;
   return { send, controller: new AuthController(rmq, config) };
 }
 
 function responseMock() {
   const redirect = jest.fn<void, [string]>();
-  return { res: { redirect } as unknown as Response, redirect };
+  const cookie = jest.fn();
+  const clearCookie = jest.fn();
+  return { res: { redirect, cookie, clearCookie } as unknown as Response, redirect, cookie };
 }
 
 function redirectedUrl(redirect: jest.Mock<void, [string]>): URL {
@@ -28,9 +39,6 @@ describe('AuthController', () => {
   describe('RPC forwarding', () => {
     it.each([
       ['register', 'auth.register'],
-      ['login', 'auth.login'],
-      ['loginByUserCode', 'auth.loginByUserCode'],
-      ['refresh', 'auth.refresh'],
       ['forgotPassword', 'auth.forgotPassword'],
       ['resetPassword', 'auth.resetPassword'],
     ] as const)('%s forwards its body to %s', async (method, pattern) => {
@@ -54,7 +62,7 @@ describe('AuthController', () => {
       });
       send.mockResolvedValue({ accessToken: 'AT', refreshToken: 'RT' });
       const profile = { id: 'g-1', email: 'g@x.y' };
-      const { res, redirect } = responseMock();
+      const { res, redirect, cookie } = responseMock();
 
       await controller.googleAuthCallback({ user: profile } as never, res);
 
@@ -62,7 +70,12 @@ describe('AuthController', () => {
       const target = redirectedUrl(redirect);
       expect(target.origin + target.pathname).toBe('https://app.example.com/oauth/callback');
       expect(fragmentParams(target).get('accessToken')).toBe('AT');
-      expect(fragmentParams(target).get('refreshToken')).toBe('RT');
+      expect(fragmentParams(target).has('refreshToken')).toBe(false);
+      expect(cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'RT',
+        expect.objectContaining({ httpOnly: true, path: '/auth' }),
+      );
     });
 
     it('falls back to localhost when no redirect URL is configured', async () => {
@@ -85,14 +98,19 @@ describe('AuthController', () => {
       });
       send.mockResolvedValue({ accessToken: 'AT2', refreshToken: 'RT2' });
       const profile = { id: 'f-1' };
-      const { res, redirect } = responseMock();
+      const { res, redirect, cookie } = responseMock();
 
       await controller.facebookAuthCallback({ user: profile } as never, res);
 
       expect(send).toHaveBeenCalledWith('auth.facebookLogin', profile);
       const target = redirectedUrl(redirect);
       expect(fragmentParams(target).get('accessToken')).toBe('AT2');
-      expect(fragmentParams(target).get('refreshToken')).toBe('RT2');
+      expect(fragmentParams(target).has('refreshToken')).toBe(false);
+      expect(cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'RT2',
+        expect.objectContaining({ httpOnly: true, path: '/auth' }),
+      );
     });
 
     // KNOWN BUG (see report): the Facebook callback reads GOOGLE_OAUTH_REDIRECT_URL, not a
@@ -143,6 +161,57 @@ describe('AuthController', () => {
         'user service down',
       );
       expect(redirect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /auth/verify-email', () => {
+    const VALID_JTI = '3f2a8c1e-9b4d-4e6a-8f00-1234567890ab';
+    // @nestjs/throttler stores each named tier as `THROTTLER:<PREFIX><tierName>`.
+    const THROTTLER_LIMIT_SHORT = 'THROTTLER:LIMITshort';
+    const THROTTLER_TTL_SHORT = 'THROTTLER:TTLshort';
+    const handler = AuthController.prototype.verifyEmail;
+
+    it('is public so an unauthenticated user can verify their email', () => {
+      expect(Reflect.getMetadata(IS_PUBLIC_KEY, handler)).toBe(true);
+    });
+
+    it('is throttled to 5 requests per 60s on the short tier', () => {
+      expect(Reflect.getMetadata(THROTTLER_LIMIT_SHORT, handler)).toBe(5);
+      expect(Reflect.getMetadata(THROTTLER_TTL_SHORT, handler)).toBe(60000);
+    });
+
+    it('responds with HTTP 200', () => {
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(200);
+    });
+
+    it('binds ZodValidationPipe(verifyEmailSchema) to the body', () => {
+      const params = Object.values(
+        (Reflect.getMetadata(ROUTE_ARGS_METADATA, AuthController, 'verifyEmail') ?? {}) as Record<
+          string,
+          { pipes: Array<{ transform: (v: unknown) => unknown }> }
+        >,
+      );
+      const pipe = params.flatMap((p) => p.pipes)[0];
+
+      expect(pipe.transform({ jti: VALID_JTI })).toEqual({ jti: VALID_JTI });
+      expect(() => pipe.transform({})).toThrow(UnprocessableEntityException);
+      expect(() => pipe.transform({ jti: 'not-a-uuid' })).toThrow(UnprocessableEntityException);
+    });
+
+    it('forwards the dto to auth.verifyEmail and returns the RPC result', async () => {
+      const { send, controller } = setup();
+      send.mockResolvedValue({ message: 'ok' });
+      const dto = { jti: VALID_JTI };
+
+      await expect(controller.verifyEmail(dto)).resolves.toEqual({ message: 'ok' });
+      expect(send).toHaveBeenCalledWith('auth.verifyEmail', dto);
+    });
+
+    it('propagates an RPC failure instead of swallowing it', async () => {
+      const { send, controller } = setup();
+      send.mockRejectedValue(new Error('token expired'));
+
+      await expect(controller.verifyEmail({ jti: VALID_JTI })).rejects.toThrow('token expired');
     });
   });
 

@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -56,7 +57,7 @@ export class TuitionController {
     dto: CreateTuitionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('tuition.create', { userId: user.id, data: dto });
+    return this.rmqProducer.send('tuition.create', { userId: user.id, role: user.role, data: dto });
   }
 
   @Get('summary')
@@ -68,7 +69,11 @@ export class TuitionController {
   @ApiQuery({ name: 'classId', required: false, type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
   getSummary(@Query('classId') classId: string | undefined, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('tuition.getSummary', { userId: user.id, classId });
+    return this.rmqProducer.send('tuition.getSummary', {
+      userId: user.id,
+      role: user.role,
+      classId,
+    });
   }
 
   @Get()
@@ -85,7 +90,7 @@ export class TuitionController {
     query: GetTuitionsQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('tuition.getAll', { userId: user.id, query });
+    return this.rmqProducer.send('tuition.getAll', { userId: user.id, role: user.role, query });
   }
 
   @Get(':id')
@@ -93,8 +98,8 @@ export class TuitionController {
   @ApiOperation({ summary: 'Get tuition detail' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition detail' })
-  getById(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('tuition.getById', { userId: user.id, id });
+  getById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('tuition.getById', { userId: user.id, role: user.role, id });
   }
 
   @UseGuards(RolesGuard)
@@ -105,12 +110,17 @@ export class TuitionController {
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition updated' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateTuitionSchema))
     dto: UpdateTuitionDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('tuition.update', { userId: user.id, id, data: dto });
+    return this.rmqProducer.send('tuition.update', {
+      userId: user.id,
+      role: user.role,
+      id,
+      data: dto,
+    });
   }
 
   @UseGuards(RolesGuard)
@@ -120,7 +130,7 @@ export class TuitionController {
   @ApiOperation({ summary: 'Delete tuition record' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Tuition deleted' })
-  delete(@Param('id') id: string, @CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('tuition.delete', { userId: user.id, id });
+  delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtGuardUser) {
+    return this.rmqProducer.send('tuition.delete', { userId: user.id, role: user.role, id });
   }
 }

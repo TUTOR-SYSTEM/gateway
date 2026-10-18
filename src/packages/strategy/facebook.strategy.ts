@@ -36,6 +36,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
   }
 
   validate(_accessToken: string, _refreshToken: string, profile: Profile): FacebookProfile {
+    // Facebook only returns emails the account has confirmed, so no verification flag is checked.
     const email = profile.emails?.[0]?.value;
     if (!email) {
       throw new BadRequestException('Facebook account has no public email');

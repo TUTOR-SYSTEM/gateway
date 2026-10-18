@@ -10,6 +10,7 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { ZodValidationPipe } from '@packages/pipes';
 import { CurrentUser } from '@packages/decorators';
+import { Throttle } from '@nestjs/throttler';
 import {
   chatSchema,
   getHistoryQuerySchema,
@@ -29,16 +30,20 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 export class AiChatController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
+  @Throttle({ medium: { limit: 10, ttl: 60000 } }) // every call is a paid LLM session: cap per client
   @Post('chat')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Chat with AI assistant', description: 'Send a message and get a reply (history is DB-backed)' })
+  @ApiOperation({
+    summary: 'Chat with AI assistant',
+    description: 'Send a message and get a reply (history is DB-backed)',
+  })
   @ApiBody({ schema: { type: 'object', required: ['message'] } })
   @SwaggerResponse({ status: 200, description: 'AI reply fetched' })
   chat(
     @Body(new ZodValidationPipe<ChatDto>(chatSchema)) dto: ChatDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('ai.chat', { userId: user.id, data: dto });
+    return this.rmqProducer.send('ai.chat', { userId: user.id, role: user.role, data: dto });
   }
 
   @Get('history')
@@ -51,7 +56,7 @@ export class AiChatController {
     query: GetHistoryQueryDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    return this.rmqProducer.send('ai.history', { userId: user.id, query });
+    return this.rmqProducer.send('ai.history', { userId: user.id, role: user.role, query });
   }
 
   @Delete('history')
@@ -59,6 +64,6 @@ export class AiChatController {
   @ApiOperation({ summary: 'Clear AI chat history' })
   @SwaggerResponse({ status: 200, description: 'Chat history cleared' })
   clearHistory(@CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('ai.clearHistory', { userId: user.id });
+    return this.rmqProducer.send('ai.clearHistory', { userId: user.id, role: user.role });
   }
 }

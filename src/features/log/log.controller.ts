@@ -11,7 +11,11 @@ import { StatusCodes } from 'http-status-codes';
 import { Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
 import { ZodValidationPipe } from '@packages/pipes';
-import { getRequestLogsQuerySchema, type GetRequestLogsQueryDto } from '@packages/entities/log';
+import {
+  correlationIdParamSchema,
+  getRequestLogsQuerySchema,
+  type GetRequestLogsQueryDto,
+} from '@packages/entities/log';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 /**
@@ -51,7 +55,9 @@ export class LogController {
   })
   @ApiParam({ name: 'correlationId', type: String })
   @SwaggerResponse({ status: 200, description: 'Trace fetched' })
-  trace(@Param('correlationId') correlationId: string) {
+  trace(
+    @Param('correlationId', new ZodValidationPipe(correlationIdParamSchema)) correlationId: string,
+  ) {
     return this.rmqProducer.send('log.trace', { correlationId });
   }
 

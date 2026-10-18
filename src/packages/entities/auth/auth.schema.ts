@@ -5,6 +5,7 @@ export const AUTH_MESSAGES = {
   EMAIL_REQUIRED: ERROR_MESSAGES.AUTH_EMAIL_REQUIRED,
   EMAIL_INVALID: ERROR_MESSAGES.AUTH_EMAIL_INVALID,
   USERNAME_REQUIRED: ERROR_MESSAGES.AUTH_USERNAME_REQUIRED,
+  USERNAME_MAX: ERROR_MESSAGES.AUTH_USERNAME_MAX,
   PASSWORD_REQUIRED: ERROR_MESSAGES.AUTH_PASSWORD_REQUIRED,
   PASSWORD_MIN: ERROR_MESSAGES.AUTH_PASSWORD_MIN,
   PASSWORD_MAX: ERROR_MESSAGES.AUTH_PASSWORD_MAX,
@@ -27,13 +28,14 @@ export const AUTH_MESSAGES = {
 
 export const emailFieldSchema = z
   .string({ message: AUTH_MESSAGES.EMAIL_REQUIRED })
-  .min(1, { message : AUTH_MESSAGES.EMAIL_REQUIRED})
+  .min(1, { message: AUTH_MESSAGES.EMAIL_REQUIRED })
   .email({ message: AUTH_MESSAGES.EMAIL_INVALID });
 
+// One policy for create, change and reset (8–100 chars); login never re-checks it (see below).
 export const passwordFieldSchema = z
   .string({ message: AUTH_MESSAGES.PASSWORD_REQUIRED })
-  .min(6, { message: AUTH_MESSAGES.PASSWORD_MIN })
-  .max(25, { message: AUTH_MESSAGES.PASSWORD_MAX })
+  .min(8, { message: AUTH_MESSAGES.PASSWORD_MIN })
+  .max(100, { message: AUTH_MESSAGES.PASSWORD_MAX })
   .superRefine((password, ctx) => {
     if (!/[a-z]/.test(password)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: AUTH_MESSAGES.PASSWORD_LOWERCASE });
@@ -52,11 +54,15 @@ export const passwordFieldSchema = z
 // Login must not re-validate strength: accounts with legacy/default passwords must still log in.
 export const loginPasswordFieldSchema = z
   .string({ message: AUTH_MESSAGES.PASSWORD_REQUIRED })
-  .min(1, { message: AUTH_MESSAGES.PASSWORD_REQUIRED });
+  .min(1, { message: AUTH_MESSAGES.PASSWORD_REQUIRED })
+  .max(100, { message: AUTH_MESSAGES.PASSWORD_MAX });
 
 export const registerSchema = z.object({
   email: emailFieldSchema,
-  username: z.string({ message: AUTH_MESSAGES.USERNAME_REQUIRED }).optional(),
+  username: z
+    .string({ message: AUTH_MESSAGES.USERNAME_REQUIRED })
+    .max(50, { message: AUTH_MESSAGES.USERNAME_MAX })
+    .optional(),
   password: passwordFieldSchema,
   firstName: z
     .string({ message: AUTH_MESSAGES.FIRST_NAME_REQUIRED })
@@ -100,8 +106,8 @@ const resetPasswordBodySchema = z
     password: passwordFieldSchema,
     confirmPassword: z
       .string({ message: AUTH_MESSAGES.CONFIRM_PASSWORD_REQUIRED })
-      .min(6, { message: AUTH_MESSAGES.CONFIRM_PASSWORD_MIN })
-      .max(25, { message: AUTH_MESSAGES.CONFIRM_PASSWORD_MAX }),
+      .min(8, { message: AUTH_MESSAGES.CONFIRM_PASSWORD_MIN })
+      .max(100, { message: AUTH_MESSAGES.CONFIRM_PASSWORD_MAX }),
   })
   .superRefine((data, ctx) => {
     if (data.password !== data.confirmPassword) {
@@ -112,6 +118,12 @@ const resetPasswordBodySchema = z
       });
     }
   });
+
+export const verifyEmailSchema = z.object({
+  jti: z
+    .string({ message: AUTH_MESSAGES.RESET_TOKEN_REQUIRED })
+    .uuid({ message: AUTH_MESSAGES.RESET_TOKEN_INVALID }),
+});
 
 /** Accept either `password` or `newPassword` (same meaning). */
 export const resetPasswordSchema = z.preprocess((val) => {

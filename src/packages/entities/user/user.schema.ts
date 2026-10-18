@@ -58,7 +58,7 @@ export const changePasswordSchema = z
     newPassword: z
       .string({ message: 'New password is required' })
       .min(8, { message: 'Password must be at least 8 characters' })
-      .max(20, { message: 'Password must be at most 20 characters' }),
+      .max(100, { message: 'Password must be at most 100 characters' }),
   })
   .superRefine((data, ctx) => {
     const { newPassword } = data;
@@ -176,7 +176,7 @@ export const updateUserSchema = z
       .optional(),
     subjects: z
       .string()
-      .max(30, { message: 'Province must be at most 30 characters' })
+      .max(30, { message: 'Subjects must be at most 30 characters' })
       .nullable()
       .optional(),
     facebookId: z
@@ -220,6 +220,9 @@ export const updateSelfSchema = updateUserSchema.omit({
   // Class and grade membership are assigned by an admin/tutor, never by the user.
   classId: true,
   gradesId: true,
+  // Parent and tutor links are set by admin only (the user service rejects them on self update).
+  parentId: true,
+  tutorId: true,
 });
 
 export const createUserSchema = z
@@ -242,12 +245,12 @@ export const createUserSchema = z
     lastName: z
       .string({ message: 'Last name is required' })
       .trim()
-      .min(2, { message: 'First name must be at least 2 characters' })
-      .max(100, { message: 'First name must be at most 100 characters' }),
+      .min(2, { message: 'Last name must be at least 2 characters' })
+      .max(100, { message: 'Last name must be at most 100 characters' }),
     password: z
       .string({ message: 'Password is required' })
       .min(8, { message: 'Password must be at least 8 characters' })
-      .max(20, { message: 'Password must be at most 20 characters' }),
+      .max(100, { message: 'Password must be at most 100 characters' }),
     avatar: z
       .string({ message: 'Avatar must be string ...' })
       .url({ message: 'Avatar must be url ...' })
@@ -256,7 +259,7 @@ export const createUserSchema = z
     description: z.string().default(''),
     userCode: z.string().default(''),
     gender: z.string().default(''),
-    dateOfBirth: z.date().optional(),
+    dateOfBirth: z.coerce.date().optional(),
     address: z.string().default(''),
     district: z.string().default(''),
     province: z.string().default(''),
@@ -321,3 +324,10 @@ export const createUserSchema = z
       });
     }
   });
+
+/** `PUT /users/:id/status` body: explicit, idempotent target state (not a toggle). */
+export const updateUserStatusSchema = z
+  .object({
+    isActive: z.boolean({ message: 'isActive must be a boolean' }),
+  })
+  .strict();

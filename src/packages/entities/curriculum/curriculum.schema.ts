@@ -18,7 +18,7 @@ export const createCurriculumSchema = z.object({
   grade: z.union([z.string(), z.number()]).transform((value) => Number(value)),
   courseTime: z.string({ message: 'Course time must be string ...' }),
   description: z.string().optional(),
-  gradesId: z.string().uuid('Invalid grade ID'),
+  gradesId: z.string().uuid('Invalid grade ID').optional(), // grade_id is nullable in the DB
 });
 
 export const updateCurriculumSchema = createCurriculumSchema.partial();
@@ -48,7 +48,11 @@ export const createChapterSchema = z.object({
 // ordering on every update that doesn't send it.
 export const updateChapterSchema = createChapterSchema
   .partial()
-  .extend({ order: z.coerce.number().int().optional() });
+  .extend({ order: z.coerce.number().int().optional() })
+  // An empty update used to reach the DB as "no values to set" (500); refuse it up front.
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field is required',
+  });
 
 export const createLessonSchema = z.object({
   title: z
@@ -65,7 +69,10 @@ export const createLessonSchema = z.object({
 
 export const updateLessonSchema = createLessonSchema
   .partial()
-  .extend({ order: z.coerce.number().int().optional() });
+  .extend({ order: z.coerce.number().int().optional() })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field is required',
+  });
 
 export const createLessonBodySchema = createLessonSchema.omit({
   curriculumId: true,

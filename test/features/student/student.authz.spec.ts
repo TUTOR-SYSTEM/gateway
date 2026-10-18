@@ -38,13 +38,13 @@ describe('GW3-02 / GW3-06 / GW3-07 student routes', () => {
     const controller = new StudentController({ send } as unknown as RmqProducer);
     const actor = { id: 'tutor-1', role: 'TUTOR' } as never;
     controller.findById('s-1', actor);
-    expect(send).toHaveBeenLastCalledWith('user.getDetailUser', {
-      userId: 's-1',
+    expect(send).toHaveBeenLastCalledWith('student.findById', {
+      id: 's-1',
       actorId: 'tutor-1',
       actorRole: 'TUTOR',
     });
     controller.delete('s-1', { id: 'admin-1', role: 'ADMIN' } as never);
-    expect(send).toHaveBeenLastCalledWith('user.deleteUserByAdmin', {
+    expect(send).toHaveBeenLastCalledWith('student.delete', {
       id: 's-1',
       actorId: 'admin-1',
       actorRole: 'ADMIN',

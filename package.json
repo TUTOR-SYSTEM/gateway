@@ -32,10 +32,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "compose:up": "docker compose up -d",
-    "compose:down": "docker compose down",
-    "podman:up": "podman compose up -d",
-    "podman:down": "podman compose down",
+    "compose:up": "docker compose --env-file docker.env up -d",
+    "compose:down": "docker compose --env-file docker.env down",
+    "podman:up": "podman compose --env-file docker.env up -d",
+    "podman:down": "podman compose --env-file docker.env down",
     "podman:logs": "podman compose logs -f postgres"
   },
   "dependencies": {

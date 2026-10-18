@@ -7,7 +7,8 @@
 # debugging from the host, add the override file: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
 #
 # Required secrets (no defaults, compose refuses to start without them): POSTGRES_PASSWORD,
-# RABBITMQ_USER, RABBITMQ_PASSWORD. Put them in the local .env (never commit it).
+# RABBITMQ_USER, RABBITMQ_PASSWORD. Put them in docker.env (never commit it); run with
+# `bun compose:up` or `docker compose --env-file docker.env up -d`.
 #
 # RabbitMQ ACL (target state): one broker user per service, each limited to its own queue
 # (configure `rabbitmqctl set_permissions` / a definitions file; the admin user is for ops only).

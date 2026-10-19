@@ -59,7 +59,7 @@ export class UploadController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'TUTOR')
+  @Roles('ADMIN', 'TUTOR', 'STUDENT')
   @Throttle({ medium: { limit: 20, ttl: 60000 } })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE } }))
   @HttpCode(StatusCodes.CREATED)
@@ -89,7 +89,7 @@ export class UploadController {
 
   @Post('multiple')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'TUTOR')
+  @Roles('ADMIN', 'TUTOR', 'STUDENT')
   @Throttle({ medium: { limit: 10, ttl: 60000 } })
   @UseInterceptors(
     FilesInterceptor('files', MAX_FILES_PER_REQUEST, { limits: { fileSize: MAX_FILE_SIZE } }),

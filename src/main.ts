@@ -38,7 +38,7 @@ async function bootstrap() {
   app.use(securityHeaders);
 
   // Origin whitelist from CORS_ORIGINS (comma-separated). Dev default: local frontends only.
-  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173')
+  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,https://api-tutor.haiphan.org/')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -51,8 +51,6 @@ async function bootstrap() {
   const rmqProducer = app.get(RmqProducer);
   setLogSink((entry) => rmqProducer.emit('log.create', entry));
 
-  // The API schema is not published in production; it is served only in development/staging.
-  if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Tutor Management API')
       .setDescription('API documentation for the Tutor Management backend')
@@ -91,7 +89,7 @@ async function bootstrap() {
         persistAuthorization: true,
       },
     });
-  }
+
 
   const port = process.env.PORT ?? 8888;
   await app.listen(port);

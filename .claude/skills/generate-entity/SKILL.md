@@ -23,8 +23,9 @@ Zod v4. Export:
 - Shared enums first, e.g. `export const fooStatusEnum = z.enum(['OPEN', 'CLOSED']);`
 - `createFooSchema = z.object({ ... })` — one rule per field, friendly messages matching the
   existing `student.schema.ts` style (e.g. `z.string({ message: 'Name is required' })`).
-  Coerce numbers/dates with `z.coerce.number()` / `z.coerce.date()`; UUID FKs with
-  `.uuid('Invalid tutor ID')`.
+  Body numbers use plain `z.number()` (coerce turns `""`/`null` into `0`); `z.coerce` only for
+  query strings (see the pagination shape below). Dates: `z.coerce.date()` only when the input
+  is a string. UUID FKs with `.uuid('Invalid tutor ID')`.
 - `updateFooSchema = createFooSchema.partial()` (`.omit({ ... })` any immutable field). **Zod 4
   `.partial()` keeps `.default(...)`** — re-declare each defaulted field without a default via
   `.extend({ field: <type>.optional() })`, because gateway forwards the already-parsed DTO and an

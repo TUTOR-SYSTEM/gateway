@@ -27,9 +27,11 @@ import { RolesGuard } from '@packages/guards';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import {
   createLessonBodySchema,
+  createLessonQuerySchema,
   getLessonsQuerySchema,
   updateLessonSchema,
   type CreateLessonBodyDto,
+  type CreateLessonQueryDto,
   type GetLessonsQueryDto,
   type UpdateLessonDto,
 } from '@packages/entities/curriculum';
@@ -61,16 +63,16 @@ export class LessonController {
   @SwaggerResponse({ status: 201, description: 'Lesson created' })
   create(
     @CurrentUser() user: JwtGuardUser,
-    @Query('curriculumId') _curriculumId: string,
-    @Query('chapterId') _chapterId: string | undefined,
+    @Query(new ZodValidationPipe<CreateLessonQueryDto>(createLessonQuerySchema))
+    _query: CreateLessonQueryDto,
     @Body(new ZodValidationPipe<CreateLessonBodyDto>(createLessonBodySchema))
     _data: CreateLessonBodyDto,
   ) {
     return this.rmqProducer.send('lesson.create', {
       userId: user.id,
       role: user.role,
-      curriculumId: _curriculumId,
-      chapterId: _chapterId,
+      curriculumId: _query.curriculumId,
+      chapterId: _query.chapterId,
       data: _data,
     });
   }

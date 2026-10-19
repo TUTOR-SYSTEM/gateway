@@ -2,7 +2,7 @@
 
 - Luồng: UI (không có hàm trong `ui/lib/services`; chỉ `ui/components/flow-requests/flow-request-seed-data.ts:136` là công cụ test) → gateway (`gateway/src/features/email/email.controller.ts`) → RMQ `email.*` → `third/src/features/email/{email.rpc.controller,email.service}.ts`.
 - Phương pháp: sub agent `flow-review-email`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 3 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 0 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | Nguồn | HTTP | RMQ | Handler | Khớp? |
@@ -19,12 +19,7 @@ Không còn bug mở.
 Không còn bug mở.
 
 ## Minor
-
-| ID | Mức | Nội dung |
-|---|---|---|
-| — | Minor | `GET /emails` chưa có `maxRetries: 0` (`email.controller.ts:25`, `rmq.constants.ts`); khi timeout RMQ có thể gửi lại mail thật trùng. |
-| — | Minor | `GET` có tác dụng phụ: gửi mail thật qua Resend; gọi lặp tốn quota/spam. Gợi ý `POST /emails/test`. Chưa xác minh throttle. |
-| — | Minor | `gateway/API_ENDPOINTS.md:559` (và các `API_ENDPOINTS.md` khác) ghi `GET /emails` là "Public", thực tế gateway yêu cầu `@Roles('ADMIN')`. Code đúng, sửa tài liệu. |
+Không còn bug mở.
 
 ## Sạch
 Không còn route `email.sendForgotPasswordMail` bị lộ qua gateway; payload forgot-password validate bằng Zod ở third (`email.rpc.controller.ts:12-16`); `displayName` được `escapeHtml` trước khi chèn HTML; `email.test` có `timeoutMs`.

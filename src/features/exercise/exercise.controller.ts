@@ -46,7 +46,7 @@ export class ExerciseController {
   constructor(private readonly rmqProducer: RmqProducer) {}
 
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'TUTOR')
+  @Roles('ADMIN', 'TUTOR', 'STUDENT')
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({

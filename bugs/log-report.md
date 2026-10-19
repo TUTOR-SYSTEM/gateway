@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/log.service.ts`, `ui/types/log.types.ts`) → gateway (`gateway/src/features/log/log.controller.ts`) → RMQ `log.*` → `third/src/features/log/{log.rpc.controller,log.service,log.repository,log.gateway}.ts`.
 - Phương pháp: sub agent `flow-review-log`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 3 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 1 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -25,8 +25,6 @@ Không còn bug mở.
 
 | ID | Mức | Nội dung |
 |---|---|---|
-| — | Minor | `findByCorrelationId` cứng `limit = 500`, không phân trang/báo cắt bớt (`third/src/features/log/log.repository.ts`); ghi chú giới hạn cho UI. |
-| — | Minor | `stats` gộp theo `(method, path)` với path thô; path chứa id làm số nhóm tăng không giới hạn (`log.repository.ts:110`). Chuẩn hóa path khi ghi log hoặc thêm LIMIT. |
 | — | Minor | Dữ liệu trả gồm `requestBody/responseBody`/headers có thể chứa secret (`ui/types/log.types.ts:27-31`); chưa xác nhận redaction (`SENSITIVE_KEYS`) trước khi emit `log.create`. |
 
 ## Sạch

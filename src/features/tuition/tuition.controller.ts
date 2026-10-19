@@ -26,9 +26,11 @@ import { CurrentUser, Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
 import {
   createTuitionSchema,
+  getTuitionSummaryQuerySchema,
   getTuitionsQuerySchema,
   updateTuitionSchema,
   type CreateTuitionDto,
+  type GetTuitionSummaryQueryDto,
   type GetTuitionsQueryDto,
   type UpdateTuitionDto,
 } from '@packages/entities/tuition';
@@ -68,11 +70,15 @@ export class TuitionController {
   })
   @ApiQuery({ name: 'classId', required: false, type: String, format: 'uuid' })
   @SwaggerResponse({ status: 200, description: 'Summary fetched' })
-  getSummary(@Query('classId') classId: string | undefined, @CurrentUser() user: JwtGuardUser) {
+  getSummary(
+    @Query(new ZodValidationPipe<GetTuitionSummaryQueryDto>(getTuitionSummaryQuerySchema))
+    query: GetTuitionSummaryQueryDto,
+    @CurrentUser() user: JwtGuardUser,
+  ) {
     return this.rmqProducer.send('tuition.getSummary', {
       userId: user.id,
       role: user.role,
-      classId,
+      classId: query.classId,
     });
   }
 

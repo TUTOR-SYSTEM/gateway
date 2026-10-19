@@ -55,7 +55,20 @@ export class ClassController {
     summary: 'Create class',
     description: 'Create a new class (Stage 1: class info)',
   })
-  @ApiBody({ schema: { type: 'object', required: ['name', 'subject', 'tutorId'] } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['name', 'code', 'subject', 'tutorId', 'startTime', 'endTime'],
+      properties: {
+        name: { type: 'string', maxLength: 255 },
+        code: { type: 'string', maxLength: 50 },
+        subject: { type: 'string', maxLength: 255 },
+        tutorId: { type: 'string', format: 'uuid' },
+        startTime: { type: 'string', format: 'date-time' },
+        endTime: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
   @SwaggerResponse({ status: 201, description: 'Class created' })
   create(
     @Body(new ZodValidationPipe<CreateClassDto>(createClassSchema))
@@ -71,9 +84,32 @@ export class ClassController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Update class',
-    description: "Update a class's info and/or reconcile its enrolled students",
+    description:
+      "Update a class's info and/or reconcile its enrolled students. studentIds replaces the entire roster: [] removes all students; omit studentIds to leave the roster unchanged.",
   })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', maxLength: 255 },
+        code: { type: 'string', maxLength: 50 },
+        subject: { type: 'string', maxLength: 255 },
+        tutorId: { type: 'string', format: 'uuid' },
+        startTime: { type: 'string', format: 'date-time' },
+        endTime: { type: 'string', format: 'date-time' },
+        studentIds: {
+          type: 'array',
+          maxItems: 100,
+          items: { type: 'string', format: 'uuid' },
+          description:
+            'studentIds replaces the entire roster; [] removes all students; omit to leave unchanged',
+        },
+      },
+    },
+    description:
+      'studentIds replaces the entire roster; [] removes all students; omit to leave unchanged',
+  })
   @SwaggerResponse({ status: 200, description: 'Class updated' })
   update(
     @Param('id', ParseUUIDPipe) id: string,

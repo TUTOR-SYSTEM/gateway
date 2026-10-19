@@ -52,7 +52,9 @@ export class SessionController {
   @Post()
   @HttpCode(StatusCodes.CREATED)
   @ApiOperation({ summary: 'Create session', description: 'Create a single class session' })
-  @ApiBody({ schema: { type: 'object', required: ['classId', 'date', 'startTime', 'endTime'] } })
+  @ApiBody({
+    schema: { type: 'object', required: ['classId', 'sessionNumber', 'startAt', 'endAt'] },
+  })
   @SwaggerResponse({ status: 201, description: 'Session created' })
   create(
     @Body(new ZodValidationPipe<CreateSessionDto>(createSessionSchema))

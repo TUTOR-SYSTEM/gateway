@@ -75,14 +75,14 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.GET_USERS_SUCCESSFULLY,
   })
   getUsers(
-    @CurrentUser() _user: JwtGuardUser,
+    @CurrentUser() user: JwtGuardUser,
     @Query(new ZodValidationPipe<GetUsersQueryDto>(getUsersQuerySchema))
-    _query: GetUsersQueryDto,
+    query: GetUsersQueryDto,
   ) {
     return this.rmqProducer.send('user.getUsers', {
-      ..._query,
-      actorId: _user.id,
-      actorRole: _user.role,
+      ...query,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -96,11 +96,11 @@ export class UserController {
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.GET_USER_SUCCESSFULLY,
   })
-  getDetailUserController(@CurrentUser() _user: JwtGuardUser) {
+  getDetailUserController(@CurrentUser() user: JwtGuardUser) {
     return this.rmqProducer.send('user.getDetailUser', {
-      userId: _user.id,
-      actorId: _user.id,
-      actorRole: _user.role,
+      userId: user.id,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -119,14 +119,14 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.GET_USER_BY_FIELD_SUCCESSFULLY,
   })
   getUserByField(
-    @CurrentUser() _user: JwtGuardUser,
+    @CurrentUser() user: JwtGuardUser,
     @Query(new ZodValidationPipe(dataFieldSchema))
-    _dataFieldDto: UserDataFieldDto,
+    dataFieldDto: UserDataFieldDto,
   ): Promise<unknown> {
     return this.rmqProducer.send('user.getUserByField', {
-      ..._dataFieldDto,
-      actorId: _user.id,
-      actorRole: _user.role,
+      ...dataFieldDto,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -144,16 +144,16 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.CREATE_USER_SUCCESSFULLY,
   })
   createUser(
-    @CurrentUser() _user: JwtGuardUser,
+    @CurrentUser() user: JwtGuardUser,
     @Body(new ZodValidationPipe(createUserSchema))
-    _createUserDto: CreateUserDto,
+    createUserDto: CreateUserDto,
   ): Promise<CreateUserResponseDto> {
     return this.rmqProducer.send(
       'user.createUser',
       {
-        ..._createUserDto,
-        actorId: _user.id,
-        actorRole: _user.role,
+        ...createUserDto,
+        actorId: user.id,
+        actorRole: user.role,
       },
       30000,
       0,
@@ -172,17 +172,17 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_SUCCESSFULLY,
   })
   updateUserController(
-    @CurrentUser() _user: JwtGuardUser,
+    @CurrentUser() user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateSelfDto>(updateSelfSchema))
-    _updateUserDto: UpdateSelfDto,
+    updateUserDto: UpdateSelfDto,
   ) {
     return this.rmqProducer.send('user.updateUser', {
-      ..._updateUserDto,
-      userId: _user.id,
+      ...updateUserDto,
+      userId: user.id,
       // Trusted identity overrides any body field; the user service ignores `role` and reads actor.
-      role: _user.role,
-      actorId: _user.id,
-      actorRole: _user.role,
+      role: user.role,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -201,16 +201,16 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_SUCCESSFULLY,
   })
   updateUserByAdminController(
-    @Param('id', ParseUUIDPipe) _id: string,
-    @CurrentUser() _user: JwtGuardUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateUserDto>(updateUserSchema))
-    _updateUserDto: UpdateUserDto,
+    updateUserDto: UpdateUserDto,
   ) {
     return this.rmqProducer.send('user.updateUserByAdmin', {
-      ..._updateUserDto,
-      id: _id,
-      actorId: _user.id,
-      actorRole: _user.role,
+      ...updateUserDto,
+      id: id,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -228,16 +228,16 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.UPDATE_USER_STATUS_SUCCESSFULLY,
   })
   updateStatusUserController(
-    @Param('id', ParseUUIDPipe) _id: string,
-    @CurrentUser() _user: JwtGuardUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtGuardUser,
     @Body(new ZodValidationPipe<UpdateUserStatusDto>(updateUserStatusSchema))
-    _body: UpdateUserStatusDto,
+    body: UpdateUserStatusDto,
   ) {
     return this.rmqProducer.send('user.updateStatusUser', {
-      id: _id,
-      isActive: _body.isActive,
-      actorId: _user.id,
-      actorRole: _user.role,
+      id: id,
+      isActive: body.isActive,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -255,13 +255,13 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.DELETE_USER_SUCCESSFULLY,
   })
   deleteUserByAdminController(
-    @Param('id', ParseUUIDPipe) _id: string,
-    @CurrentUser() _user: JwtGuardUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtGuardUser,
   ) {
     return this.rmqProducer.send('user.deleteUserByAdmin', {
-      id: _id,
-      actorId: _user.id,
-      actorRole: _user.role,
+      id: id,
+      actorId: user.id,
+      actorRole: user.role,
     });
   }
 
@@ -277,13 +277,13 @@ export class UserController {
     description: USER_SWAGGER_MESSAGES.CHANGE_PASSWORD_SUCCESSFULLY,
   })
   changePasswordController(
-    @CurrentUser() _user: Record<string, string>,
+    @CurrentUser() user: Record<string, string>,
     @Body(new ZodValidationPipe(changePasswordSchema))
-    _changePasswordDto: ChangePasswordValues,
+    changePasswordDto: ChangePasswordValues,
   ) {
     return this.rmqProducer.send('user.changePassword', {
-      ..._changePasswordDto,
-      userId: _user.id,
+      ...changePasswordDto,
+      userId: user.id,
     });
   }
 }

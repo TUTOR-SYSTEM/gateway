@@ -35,9 +35,15 @@ export class AiChatController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Chat with AI assistant',
-    description: 'Send a message and get a reply (history is DB-backed)',
+    description: 'Send a message and get a reply (history is kept in memory per user)',
   })
-  @ApiBody({ schema: { type: 'object', required: ['message'] } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['message'],
+      properties: { message: { type: 'string', minLength: 1, maxLength: 4000 } },
+    },
+  })
   @SwaggerResponse({ status: 200, description: 'AI reply fetched' })
   chat(
     @Body(new ZodValidationPipe<ChatDto>(chatSchema)) dto: ChatDto,

@@ -14,7 +14,9 @@ import { ZodValidationPipe } from '@packages/pipes';
 import {
   correlationIdParamSchema,
   getRequestLogsQuerySchema,
+  traceLogsQuerySchema,
   type GetRequestLogsQueryDto,
+  type TraceLogsQueryDto,
 } from '@packages/entities/log';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
@@ -54,11 +56,14 @@ export class LogController {
     description: 'Every log row sharing the same correlationId, ordered by when it happened.',
   })
   @ApiParam({ name: 'correlationId', type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 500, description: 'max 1000' })
   @SwaggerResponse({ status: 200, description: 'Trace fetched' })
   trace(
     @Param('correlationId', new ZodValidationPipe(correlationIdParamSchema)) correlationId: string,
+    @Query(new ZodValidationPipe<TraceLogsQueryDto>(traceLogsQuerySchema))
+    query: TraceLogsQueryDto,
   ) {
-    return this.rmqProducer.send('log.trace', { correlationId });
+    return this.rmqProducer.send('log.trace', { correlationId, limit: query.limit });
   }
 
   @Get('stats')

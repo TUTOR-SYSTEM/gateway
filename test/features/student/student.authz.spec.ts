@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { NotImplementedException } from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ROLES_KEY } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
@@ -26,11 +25,11 @@ describe('GW3-02 / GW3-06 / GW3-07 student routes', () => {
     },
   );
 
-  it('get-student-code answers 501 explicitly and never forwards a broken RPC', () => {
-    const send = jest.fn();
+  it('get-student-code forwards to student.generateCode on the user service', async () => {
+    const send = jest.fn().mockResolvedValue('STU-0001');
     const controller = new StudentController({ send } as unknown as RmqProducer);
-    expect(() => controller.generateStudentCodeController()).toThrow(NotImplementedException);
-    expect(send).not.toHaveBeenCalled();
+    await expect(controller.generateStudentCodeController()).resolves.toBe('STU-0001');
+    expect(send).toHaveBeenCalledWith('student.generateCode', {});
   });
 
   it('findById and update forward the verified actor (id and role) to the user service', () => {

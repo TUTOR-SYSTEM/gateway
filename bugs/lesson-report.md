@@ -2,7 +2,7 @@
 
 - Luồng: UI (`ui/lib/services/lesson.service.ts`, `ui/types/lesson.types.ts`) → gateway (`gateway/src/features/lesson/lesson.controller.ts`, schema ở `packages/entities/curriculum/curriculum.schema.ts`) → RMQ `lesson.*` → `tutor/src/features/lesson/{lesson.rpc.controller,lesson.service}.ts`.
 - Phương pháp: sub agent `flow-review-lesson`, **chỉ đọc, chưa chạy test**. Ngày 2026-10-17.
-- Verdict: **OK** (0 Critical, 0 Major, 2 Minor). Tổng hợp chung: `auth-report.md` mục 5.
+- Verdict: **OK** (0 Critical, 0 Major, 0 Minor). Tổng hợp chung: `auth-report.md` mục 5.
 
 ## Bảng luồng
 | UI | HTTP | RMQ | Khớp? |
@@ -23,10 +23,7 @@ Không còn bug mở.
 
 ## Minor
 
-| ID | Mức | Nội dung |
-|---|---|---|
-| — | Minor | `curriculumId`/`chapterId` của create đọc bằng `@Query` thô, không qua Zod (`lesson.controller.ts:64-65`); service bắt bằng `BadRequestException`. |
-| — | Minor | `UpdateLessonDto` trong `curriculum.dto.ts:26` là `Partial<z.infer<createLessonSchema>>`, không phải `updateLessonSchema`. |
+Không còn bug mở.
 
 ## Sạch
 `userId` từ `@CurrentUser()` trong create/update/delete và `assertCurriculumOwner` (ADMIN được bypass); `@Roles('ADMIN','TUTOR')` + `RolesGuard` trên route ghi; update từ chối body rỗng (400); `updateLessonSchema` không dính `.default()`; dùng `RmqProducer`; đọc lesson theo catalog chung (quyết định thiết kế).

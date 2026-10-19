@@ -5,6 +5,8 @@
 - **Validation**: every request body/query is validated with a **Zod v4** schema via
   `new ZodValidationPipe<Dto>(schema)`. DTOs are `z.infer<>` types, never hand-written interfaces.
   Pagination query schemas use plain `z.coerce.number()` fields (`page`/`limit`), not `z.preprocess`.
+  Use `z.coerce` only for query strings. Body numbers use plain `z.number()` — JSON is already typed,
+  and coerce turns `""`/`null` into `0` (see `gradeExerciseSchema`).
 - **Secrets**: never read, print, or edit `.env*` files (a PreToolUse hook blocks edits).
   Reference config via `process.env` / `ConfigModule`.
 - **Style**: single quotes, trailing commas, 100-char width, semicolons. Formatting/lint is

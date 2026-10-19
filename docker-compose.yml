@@ -70,6 +70,10 @@ services:
       # Định dạng log có kèm IP (%h) và User (%u)
       - -c
       - log_line_prefix=%m [%p] ip=%h user=%u db=%d app=%a
+<<<<<<< Updated upstream
+=======
+    ports: ['127.0.0.1:5432:5432']
+>>>>>>> Stashed changes
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tutor_db}' ]
@@ -86,6 +90,10 @@ services:
     networks: [app-network]
     image: redis:7-alpine
     restart: unless-stopped
+<<<<<<< Updated upstream
+=======
+    ports: ['6379:6379']
+>>>>>>> Stashed changes
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -173,7 +181,8 @@ services:
         NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8888}
         NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
     restart: unless-stopped
-    ports: ['3000:3000']
+    ports: ['127.0.0.1:3000:3000']
+    env_file : ../ui/docker.env
     depends_on: [gateway]
 
 # ============================================================================

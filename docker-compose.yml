@@ -172,7 +172,7 @@ services:
       context: ../ui
       args:
         # Baked at build time and used by the browser, so they must be host-reachable URLs.
-        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8888}
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-https://api-tutor.haiphan.org}
         NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
     restart: unless-stopped
     ports: ['127.0.0.1:3000:3000']

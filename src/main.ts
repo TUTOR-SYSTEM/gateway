@@ -1,3 +1,4 @@
+
 // Must load env vars before any other import — `AppModule` transitively imports
 // `rmq.constants.ts`, which reads `process.env.RABBITMQ_URL` at module top-level
 // (evaluated during this static import chain, before `ConfigModule.forRoot()` ever
@@ -38,7 +39,7 @@ async function bootstrap() {
   app.use(securityHeaders);
 
   // Origin whitelist from CORS_ORIGINS (comma-separated). Dev default: local frontends only.
-  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,https://api-tutor.haiphan.org/')
+  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,https://tutor.haiphan.org')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);

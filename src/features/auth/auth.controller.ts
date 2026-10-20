@@ -103,7 +103,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @Throttle({ short: { limit: 50, ttl: 60000 } })
   @Post('login')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
@@ -157,6 +157,13 @@ export class AuthController {
   }
 
   @Public()
+  // A class of students shares one NAT IP; @Throttle only overrides the buckets it names, so all
+  // three are raised (otherwise the global medium 20/10s and long 100/min still apply).
+  @Throttle({
+    short: { limit: 50, ttl: 60000 },
+    medium: { limit: 50, ttl: 60000 },
+    long: { limit: 50, ttl: 60000 },
+  })
   @Post('login/user-code')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({

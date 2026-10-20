@@ -74,3 +74,11 @@
   same `requestId` for correlation. Use `requestId` to correlate gateway and responder service
   logs when debugging production failures — see `ERROR_ANALYSIS.md` and `PRODUCTION_DEBUGGING.md`
   for diagnostic workflows.
+- **Rate limiting**: `ThrottleModule` (`src/features/throttler/`) applies `AppThrottlerGuard`
+  globally, per client IP, with three buckets: `short` 3/s, `medium` 20/10s, `long` 100/min.
+  A route without `@Throttle` (from `@nestjs/throttler`) gets all three, so many users behind one
+  NAT (e.g. a class of students on `POST /auth/login/user-code`) share one bucket and hit 429
+  `TOO_MANY_REQUESTS`. `@Throttle({ short: {...} })` overrides **only** the named bucket — the
+  other two still apply, so raise all three when a route legitimately needs more. Behind Railway
+  `TRUST_PROXY_HOPS` (default 1, `main.ts`) must match the proxy hop count or every client shares
+  one IP.

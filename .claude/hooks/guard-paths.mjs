@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse hook (Write|Edit): deny edits to protected files.
-//   - .env / .env.* — hold secrets; Claude asks before editing them.
+//   - .env / .env.* / *.env (e.g. docker.env) — hold secrets; Claude asks before editing them.
 //   - drizzle/**    — generated migrations; edit src/database/schema.ts, then run
 //                      `bun run db:generate`. Gateway owns the canonical schema + migration
 //                      history for the shared Postgres DB (2026-09-28 consolidation).
@@ -20,8 +20,8 @@ process.stdin.on('end', () => {
 
   const rules = [
     {
-      re: /(^|\/)\.env(\.[^/]+)?$/,
-      why: '.env files hold secrets — confirm before Claude edits them.',
+      re: /(^|\/)(\.env(\.[^/]+)?|[^/]*\.env)$/,
+      why: 'env files hold secrets — confirm before Claude edits them.',
       decision: 'ask',
     },
     {

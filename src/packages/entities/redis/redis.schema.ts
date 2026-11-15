@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Key prefixes that may be read through the HTTP API. session:* and reset-password:* are excluded. */
+/** Key prefixes that may be read through the HTTP API. session:*, reset-password:* and reset-password-otp* are excluded. */
 export const REDIS_READABLE_KEY_PREFIXES = ['cache:', 'public:', 'stats:'] as const;
 
 export const getRedisQuerySchema = z.object({

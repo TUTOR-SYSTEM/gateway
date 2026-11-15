@@ -28,6 +28,7 @@ import {
   type CreateStudentDto,
   getStudentsQuerySchema,
   type GetStudentsQueryDto,
+  setStudentPasswordSchema,
   updateStudentSchema,
   type UpdateStudentDto,
 } from '@packages/entities/student';
@@ -138,7 +139,7 @@ export class StudentController {
     );
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TUTOR')
   @UseGuards(RolesGuard)
   @Get()
   @HttpCode(StatusCodes.OK)
@@ -173,6 +174,20 @@ export class StudentController {
   ) {
     return this.rmqProducer.send('student.findAll', {
       ..._query,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
+  }
+
+  /** Phụ huynh: danh sách con (khai báo trước `:id` để không bị bắt nhầm thành UUID). */
+  @Get('my-children')
+  @UseGuards(RolesGuard)
+  @Roles('PARENT')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'List my children (PARENT)' })
+  @SwaggerResponse({ status: 200, description: 'Children fetched' })
+  getMyChildren(@CurrentUser() _currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('student.findChildren', {
       actorId: _currentUser.id,
       actorRole: _currentUser.role,
     });
@@ -248,6 +263,35 @@ export class StudentController {
   findById(@Param('id', ParseUUIDPipe) _id: string, @CurrentUser() _currentUser: JwtGuardUser) {
     return this.rmqProducer.send('student.findById', {
       id: _id,
+      actorId: _currentUser.id,
+      actorRole: _currentUser.role,
+    });
+  }
+
+  /** Gia sư (chủ học sinh) hoặc admin đặt lại mật khẩu học sinh. */
+  @Put(':id/password')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Set student password (tutor owner or admin)' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['password'],
+      properties: { password: { type: 'string', minLength: 8, maxLength: 100 } },
+    },
+  })
+  @SwaggerResponse({ status: 200, description: 'Password updated' })
+  setPassword(
+    @Param('id', ParseUUIDPipe) _id: string,
+    @Body(new ZodValidationPipe(setStudentPasswordSchema))
+    _dto: { password: string },
+    @CurrentUser() _currentUser: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('student.setPassword', {
+      id: _id,
+      password: _dto.password,
       actorId: _currentUser.id,
       actorRole: _currentUser.role,
     });

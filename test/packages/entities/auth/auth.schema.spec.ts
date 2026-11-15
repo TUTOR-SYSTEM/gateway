@@ -130,6 +130,17 @@ describe('loginSchema', () => {
     const parsed = loginSchema.parse({ email: 'a@b.co', password: 'Abcdef1!', extra: 1 });
     expect(parsed).toEqual({ email: 'a@b.co', password: 'Abcdef1!' });
   });
+
+  it('trims leading and trailing whitespace from the email before validating', () => {
+    const parsed = loginSchema.parse({ email: '  a@b.co  ', password: 'Abcdef1!' });
+    expect(parsed.email).toBe('a@b.co');
+  });
+
+  it('rejects a whitespace-only email with the required message', () => {
+    expect(messagesOf(loginSchema.safeParse({ email: '   ', password: 'Abcdef1!' }))).toContain(
+      AUTH_MESSAGES.EMAIL_REQUIRED,
+    );
+  });
 });
 
 describe('registerSchema', () => {
@@ -265,23 +276,24 @@ describe('forgotPasswordSchema', () => {
 });
 
 describe('resetPasswordSchema', () => {
-  const jti = '123e4567-e89b-42d3-a456-426614174000';
+  const email = 'user@example.com';
+  const otp = '482931';
   const strong = 'Abcdef1!';
 
   it('accepts a matching password and confirmation', () => {
     expect(
-      resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: strong }).success,
+      resetPasswordSchema.safeParse({ email, otp, password: strong, confirmPassword: strong }).success,
     ).toBe(true);
   });
 
   it('maps newPassword onto password when password is absent', () => {
-    const parsed = resetPasswordSchema.parse({ jti, newPassword: strong, confirmPassword: strong });
+    const parsed = resetPasswordSchema.parse({ email, otp, newPassword: strong, confirmPassword: strong });
     expect(parsed).toMatchObject({ password: strong });
   });
 
   it('prefers an explicit password over newPassword when both are sent', () => {
     const parsed = resetPasswordSchema.parse({
-      jti,
+      email, otp,
       password: strong,
       newPassword: 'Zyxwvu9@',
       confirmPassword: strong,
@@ -291,7 +303,7 @@ describe('resetPasswordSchema', () => {
 
   it('reports a confirmation mismatch on the confirmPassword path', () => {
     const result = resetPasswordSchema.safeParse({
-      jti,
+      email, otp,
       password: strong,
       confirmPassword: 'Different1!',
     });
@@ -306,40 +318,58 @@ describe('resetPasswordSchema', () => {
     }
   });
 
-  it('rejects a missing jti with the reset-token-required message', () => {
-    expect(
-      messagesOf(resetPasswordSchema.safeParse({ password: strong, confirmPassword: strong })),
-    ).toContain(AUTH_MESSAGES.RESET_TOKEN_REQUIRED);
-  });
-
-  it('rejects a non-UUID jti with the reset-token-invalid message', () => {
+  it('rejects a missing otp with the otp-required message', () => {
     expect(
       messagesOf(
-        resetPasswordSchema.safeParse({
-          jti: 'not-a-uuid',
-          password: strong,
-          confirmPassword: strong,
-        }),
+        resetPasswordSchema.safeParse({ email, password: strong, confirmPassword: strong }),
       ),
-    ).toContain(AUTH_MESSAGES.RESET_TOKEN_INVALID);
+    ).toContain(AUTH_MESSAGES.OTP_REQUIRED);
+  });
+
+  it('rejects a non-digit or wrong-length otp with the otp-invalid message', () => {
+    for (const bad of ['abcdef', '12345', '1234567']) {
+      expect(
+        messagesOf(
+          resetPasswordSchema.safeParse({
+            email,
+            otp: bad,
+            password: strong,
+            confirmPassword: strong,
+          }),
+        ),
+      ).toContain(AUTH_MESSAGES.OTP_INVALID);
+    }
+  });
+
+  it('rejects a missing or malformed email', () => {
+    expect(
+      resetPasswordSchema.safeParse({
+        email: 'nope',
+        otp,
+        password: strong,
+        confirmPassword: strong,
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects a missing confirmation with the confirm-required message', () => {
-    expect(messagesOf(resetPasswordSchema.safeParse({ jti, password: strong }))).toContain(
+    expect(messagesOf(resetPasswordSchema.safeParse({ email, otp, password: strong }))).toContain(
       AUTH_MESSAGES.CONFIRM_PASSWORD_REQUIRED,
     );
   });
 
   it('rejects a confirmation shorter than 8 characters', () => {
     expect(
-      messagesOf(resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: 'abc' })),
+      messagesOf(
+        resetPasswordSchema.safeParse({ email, otp, password: strong, confirmPassword: 'abc' }),
+      ),
     ).toContain(AUTH_MESSAGES.CONFIRM_PASSWORD_MIN);
   });
 
   it('rejects a confirmation longer than 100 characters', () => {
     expect(
       messagesOf(
-        resetPasswordSchema.safeParse({ jti, password: strong, confirmPassword: 'x'.repeat(101) }),
+        resetPasswordSchema.safeParse({ email, otp, password: strong, confirmPassword: 'x'.repeat(101) }),
       ),
     ).toContain(AUTH_MESSAGES.CONFIRM_PASSWORD_MAX);
   });
@@ -361,21 +391,21 @@ describe('verifyEmailSchema', () => {
     expect(verifyEmailSchema.safeParse({ jti: VALID_JTI }).success).toBe(true);
   });
 
-  it('rejects a missing jti with the reset-token-required message', () => {
+  it('rejects a missing jti with the verify-token-required message', () => {
     expect(messagesOf(verifyEmailSchema.safeParse({}))).toContain(
-      AUTH_MESSAGES.RESET_TOKEN_REQUIRED,
+      AUTH_MESSAGES.VERIFY_EMAIL_TOKEN_REQUIRED,
     );
   });
 
-  it('rejects a non-string jti with the reset-token-required message', () => {
+  it('rejects a non-string jti with the verify-token-required message', () => {
     expect(messagesOf(verifyEmailSchema.safeParse({ jti: 42 }))).toContain(
-      AUTH_MESSAGES.RESET_TOKEN_REQUIRED,
+      AUTH_MESSAGES.VERIFY_EMAIL_TOKEN_REQUIRED,
     );
   });
 
-  it('rejects a non-UUID jti with the reset-token-invalid message', () => {
+  it('rejects a non-UUID jti with the verify-token-invalid message', () => {
     expect(messagesOf(verifyEmailSchema.safeParse({ jti: 'abc' }))).toContain(
-      AUTH_MESSAGES.RESET_TOKEN_INVALID,
+      AUTH_MESSAGES.VERIFY_EMAIL_TOKEN_INVALID,
     );
   });
 

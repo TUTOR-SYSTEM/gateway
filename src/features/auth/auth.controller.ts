@@ -294,26 +294,39 @@ export class AuthController {
   @HttpCode(StatusCodes.OK)
   @ApiOperation({
     summary: 'Reset password',
-    description: 'Reset password using the token from the reset email',
+    description: 'Reset password using the 6-digit code from the reset email',
   })
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['jti', 'password', 'confirmPassword'],
+      required: ['email', 'otp', 'password', 'confirmPassword'],
       properties: {
-        jti: {
+        email: { type: 'string', format: 'email', example: 'user@example.com' },
+        otp: {
           type: 'string',
-          format: 'uuid',
-          description: 'Reset token (JWT ID) from the reset email',
+          pattern: '^\\d{6}$',
+          example: '482931',
+          description: '6-digit code from the reset email (valid 5 minutes, 5 attempts)',
         },
-        password: { type: 'string', minLength: 6, maxLength: 25, example: 'NewPass123!' },
+        password: {
+          type: 'string',
+          minLength: 8,
+          maxLength: 100,
+          description: 'Needs lowercase, uppercase, digit and special character',
+          example: 'NewPass123!',
+        },
         newPassword: {
           type: 'string',
-          minLength: 6,
-          maxLength: 25,
+          minLength: 8,
+          maxLength: 100,
           description: 'Alias for password',
         },
-        confirmPassword: { type: 'string', minLength: 6, maxLength: 25, example: 'NewPass123!' },
+        confirmPassword: {
+          type: 'string',
+          minLength: 8,
+          maxLength: 100,
+          example: 'NewPass123!',
+        },
       },
     },
   })

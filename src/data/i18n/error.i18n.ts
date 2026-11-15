@@ -60,6 +60,10 @@ export const ERROR_TRANSLATIONS = {
     vi: 'Mật khẩu không được quá 100 ký tự',
     en: 'Password must be at most 100 characters long',
   },
+  MANAGED_PASSWORD_MAX: {
+    vi: 'Mật khẩu không được quá 20 ký tự',
+    en: 'Password must be at most 20 characters long',
+  },
   AUTH_PASSWORD_LOWERCASE: {
     vi: 'Mật khẩu phải có ít nhất một chữ thường (a-z)',
     en: 'Password must include at least one lowercase letter (a-z)',
@@ -93,6 +97,30 @@ export const ERROR_TRANSLATIONS = {
   AUTH_RESET_TOKEN_REQUIRED: {
     vi: 'Thiếu mã đặt lại mật khẩu',
     en: 'Reset password token is required',
+  },
+  AUTH_VERIFY_EMAIL_TOKEN_REQUIRED: {
+    vi: 'Thiếu mã xác minh email',
+    en: 'Email verification token is required',
+  },
+  AUTH_VERIFY_EMAIL_TOKEN_INVALID: {
+    vi: 'Mã xác minh email không hợp lệ',
+    en: 'Invalid email verification token',
+  },
+  AUTH_OTP_REQUIRED: {
+    vi: 'Vui lòng nhập mã xác nhận',
+    en: 'Verification code is required',
+  },
+  AUTH_OTP_INVALID: {
+    vi: 'Mã xác nhận phải gồm 6 chữ số',
+    en: 'Verification code must be 6 digits',
+  },
+  INVALID_RESET_OTP: {
+    vi: 'Mã xác nhận không đúng hoặc đã hết hạn',
+    en: 'Invalid or expired reset code',
+  },
+  RESET_OTP_TOO_MANY_ATTEMPTS: {
+    vi: 'Nhập sai mã quá nhiều lần. Vui lòng yêu cầu mã mới',
+    en: 'Too many incorrect attempts. Please request a new code',
   },
   AUTH_RESET_TOKEN_INVALID: {
     vi: 'Mã đặt lại mật khẩu không hợp lệ',
@@ -279,6 +307,7 @@ export const ERROR_TRANSLATIONS = {
 
   // Student
   STUDENT_CODE_EXISTS: { vi: 'Mã học sinh đã tồn tại', en: 'Student code already exists' },
+  STUDENT_TUTOR_REQUIRED: { vi: 'Vui lòng chọn gia sư quản lý', en: 'Please select a managing tutor' },
 
   // Generic
   VALIDATION_FAILED: { vi: 'Dữ liệu không hợp lệ', en: 'Validation failed' },
@@ -311,6 +340,10 @@ export const ERROR_TRANSLATIONS = {
     en: 'Invalid credentials',
   },
   ACCOUNT_DEACTIVATED: { vi: 'Tài khoản đã bị vô hiệu hóa', en: 'Account has been deactivated' },
+  TOO_MANY_LOGIN_ATTEMPTS: {
+    vi: 'Đăng nhập sai quá nhiều lần, vui lòng thử lại sau',
+    en: 'Too many failed sign-in attempts, please try again later',
+  },
   ACCOUNT_ALREADY_EXISTS: {
     vi: 'Không thể tạo tài khoản với thông tin này',
     en: 'An account cannot be created with these details',

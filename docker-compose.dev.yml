@@ -9,8 +9,8 @@ services:
   rabbitmq:
     ports: ['5672:5672', '15672:15672']
   user:
-    ports: ['4002:4002']
+    ports: ['4001:4001']
   tutor-service:
     ports: ['4003:4003']
   third:
-    ports: ['4001:4001']
+    ports: ['4002:4002']

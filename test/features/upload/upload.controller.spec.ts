@@ -101,17 +101,25 @@ describe('UploadController', () => {
 
   it('download asks third-service with userId/role and redirects to the presigned URL', async () => {
     const { controller, send, res } = setup();
-    send.mockResolvedValue({
-      url: 'https://r2.example/presigned',
-      expiresIn: 300,
-      contentType: 'application/pdf',
-      filename: 'a.pdf',
-    });
+    send
+      .mockResolvedValueOnce({ allowed: true })
+      .mockResolvedValueOnce({
+        url: 'https://r2.example/presigned',
+        expiresIn: 300,
+        contentType: 'application/pdf',
+        filename: 'a.pdf',
+      });
     await controller.download('uploads/abc.pdf', actor, res);
-    expect(send).toHaveBeenCalledWith('upload.download', {
+    expect(send).toHaveBeenNthCalledWith(1, 'exercise.fileAccess', {
       key: 'uploads/abc.pdf',
       userId: 'u-1',
       role: 'TUTOR',
+    });
+    expect(send).toHaveBeenNthCalledWith(2, 'upload.download', {
+      key: 'uploads/abc.pdf',
+      userId: 'u-1',
+      role: 'TUTOR',
+      authorized: true,
     });
     expect(res.redirect).toHaveBeenCalledWith(302, 'https://r2.example/presigned');
   });

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -34,10 +35,13 @@ import { ERROR_MESSAGES } from 'src/data/constants';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
 
 const UPLOAD_KEY_PREFIX = 'uploads/';
+/** Bài nộp của học sinh (third-service lưu vào thư mục này). */
+const SUBMISSION_KEY_PREFIX = 'submissions/';
 
 /** Only keys under `uploads/` (the prefix the storage service writes) and without traversal are allowed. */
 function assertValidKey(key: string): void {
-  if (!key || !key.startsWith(UPLOAD_KEY_PREFIX) || key.includes('..') || key.includes('\\')) {
+  const validPrefix = key?.startsWith(UPLOAD_KEY_PREFIX) || key?.startsWith(SUBMISSION_KEY_PREFIX);
+  if (!key || !validPrefix || key.includes('..') || key.includes('\\')) {
     throw new BadRequestException(ERROR_MESSAGES.UPLOAD_KEY_INVALID);
   }
 }
@@ -137,11 +141,19 @@ export class UploadController {
   ): Promise<void> {
     if (!key) throw new BadRequestException(ERROR_MESSAGES.UPLOAD_KEY_REQUIRED);
     assertValidKey(key);
-    // third-service enforces ownership (the uploader, or ADMIN) and returns a short-lived presigned URL.
+    // 1) Quyền theo ngữ cảnh: file thuộc buổi học / bài tập / bài giảng mà user liên quan tới
+    //    (gia sư của lớp, học sinh, phụ huynh của học sinh, ADMIN). Kiểm tra ở tutor-service vì
+    //    dữ liệu quan hệ nằm ở đó.
+    const access = await this.rmqProducer.send<
+      { allowed: boolean },
+      { key: string; userId: string; role: JwtGuardUser['role'] }
+    >('exercise.fileAccess', { key, userId: user.id, role: user.role });
+    if (!access?.allowed) throw new ForbiddenException(ERROR_MESSAGES.PERMISSION_DENIED);
+    // 2) third-service presigns (đã được gateway xác thực qua cờ authorized).
     const result = await this.rmqProducer.send<
       { url: string; expiresIn: number; contentType: string; filename: string },
-      { key: string; userId: string; role: JwtGuardUser['role'] }
-    >('upload.download', { key, userId: user.id, role: user.role });
+      { key: string; userId: string; role: JwtGuardUser['role']; authorized: boolean }
+    >('upload.download', { key, userId: user.id, role: user.role, authorized: true });
     res.redirect(302, result.url);
   }
 

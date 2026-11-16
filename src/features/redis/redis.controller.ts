@@ -19,6 +19,8 @@ const SENSITIVE_KEY_PREFIXES = [
   'session:',
   'login-session:',
   'reset-password:',
+  // Password-reset code hashes and their attempt counters (no colon: covers both key shapes).
+  'reset-password-otp',
   'refresh:',
   'refresh-token:',
 ];

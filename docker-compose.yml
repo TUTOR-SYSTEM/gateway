@@ -139,7 +139,7 @@ services:
     env_file: ../user/docker.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: "4002"
+      PORT: "4001"
       NODE_ENV: production
     depends_on: *service-deps
 
@@ -161,7 +161,7 @@ services:
     env_file: ../third/docker.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: "4001"
+      PORT: "4002"
       NODE_ENV: production
       GATEWAY_BASE_URL: http://gateway:8888
     depends_on: *service-deps

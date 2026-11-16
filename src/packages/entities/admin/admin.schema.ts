@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ERROR_MESSAGES } from 'src/data/constants';
 
 /**
  * Admin-managed accounts (TUTOR / STUDENT).
@@ -8,36 +9,18 @@ import { z } from 'zod';
  * only cover the profile/credential fields the admin may set.
  */
 
-/** Shared password-complexity refinement (mirrors the auth/user rules). */
+/** Max length for a password an admin sets on a managed account (mirrors `user`). */
+const MANAGED_PASSWORD_MAX_LENGTH = 20;
+
+/** Shared password-complexity refinement, 8–20 chars (mirrors the user service). */
 function refinePassword(password: string, ctx: z.RefinementCtx): void {
-  if (!/[a-z]/.test(password)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Password must include at least one lowercase letter (a-z)',
-      path: ['password'],
-    });
-  }
-  if (!/[A-Z]/.test(password)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Password must include at least one uppercase letter (A-Z)',
-      path: ['password'],
-    });
-  }
-  if (!/\d/.test(password)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Password must include at least one digit (0-9)',
-      path: ['password'],
-    });
-  }
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Password must include at least one special character',
-      path: ['password'],
-    });
-  }
+  if (password.length < 8 || password.length > MANAGED_PASSWORD_MAX_LENGTH) return;
+  const issue = (code: string) =>
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: code, path: ['password'] });
+  if (!/[a-z]/.test(password)) issue(ERROR_MESSAGES.AUTH_PASSWORD_LOWERCASE);
+  if (!/[A-Z]/.test(password)) issue(ERROR_MESSAGES.AUTH_PASSWORD_UPPERCASE);
+  if (!/\d/.test(password)) issue(ERROR_MESSAGES.AUTH_PASSWORD_DIGIT);
+  if (!/[^A-Za-z0-9]/.test(password)) issue(ERROR_MESSAGES.AUTH_PASSWORD_SPECIAL);
 }
 
 /** Create a tutor or student account. */
@@ -45,6 +28,7 @@ export const createManagedUserSchema = z
   .object({
     email: z
       .string({ message: 'Email is required' })
+      .trim()
       .min(1, { message: 'Email is required' })
       .email({ message: 'Invalid email address' }),
     username: z
@@ -64,9 +48,9 @@ export const createManagedUserSchema = z
       .min(2, { message: 'Last name must be at least 2 characters' })
       .max(100, { message: 'Last name must be at most 100 characters' }),
     password: z
-      .string({ message: 'Password is required' })
-      .min(8, { message: 'Password must be at least 8 characters' })
-      .max(100, { message: 'Password must be at most 100 characters' }),
+      .string({ message: ERROR_MESSAGES.AUTH_PASSWORD_REQUIRED })
+      .min(8, { message: ERROR_MESSAGES.AUTH_PASSWORD_MIN })
+      .max(MANAGED_PASSWORD_MAX_LENGTH, { message: ERROR_MESSAGES.MANAGED_PASSWORD_MAX }),
     phone: z.string().trim().max(20, { message: 'Phone must be at most 20 characters' }).optional(),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
     dateOfBirth: z.coerce.date().optional(),
@@ -87,7 +71,7 @@ export const createManagedUserSchema = z
 /** Update a tutor or student account — every field optional, no password here. */
 export const updateManagedUserSchema = z
   .object({
-    email: z.string().email({ message: 'Invalid email address' }).optional(),
+    email: z.string().trim().email({ message: 'Invalid email address' }).optional(),
     username: z.string().trim().min(1).max(50).optional(),
     firstName: z.string().trim().min(2).max(100).optional(),
     lastName: z.string().trim().min(2).max(100).optional(),
@@ -101,7 +85,7 @@ export const updateManagedUserSchema = z
       .nullable()
       .optional(),
     description: z.string().max(5000).nullable().optional(),
-    avatar: z.string().url({ message: 'Avatar must be a url ...' }).nullable().optional(),
+    avatar: z.string().url({ message: 'Avatar must be a url ...' }).regex(/\.(jpe?g|png|webp|gif)(\?.*)?$/i, { message: 'Avatar must be an image (jpg, png, webp, gif)' }).nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .strict();

@@ -12,6 +12,7 @@ import {
   numeric,
   integer,
   jsonb,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────
@@ -562,4 +563,130 @@ export const testFixtures = pgTable('test_fixtures', {
   updatedAt: timestamp('updated_at')
     .defaultNow()
     .$onUpdate(() => new Date()),
+});
+
+// ─── Course progress (owner: tutor-service; kết quả học tập và test của khoá học VPS) ──
+export const courseItemKindEnum = pgEnum('course_item_kind', ['LAB', 'DEBUG']);
+
+/** Đáp án đã chọn từng câu quiz (lần đầu được giữ, số sai và cờ được cộng dồn). */
+export const courseQuizAnswers = pgTable(
+  'course_quiz_answers',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    lessonId: text('lesson_id').notNull(),
+    questionIndex: integer('question_index').notNull(),
+    optionIndex: integer('option_index'),
+    wrongCount: integer('wrong_count').default(0).notNull(),
+    flagged: boolean('flagged').default(false).notNull(),
+    answeredAt: timestamp('answered_at').defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.lessonId, table.questionIndex] })],
+);
+
+/** Kết quả từng lần làm quiz của user theo module. */
+export const courseQuizAttempts = pgTable(
+  'course_quiz_attempts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    lessonId: text('lesson_id').notNull(),
+    score: integer('score').notNull(),
+    total: integer('total').notNull(),
+    completedAt: timestamp('completed_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('course_quiz_attempts_unique').on(table.userId, table.lessonId, table.completedAt),
+  ],
+);
+
+/** Lab và bài fix lỗi đã đạt của user theo module. */
+export const courseItemResults = pgTable(
+  'course_item_results',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    lessonId: text('lesson_id').notNull(),
+    kind: courseItemKindEnum('kind').notNull(),
+    itemKey: text('item_key').notNull(),
+    passedAt: timestamp('passed_at').defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.lessonId, table.kind, table.itemKey] })],
+);
+
+/** Kết quả học tập tổng hợp: một dòng cho mỗi user và module. */
+export const courseLearningResults = pgTable(
+  'course_learning_results',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    lessonId: text('lesson_id').notNull(),
+    quizAttempts: integer('quiz_attempts').default(0).notNull(),
+    quizBest: integer('quiz_best'),
+    quizTotal: integer('quiz_total'),
+    quizLastAt: timestamp('quiz_last_at'),
+    labsPassed: integer('labs_passed').default(0).notNull(),
+    labsTotal: integer('labs_total').default(0).notNull(),
+    debugsSolved: integer('debugs_solved').default(0).notNull(),
+    wrongTotal: integer('wrong_total').default(0).notNull(),
+    flagged: integer('flagged').default(0).notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.lessonId] })],
+);
+
+// ─── API route catalogue (nguồn: tab "API Route Checklist" của course-vps, data/api.html) ──
+/** Mỗi route/handler/UI item của các service, gom theo svc và module như trên UI. */
+export const apiRoutes = pgTable(
+  'api_routes',
+  {
+    id: text('id').primaryKey(),
+    scanId: text('scan_id').notNull(),
+    key: text('key').notNull().unique(),
+    svc: text('svc').notNull(),
+    module: text('module').notNull(),
+    type: text('type').notNull(),
+    method: text('method').notNull(),
+    path: text('path').notNull(),
+    handler: text('handler').notNull().default(''),
+    file: text('file').notNull().default(''),
+    line: integer('line'),
+    auth: text('auth').notNull().default(''),
+    dto: text('dto').notNull().default(''),
+    dev: boolean('dev').default(false).notNull(),
+    flags: jsonb('flags').$type<string[]>().default([]).notNull(),
+    /** Các trường phụ của UI item (title, chain, callers, ...) giữ nguyên dạng JSON. */
+    details: jsonb('details').$type<Record<string, unknown>>().default({}).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [index('api_routes_svc_module_idx').on(table.svc, table.module)],
+);
+
+/** Kết quả test/tick của một route trên tab API Route Checklist (một dòng cho mỗi route). */
+export const apiRouteResults = pgTable('api_route_results', {
+  routeId: text('route_id')
+    .primaryKey()
+    .references(() => apiRoutes.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('todo'),
+  /** Toàn bộ doc của trang: cases, note, checks, testedAt, ackChange, ... */
+  doc: jsonb('doc').$type<Record<string, unknown>>().default({}).notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/** Meta của lần quét API (một dòng): commit/nhánh/services/sends/thứ tự service để dựng lại danh mục route. */
+export const apiCatalog = pgTable('api_catalog', {
+  scanId: text('scan_id').primaryKey(),
+  scannedAt: text('scanned_at').notNull(),
+  commits: jsonb('commits').$type<Record<string, string>>().default({}).notNull(),
+  branches: jsonb('branches').$type<Record<string, string>>().default({}).notNull(),
+  services: jsonb('services').$type<Record<string, unknown>>().default({}).notNull(),
+  sends: jsonb('sends').$type<unknown[]>().default([]).notNull(),
+  order: jsonb('order').$type<string[]>().default([]).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });

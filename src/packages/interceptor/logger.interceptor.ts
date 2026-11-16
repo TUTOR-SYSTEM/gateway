@@ -16,6 +16,7 @@ const SENSITIVE_KEYS = [
   'token',
   'accessToken',
   'refreshToken',
+  'otp',
   'jti',
   'key',
   'secret',

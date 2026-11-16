@@ -22,7 +22,7 @@ describe('F-01 gateway RedisController hardening', () => {
     expect(guards).toContain(RolesGuard);
   });
 
-  it.each(['session:u1', 'login-session:u1', 'reset-password:jti-1', 'refresh:u1', 'SESSION:u1'])(
+  it.each(['session:u1', 'login-session:u1', 'reset-password:jti-1', 'reset-password-otp:u1', 'refresh:u1', 'SESSION:u1'])(
     'rejects sensitive key %s with 403 without calling RPC',
     async (key) => {
       await expect((async () => controller.get({ key }))()).rejects.toBeInstanceOf(ForbiddenException);

@@ -38,6 +38,8 @@ export const RMQ_PREFIX_ROUTES: Record<string, RmqTarget> = {
   chapter: TUTOR_SERVICE,
   lesson: TUTOR_SERVICE,
   exercise: TUTOR_SERVICE,
+  courseProgress: TUTOR_SERVICE,
+  apiRoutes: TUTOR_SERVICE,
   tuition: TUTOR_SERVICE,
   class: TUTOR_SERVICE,
   schedule: TUTOR_SERVICE,

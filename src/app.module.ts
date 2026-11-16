@@ -14,6 +14,8 @@ import { CurriculumModule } from './features/curriculum/curriculum.module';
 import { ChapterModule } from './features/chapter/chapter.module';
 import { LessonModule } from './features/lesson/lesson.module';
 import { ExerciseModule } from './features/exercise/exercise.module';
+import { CourseProgressModule } from './features/course-progress/course-progress.module';
+import { ApiRoutesModule } from './features/api-routes/api-routes.module';
 import { TuitionModule } from './features/tuition/tuition.module';
 import { DashboardModule } from './features/dashboard/dashboard.module';
 import { AttendanceModule } from './features/attendance/attendance.module';
@@ -25,7 +27,9 @@ import { UploadModule } from './features/upload/upload.module';
 import { EmailModule } from './features/email/email.module';
 import { LogModule } from './features/log/log.module';
 import { TestScenarioModule } from './features/test-scenario/test-scenario.module';
-import { JwtAuthGuard, LanguageGuard } from '@packages/guards';
+// Relative on purpose: JwtAuthGuard injects RmqProducer, and an alias import can load a second copy
+// of that class (src vs dist under Bun), which Nest then can't match to RmqModule's provider.
+import { JwtAuthGuard, LanguageGuard } from './packages/guards';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { RmqModule } from './features/rabbitmq/rmq.module';
@@ -48,6 +52,8 @@ import { ThrottleModule } from './features/throttler/throttler.module';
     CurriculumModule,
     ChapterModule,
     ExerciseModule,
+    CourseProgressModule,
+    ApiRoutesModule,
     TuitionModule,
     DashboardModule,
     AttendanceModule,

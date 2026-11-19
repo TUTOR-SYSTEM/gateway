@@ -1,37 +1,18 @@
-# Full stack: infra (postgres, redis, rabbitmq) + gateway, user, tutor, third services + UI.
-#   cd gateway && docker compose up -d --build
-#
-# Exposure: only the gateway (8888) and the UI (3000) publish ports to the host. Every other
-# service (user, tutor-service, third, postgres, redis, rabbitmq) is reachable only on app-network.
-# Publishing a service directly would bypass the gateway's JWT/session/throttle layer. For local
-# debugging from the host, add the override file: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
-#
-# Required secrets (no defaults, compose refuses to start without them): POSTGRES_PASSWORD,
-# RABBITMQ_USER, RABBITMQ_PASSWORD. Put them in docker.env (never commit it); run with
-# `bun compose:up` or `docker compose --env-file docker.env up -d`.
-#
-# RabbitMQ ACL (target state): one broker user per service, each limited to its own queue
-# (configure `rabbitmqctl set_permissions` / a definitions file; the admin user is for ops only).
-# Until that exists, the broker is still a shared trust boundary: keep 5672 off the public network.
-# Each service keeps its own env file; the `environment:` block below overrides the
-# host-style values (localhost) with in-network service names.
 name: tutor
 
 x-infra-env: &infra-env
   POSTGRES_HOST: postgres
-  POSTGRES_PORT: "5432"
+  POSTGRES_PORT: '5432'
   REDIS_HOST: redis
-  REDIS_PORT: "6379"
+  REDIS_PORT: '6379'
   REDIS_URL: redis://redis:6379
   RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
   USER_QUEUE: user_queue
   TUTOR_QUEUE: tutor_queue
   THIRD_QUEUE: third_queue
 
-# One shared Postgres database for user, tutor-service and third. Every service reads the same
-# DATABASE_URL built from POSTGRES_* here, and the postgres container creates the same POSTGRES_DB.
 x-db-env: &db-env
-  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tutor_db}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-af56f868db2a46029d4d210a342ac046}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-8f78b51c031c426fa58b47f875fec202}
 
 x-service-deps: &service-deps
   postgres: { condition: service_healthy }
@@ -39,16 +20,12 @@ x-service-deps: &service-deps
   rabbitmq: { condition: service_healthy }
 
 services:
-
-  # ============================================================================
-  # Infrastructure: Database
-  # ============================================================================
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-tutor_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-8f78b51c031c426fa58b47f875fec202}
+      POSTGRES_USER: ${POSTGRES_USER:-af56f868db2a46029d4d210a342ac046}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     # CẬP NHẬT COMMAND TẠI ĐÂY
     command:
@@ -73,7 +50,11 @@ services:
     ports: ['127.0.0.1:5432:5432']
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tutor_db}' ]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-af56f868db2a46029d4d210a342ac046} -d ${POSTGRES_DB:-8f78b51c031c426fa58b47f875fec202}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -116,10 +97,10 @@ services:
     networks: [app-network]
     build: .
     restart: unless-stopped
-    env_file: ./docker.env
+    env_file: ./.env
     environment:
       <<: *infra-env
-      PORT: "8888"
+      PORT: '8888'
       NODE_ENV: production
       # Session check (JWT -> third redis): fail closed unless explicitly opened.
       SESSION_CHECK_FAIL_OPEN: ${SESSION_CHECK_FAIL_OPEN:-false}
@@ -136,10 +117,10 @@ services:
     networks: [app-network]
     build: ../user
     restart: unless-stopped
-    env_file: ../user/docker.env
+    env_file: ../user/.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: "4001"
+      PORT: '4001'
       NODE_ENV: production
     depends_on: *service-deps
 
@@ -147,10 +128,10 @@ services:
     networks: [app-network]
     build: ../tutor
     restart: unless-stopped
-    env_file: ../tutor/docker.env
+    env_file: ../tutor/.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: "4003"
+      PORT: '4003'
       NODE_ENV: production
     depends_on: *service-deps
 
@@ -158,10 +139,10 @@ services:
     networks: [app-network]
     build: ../third
     restart: unless-stopped
-    env_file: ../third/docker.env
+    env_file: ../third/.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: "4002"
+      PORT: '4002'
       NODE_ENV: production
       GATEWAY_BASE_URL: http://gateway:8888
     depends_on: *service-deps
@@ -176,7 +157,7 @@ services:
         NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
     restart: unless-stopped
     ports: ['127.0.0.1:3000:3000']
-    env_file : ../ui/docker.env
+    env_file: ../ui/docker.env
     depends_on: [gateway]
 
 # ============================================================================
@@ -197,3 +178,8 @@ networks:
   app-network:
     driver: bridge
     name: app-network
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.50.0.0/16
+          gateway: 10.50.0.1

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -42,6 +43,7 @@ import {
 } from '@packages/entities/user';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
 import { RolesGuard } from '@packages/guards';
+import { ERROR_MESSAGES } from 'src/data/constants';
 import { USER_SWAGGER_MESSAGES } from 'src/data/swaggers/messages';
 import { USER_SWAGGERS_DATA } from 'src/data/swaggers/data/user.swagger';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
@@ -176,6 +178,10 @@ export class UserController {
     @Body(new ZodValidationPipe<UpdateSelfDto>(updateSelfSchema))
     updateUserDto: UpdateSelfDto,
   ) {
+    // A STUDENT may not change their own email (other roles may).
+    if (user.role === 'STUDENT' && updateUserDto.email !== undefined) {
+      throw new BadRequestException(ERROR_MESSAGES.STUDENT_CANNOT_UPDATE_EMAIL);
+    }
     return this.rmqProducer.send('user.updateUser', {
       ...updateUserDto,
       userId: user.id,
@@ -275,6 +281,10 @@ export class UserController {
   @SwaggerResponse({
     status: StatusCodes.OK,
     description: USER_SWAGGER_MESSAGES.CHANGE_PASSWORD_SUCCESSFULLY,
+  })
+  @SwaggerResponse({
+    status: StatusCodes.BAD_REQUEST,
+    description: 'Current password is incorrect (400, not 401: the session stays valid)',
   })
   changePasswordController(
     @CurrentUser() user: Record<string, string>,

@@ -277,6 +277,10 @@ export const ERROR_TRANSLATIONS = {
     vi: 'Học sinh không được tự thay đổi họ tên',
     en: 'Students are not allowed to update their own first/last name',
   },
+  STUDENT_CANNOT_UPDATE_EMAIL: {
+    vi: 'Học sinh không được tự thay đổi email',
+    en: 'Students are not allowed to update their own email',
+  },
 
   // Upload
   KEY_QUERY_PARAM_REQUIRED: {

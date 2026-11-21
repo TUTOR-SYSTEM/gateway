@@ -145,6 +145,7 @@ export class ClassController {
   @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'CLOSED', 'UPCOMING'] })
   @ApiQuery({ name: 'subject', required: false, type: String })
   @ApiQuery({ name: 'studentsId', required: false, type: String, format: 'uuid' })
+  @ApiQuery({ name: 'tutorId', required: false, type: String, format: 'uuid', description: 'ADMIN only: classes of this tutor' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Class list fetched' })
   getAll(
     @Query(new ZodValidationPipe<GetClassesQueryDto>(getClassesQuerySchema))

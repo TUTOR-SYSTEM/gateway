@@ -141,6 +141,7 @@ export const classes = pgTable('classes', {
   tutorId: uuid('tutor_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  maxStudents: integer('max_students').notNull().default(10),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

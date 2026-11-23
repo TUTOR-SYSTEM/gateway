@@ -115,3 +115,14 @@ export const listManagedUsersQuerySchema = z.object({
     .transform((value) => value === 'true')
     .optional(),
 });
+
+/** `PUT /admin/tutors/:id/password` — admin đặt mật khẩu mới cho gia sư (cùng policy khi tạo). */
+export const setManagedPasswordSchema = z
+  .object({
+    password: z
+      .string({ message: ERROR_MESSAGES.AUTH_PASSWORD_REQUIRED })
+      .min(8, { message: ERROR_MESSAGES.AUTH_PASSWORD_MIN })
+      .max(MANAGED_PASSWORD_MAX_LENGTH, { message: ERROR_MESSAGES.MANAGED_PASSWORD_MAX }),
+  })
+  .strict()
+  .superRefine((data, ctx) => refinePassword(data.password, ctx));

@@ -48,9 +48,14 @@ export class CurriculumController {
   @Get('generate-code')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Generate curriculum code' })
+  @ApiQuery({ name: 'subject', required: false, description: 'Subject name (VN), e.g. Toán → MAT-463' })
   @SwaggerResponse({ status: 200, description: 'Curriculum code generated' })
-  generateCode(@CurrentUser() user: JwtGuardUser) {
-    return this.rmqProducer.send('curriculum.generateCode', { userId: user.id, role: user.role });
+  generateCode(@CurrentUser() user: JwtGuardUser, @Query('subject') subject?: string) {
+    return this.rmqProducer.send('curriculum.generateCode', {
+      userId: user.id,
+      role: user.role,
+      subject: subject?.trim() || undefined,
+    });
   }
 
   @UseGuards(RolesGuard)

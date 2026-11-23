@@ -30,6 +30,8 @@ import {
   updateManagedUserSchema,
   updateManagedStudentSchema,
   listManagedUsersQuerySchema,
+  setManagedPasswordSchema,
+  type SetManagedPasswordDto,
   type CreateManagedUserDto,
   type UpdateManagedUserDto,
   type UpdateManagedStudentDto,
@@ -186,6 +188,31 @@ export class AdminController {
   ) {
     return this.rmqProducer.send('admin.updateTutor', {
       ...dto,
+      id: id,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
+  @Put('tutors/:id/password')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Set tutor password (admin)' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['password'],
+      properties: { password: { type: 'string', minLength: 8, maxLength: 20 } },
+    },
+  })
+  @SwaggerResponse({ status: 200, description: 'Tutor password updated' })
+  setTutorPassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: JwtGuardUser,
+    @Body(new ZodValidationPipe(setManagedPasswordSchema)) dto: SetManagedPasswordDto,
+  ) {
+    return this.rmqProducer.send('admin.setTutorPassword', {
+      password: dto.password,
       id: id,
       actorId: currentUser.id,
       actorRole: currentUser.role,

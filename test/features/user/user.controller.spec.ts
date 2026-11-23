@@ -1,10 +1,19 @@
 import { UserController } from 'src/features/user/user.controller';
 import type { RmqProducer } from 'src/features/rabbitmq/rmq.producer';
 import { updateSelfSchema, createUserSchema } from '@packages/entities/user';
+import type { ConfigService } from '@nestjs/config';
 
 function setup() {
   const send = jest.fn().mockResolvedValue({});
-  return { send, controller: new UserController({ send } as unknown as RmqProducer) };
+  const secrets: Record<string, string> = { JWT_ACCESS_SECRET: 'a', JWT_REFRESH_SECRET: 'r' };
+  const configService = { get: (key: string) => secrets[key] };
+  return {
+    send,
+    controller: new UserController(
+      { send } as unknown as RmqProducer,
+      configService as unknown as ConfigService,
+    ),
+  };
 }
 
 describe('UserController', () => {
@@ -22,18 +31,41 @@ describe('UserController', () => {
 
   it('PUT /users/:id keeps the path id over a body id', async () => {
     const { send, controller } = setup();
-    await controller.updateUserByAdminController('path-id', { id: 'body', firstName: 'A' } as never);
+    await controller.updateUserByAdminController('path-id', {
+      id: 'body',
+      firstName: 'A',
+    } as never);
     expect(send.mock.calls[0][1]).toMatchObject({ id: 'path-id' });
   });
 
-  it('change password uses the authenticated user id', async () => {
+  it('change password uses the authenticated user id and forwards the signed actor', async () => {
     const { send, controller } = setup();
-    await controller.changePasswordController({ id: 'me' } as never, {
-      userId: 'other',
-      currentPassword: 'a',
-      newPassword: 'b',
-    } as never);
-    expect(send.mock.calls[0][1]).toMatchObject({ userId: 'me' });
+    send.mockResolvedValueOnce({ message: 'ok', refreshToken: 'rt' });
+    const res = { cookie: jest.fn() };
+    await controller.changePasswordController(
+      { id: 'me', role: 'STUDENT', sid: 'sid-1' } as never,
+      { userId: 'other', currentPassword: 'a', newPassword: 'b' } as never,
+      res as never,
+    );
+    expect(send.mock.calls[0][1]).toMatchObject({
+      userId: 'me',
+      actorId: 'me',
+      actorRole: 'STUDENT',
+      actorSid: 'sid-1',
+    });
+  });
+
+  it('change password keeps the new refresh token in the cookie, not in the body', async () => {
+    const { send, controller } = setup();
+    send.mockResolvedValueOnce({ message: 'ok', refreshToken: 'rt-new' });
+    const res = { cookie: jest.fn() };
+    const body = await controller.changePasswordController(
+      { id: 'me', role: 'STUDENT', sid: 'sid-1' } as never,
+      { currentPassword: 'a', newPassword: 'b' } as never,
+      res as never,
+    );
+    expect(body).toEqual({ message: 'ok' });
+    expect(res.cookie).toHaveBeenCalledWith('refresh_token', 'rt-new', expect.any(Object));
   });
 });
 

@@ -49,6 +49,11 @@ export const gradeExerciseSchema = z.object({
   answerKeyUrls: z.array(fileUrlSchema).max(5).optional(),
 });
 
+/** Tutor asks the student to submit again; optional comment is shown to the student. */
+export const requestResubmitExerciseSchema = z.object({
+  comment: z.string().max(2000).optional().nullable(),
+});
+
 export const getExerciseQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),

@@ -2,6 +2,7 @@ import {
   createExerciseSchema,
   getExerciseQuerySchema,
   gradeExerciseSchema,
+  requestResubmitExerciseSchema,
   submitExerciseSchema,
 } from './exercise.schema';
 import z from 'zod';
@@ -9,6 +10,7 @@ import z from 'zod';
 export type CreateExerciseDto = z.infer<typeof createExerciseSchema>;
 export type SubmitExerciseDto = z.infer<typeof submitExerciseSchema>;
 export type GradeExerciseDto = z.infer<typeof gradeExerciseSchema>;
+export type RequestResubmitExerciseDto = z.infer<typeof requestResubmitExerciseSchema>;
 export type getExerciseDto = z.infer<typeof getExerciseQuerySchema>;
 
 export type ExerciseStatus = 'SUBMITTED' | 'GRADED' | 'RESUBMIT';

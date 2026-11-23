@@ -26,6 +26,8 @@ import { CurrentUser, Roles } from '@packages/decorators';
 import {
   createStudentSchema,
   type CreateStudentDto,
+  getParentsQuerySchema,
+  type GetParentsQueryDto,
   getStudentsQuerySchema,
   type GetStudentsQueryDto,
   setStudentPasswordSchema,
@@ -179,6 +181,31 @@ export class StudentController {
     });
   }
 
+  /**
+   * Parent picker: PARENT accounts that can be attached to a student, so several students can share
+   * one parent. TUTOR sees their own parents, ADMIN all. Declared before `:id` so it is not read as a UUID.
+   */
+  @Get('parents')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Search existing parents (to link a student to a shared parent)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Name / email / phone' })
+  @SwaggerResponse({ status: 200, description: 'Parents fetched' })
+  getParents(
+    @Query(new ZodValidationPipe<GetParentsQueryDto>(getParentsQuerySchema))
+    query: GetParentsQueryDto,
+    @CurrentUser() currentUser: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('student.findParents', {
+      ...query,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
   /** Phụ huynh: danh sách con (khai báo trước `:id` để không bị bắt nhầm thành UUID). */
   @Get('my-children')
   @UseGuards(RolesGuard)
@@ -299,9 +326,9 @@ export class StudentController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TUTOR')
   @HttpCode(StatusCodes.OK)
-  @ApiOperation({ summary: 'Update student' })
+  @ApiOperation({ summary: 'Update student (ADMIN: any; TUTOR: own students only)' })
   @ApiParam({ name: 'id', type: String, format: 'uuid' })
   @ApiBody({
     schema: {

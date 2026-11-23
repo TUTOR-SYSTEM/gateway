@@ -97,7 +97,7 @@ services:
     networks: [app-network]
     build: .
     restart: unless-stopped
-    env_file: ./.env
+    env_file: ./docker.env
     environment:
       <<: *infra-env
       PORT: '8888'
@@ -117,7 +117,7 @@ services:
     networks: [app-network]
     build: ../user
     restart: unless-stopped
-    env_file: ../user/.env
+    env_file: ../user/docker.env
     environment:
       <<: [*infra-env, *db-env]
       PORT: '4001'
@@ -128,7 +128,7 @@ services:
     networks: [app-network]
     build: ../tutor
     restart: unless-stopped
-    env_file: ../tutor/.env
+    env_file: ../tutor/docker.env
     environment:
       <<: [*infra-env, *db-env]
       PORT: '4003'
@@ -139,7 +139,7 @@ services:
     networks: [app-network]
     build: ../third
     restart: unless-stopped
-    env_file: ../third/.env
+    env_file: ../third/docker.env
     environment:
       <<: [*infra-env, *db-env]
       PORT: '4002'

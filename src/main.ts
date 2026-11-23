@@ -1,4 +1,3 @@
-
 // Must load env vars before any other import — `AppModule` transitively imports
 // `rmq.constants.ts`, which reads `process.env.RABBITMQ_URL` at module top-level
 // (evaluated during this static import chain, before `ConfigModule.forRoot()` ever
@@ -19,15 +18,24 @@ import { RmqProducer } from './features/rabbitmq/rmq.producer';
 import { securityHeaders } from '@packages/helpers/security-headers.helper';
 
 async function bootstrap() {
+  // Every user-acting RPC carries a gateway signature made with this secret. Without it, user-service
+  // refuses those calls with 403, so fail here instead of at the first request.
+  if (!process.env.RPC_ACTOR_SECRET?.trim()) {
+    throw new Error('RPC_ACTOR_SECRET must be set (shared with user-service)');
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   // Behind the platform proxy (Railway), req.ip is the proxy address unless the hop count is set:
   // without this, every client shares one rate-limit bucket. TRUST_PROXY_HOPS defaults to 1.
   const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 1);
-  app.set(
-    'trust proxy',
-    Number.isInteger(trustProxyHops) && trustProxyHops >= 0 ? trustProxyHops : 1,
+  const hops = Number.isInteger(trustProxyHops) && trustProxyHops >= 0 ? trustProxyHops : 1;
+  app.set('trust proxy', hops);
+  // Logged on boot because a wrong hop count is silent: too high and clients can spoof req.ip via
+  // X-Forwarded-For, which defeats the per-IP login lockout and rate limits (#8).
+  Logger.log(
+    `trust proxy hops = ${hops} (TRUST_PROXY_HOPS; set it to the number of proxies in front)`,
+    'Bootstrap',
   );
   // Lets Nest run onModuleDestroy (RMQ clients close) on SIGTERM/SIGINT instead of dropping
   // in-flight requests.
@@ -39,7 +47,9 @@ async function bootstrap() {
   app.use(securityHeaders);
 
   // Origin whitelist from CORS_ORIGINS (comma-separated). Dev default: local frontends only.
-  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,https://tutor.haiphan.org')
+  const corsOrigins = (
+    process.env.CORS_ORIGINS ?? 'http://localhost:3000,https://tutor.haiphan.org'
+  )
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -52,45 +62,44 @@ async function bootstrap() {
   const rmqProducer = app.get(RmqProducer);
   setLogSink((entry) => rmqProducer.emit('log.create', entry));
 
-    const config = new DocumentBuilder()
-      .setTitle('Tutor Management API')
-      .setDescription('API documentation for the Tutor Management backend')
-      .setVersion('1.0')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Enter JWT access token',
-        },
-        'access-token',
-      )
-      // ── Tutor Management ─────────────────────────────
-      .addTag('Users')
-      .addTag('Auth')
-      .addTag('Students')
-      .addTag('Curriculum')
-      .addTag('Chapter')
-      .addTag('Lesson')
-      .addTag('Classes')
-      .addTag('Schedules')
-      .addTag('Sessions')
-      .addTag('Exercises')
-      .addTag('Tuitions')
-      .addTag('Notifications')
-      .addTag('Reports')
-      // ── System ────────────────────────────────────────
-      .addTag('Upload')
-      .addTag('Health')
-      .addTag('Redis')
-      .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api-docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
+  const config = new DocumentBuilder()
+    .setTitle('Tutor Management API')
+    .setDescription('API documentation for the Tutor Management backend')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter JWT access token',
       },
-    });
-
+      'access-token',
+    )
+    // ── Tutor Management ─────────────────────────────
+    .addTag('Users')
+    .addTag('Auth')
+    .addTag('Students')
+    .addTag('Curriculum')
+    .addTag('Chapter')
+    .addTag('Lesson')
+    .addTag('Classes')
+    .addTag('Schedules')
+    .addTag('Sessions')
+    .addTag('Exercises')
+    .addTag('Tuitions')
+    .addTag('Notifications')
+    .addTag('Reports')
+    // ── System ────────────────────────────────────────
+    .addTag('Upload')
+    .addTag('Health')
+    .addTag('Redis')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   const port = process.env.PORT ?? 8888;
   await app.listen(port);

@@ -26,10 +26,12 @@ import {
   createExerciseSchema,
   getExerciseQuerySchema,
   gradeExerciseSchema,
+  requestResubmitExerciseSchema,
   submitExerciseSchema,
   type CreateExerciseDto,
   type getExerciseDto,
   type GradeExerciseDto,
+  type RequestResubmitExerciseDto,
   type SubmitExerciseDto,
 } from '@packages/entities/exercise';
 import type { JwtGuardUser } from '@packages/guards/jwt-auth.guard';
@@ -143,6 +145,30 @@ export class ExerciseController {
     @CurrentUser() _user: JwtGuardUser,
   ) {
     return this.rmqProducer.send('exercise.grade', {
+      userId: _user.id,
+      role: _user.role,
+      id: _id,
+      data: _dto,
+    });
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @Patch(':id/request-resubmit')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({
+    summary: 'Request exercise re-submission',
+    description: 'Set a submitted exercise to RESUBMIT (optional comment for the student)',
+  })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @SwaggerResponse({ status: StatusCodes.OK, description: 'Re-submission requested' })
+  requestResubmit(
+    @Param('id', ParseUUIDPipe) _id: string,
+    @Body(new ZodValidationPipe<RequestResubmitExerciseDto>(requestResubmitExerciseSchema))
+    _dto: RequestResubmitExerciseDto,
+    @CurrentUser() _user: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('exercise.requestResubmit', {
       userId: _user.id,
       role: _user.role,
       id: _id,

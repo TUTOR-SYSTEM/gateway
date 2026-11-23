@@ -188,6 +188,27 @@ export class ClassController {
     });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
+  @Delete(':id/students/:studentId')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Remove a student from class' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiParam({ name: 'studentId', type: String, format: 'uuid' })
+  @SwaggerResponse({ status: StatusCodes.OK, description: 'Student removed from class' })
+  removeStudent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentUser() user: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('class.removeStudent', {
+      userId: user.id,
+      role: user.role,
+      classId: id,
+      studentId,
+    });
+  }
+
   @Get(':id/students')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Get students in class' })

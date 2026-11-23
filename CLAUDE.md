@@ -202,6 +202,7 @@ Entities live in `src/packages/entities/{domain}/` — unchanged despite gateway
 | `PORT`                        | Server port                    | Must be unique per service when running several on one host |
 | `JWT_ACCESS_SECRET`           | Access token secret            | Required (must match `user`'s)       |
 | `JWT_REFRESH_SECRET`          | Refresh token secret           | Required (must match `user`'s)       |
+| `RPC_ACTOR_SECRET`            | HMAC key that signs actor/client-IP fields on RPC calls to `user` | Required, must be identical in `user`'s `.env`; gateway refuses to boot without it |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` / `GOOGLE_OAUTH_REDIRECT_URL` | Google OAuth (lives in gateway) | Required for Google login |
 | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` / `BACKEND_URL` | Facebook OAuth (lives in gateway) | Required for Facebook login |
 | `RABBITMQ_URL`                | RabbitMQ connection URL (on Railway: reference the RabbitMQ service's private URL) | `amqp://guest:guest@localhost:5672` |

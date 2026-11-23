@@ -21,7 +21,10 @@ on 2026-09-27.
   with `constructor(private readonly rmqProducer: RmqProducer) {}` (`RmqModule` is `@Global()`,
   so no module import needed). `RmqProducer.send()` is the only sanctioned way to call a
   downstream service — it adds trace headers, retries with backoff, and turns the responder's
-  error payload back into the matching `HttpException`. Never inject a raw `ClientProxy` or call
+  error payload back into the matching `HttpException`. For user-acting calls (payload carries
+  `actorId`/`actorRole`/`actorSid`) or login calls (`clientIp`) it also HMAC-signs those fields with
+  `RPC_ACTOR_SECRET` (`withActorSignature` in `rmq.producer.ts`); the secret must match `user`'s,
+  and the app refuses to boot without it (`src/main.ts`). Never inject a raw `ClientProxy` or call
   `client.send(...)` directly from a controller. Use `.emit()` only for fire-and-forget calls
   whose result nobody needs.
 - **Routing**: `RmqProducer` picks the target queue from the pattern's first segment via

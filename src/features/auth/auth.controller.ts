@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Ip,
   Post,
   Req,
   Res,
@@ -147,11 +148,13 @@ export class AuthController {
     @Body(new ZodValidationPipe<LoginDto>(loginSchema))
     loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Ip() clientIp: string,
   ): Promise<LoginSessionResponse> {
-    const { refreshToken, ...body } = await this.rmqProducer.send<LoginResponseDto, LoginDto>(
-      'auth.login',
-      loginDto,
-    );
+    // The IP keys the lockout counter together with the email (see auth.service lockoutIdentifier).
+    const { refreshToken, ...body } = await this.rmqProducer.send<
+      LoginResponseDto,
+      LoginDto & { clientIp: string }
+    >('auth.login', { ...loginDto, clientIp });
     setRefreshCookie(res, refreshToken, this.configService);
     return body;
   }
@@ -207,11 +210,12 @@ export class AuthController {
     @Body(new ZodValidationPipe<LoginByUserCodeDto>(loginByUserCodeSchema))
     dto: LoginByUserCodeDto,
     @Res({ passthrough: true }) res: Response,
+    @Ip() clientIp: string,
   ): Promise<LoginSessionResponse> {
     const { refreshToken, ...body } = await this.rmqProducer.send<
       LoginResponseDto,
-      LoginByUserCodeDto
-    >('auth.loginByUserCode', dto);
+      LoginByUserCodeDto & { clientIp: string }
+    >('auth.loginByUserCode', { ...dto, clientIp });
     setRefreshCookie(res, refreshToken, this.configService);
     return body;
   }
@@ -257,10 +261,16 @@ export class AuthController {
     @CurrentUser() user: JwtGuardUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string }> {
+    // actorId/actorRole are the signed caller identity: user-service only ends the caller's own session.
     const result = await this.rmqProducer.send<
       { message: string },
-      { userId: string; sid: string }
-    >('auth.logout', { userId: user.id, sid: user.sid });
+      { userId: string; sid: string; actorId: string; actorRole: string }
+    >('auth.logout', {
+      userId: user.id,
+      sid: user.sid,
+      actorId: user.id,
+      actorRole: user.role,
+    });
     clearRefreshCookie(res);
     return result;
   }

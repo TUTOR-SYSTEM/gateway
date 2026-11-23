@@ -9,6 +9,7 @@ import {
 import { ClientProxy, RmqRecord } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { randomUUID } from 'node:crypto';
+import { computeClientIpSignature, computeRpcActorSignature } from './rpc-actor-signature.helper';
 import {
   CORRELATION_ID_HEADER,
   getRequestContext,
@@ -34,6 +35,51 @@ const SERVICE_NAME = 'gateway';
  */
 export function redactConnectionSecrets(text: string): string {
   return text.replace(/(amqps?:\/\/)[^\s"'/@]+@/gi, '$1***@');
+}
+
+/**
+ * Signs what user-service must trust from this gateway hop, with `RPC_ACTOR_SECRET`:
+ *  - the caller identity of a user-acting RPC (`actorId`/`actorRole`/`actorSid`), and
+ *  - the client IP of a login (`clientIp`, the lockout key).
+ * Messages with neither pass through unchanged. Fails loudly when the secret is unset: an unsigned
+ * actor would be refused downstream anyway, so this surfaces the misconfiguration here instead.
+ */
+export function withActorSignature<T>(message: T): T {
+  if (typeof message !== 'object' || message === null) return message;
+  const fields = message as unknown as {
+    actorId?: unknown;
+    actorRole?: string;
+    actorSid?: string;
+    clientIp?: unknown;
+  };
+  const signsActor = typeof fields.actorId === 'string';
+  const signsIp = typeof fields.clientIp === 'string';
+  if (!signsActor && !signsIp) return message;
+
+  const secret = process.env.RPC_ACTOR_SECRET?.trim();
+  if (!secret) {
+    throw new Error(
+      'RPC_ACTOR_SECRET must be set to forward an actor or client IP to user-service',
+    );
+  }
+  const sigTs = Date.now();
+  const signed: Record<string, unknown> = { ...(message as Record<string, unknown>) };
+  if (signsActor) {
+    const actorRole = fields.actorRole ?? '';
+    const actorSid = fields.actorSid ?? '';
+    signed.actorRole = actorRole;
+    signed.actorSid = actorSid;
+    signed.actorSigTs = sigTs;
+    signed.actorSig = computeRpcActorSignature(
+      { actorId: fields.actorId as string, actorRole, actorSid, actorSigTs: sigTs },
+      secret,
+    );
+  }
+  if (signsIp) {
+    signed.clientIpSigTs = sigTs;
+    signed.clientIpSig = computeClientIpSignature(fields.clientIp as string, sigTs, secret);
+  }
+  return signed as T;
 }
 
 /**
@@ -114,7 +160,7 @@ export class RmqProducer implements OnModuleDestroy {
 
   emit<TResult = unknown, TInput = unknown>(pattern: string, message: TInput): Promise<TResult> {
     const client = this.clients[resolveRmqTarget(pattern)];
-    const { record, headers } = withTraceHeaders(message);
+    const { record, headers } = withTraceHeaders(withActorSignature(message));
     this.logger.log(
       `[EMIT] ${pattern} correlationId=${headers[CORRELATION_ID_HEADER]} traceId=${headers[TRACE_ID_HEADER]}`,
     );
@@ -141,12 +187,17 @@ export class RmqProducer implements OnModuleDestroy {
     const policy = resolveRmqCallPolicy(pattern);
     const finalTimeoutMs = timeoutMs ?? policy.timeoutMs ?? 10000;
     const maxRetries = maxRetriesOverride ?? policy.maxRetries ?? 2;
-    const { record, headers } = withTraceHeaders(message, finalTimeoutMs);
+    // Trace headers are built once, so every attempt shares one traceId. The actor signature is built
+    // per attempt: user-service refuses a second copy of the same signature (replay guard), so a retry
+    // must carry a fresh one.
+    const { record: traceRecord, headers } = withTraceHeaders(message, finalTimeoutMs);
+    const recordOptions = traceRecord.options;
     const correlationId = headers[CORRELATION_ID_HEADER];
     const traceId = headers[TRACE_ID_HEADER];
 
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       const attemptStartTime = Date.now();
+      const record = new RmqRecord<TRequest>(withActorSignature(message), recordOptions);
 
       this.logger.log(
         `[SEND-START] ${pattern} attempt=${attempt}/${maxRetries + 1} correlationId=${correlationId} traceId=${traceId} timeoutMs=${finalTimeoutMs}`,

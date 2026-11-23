@@ -34,6 +34,7 @@ export const RMQ_PREFIX_ROUTES: Record<string, RmqTarget> = {
   testscenario: THIRD_SERVICE,
 
   tutor: TUTOR_SERVICE,
+  settings: TUTOR_SERVICE,
   curriculum: TUTOR_SERVICE,
   chapter: TUTOR_SERVICE,
   lesson: TUTOR_SERVICE,

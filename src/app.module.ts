@@ -22,6 +22,7 @@ import { AttendanceModule } from './features/attendance/attendance.module';
 import { ReportModule } from './features/report/report.module';
 import { AiChatModule } from './features/ai-chat/ai-chat.module';
 import { NotificationModule } from './features/notification/notification.module';
+import { TutorSettingsModule } from './features/tutor-settings/tutor-settings.module';
 import { RedisModule } from './features/redis/redis.module';
 import { UploadModule } from './features/upload/upload.module';
 import { EmailModule } from './features/email/email.module';
@@ -61,6 +62,7 @@ import { ThrottleModule } from './features/throttler/throttler.module';
     AiChatModule,
     ThrottleModule,
     NotificationModule,
+    TutorSettingsModule,
     RedisModule,
     UploadModule,
     EmailModule,

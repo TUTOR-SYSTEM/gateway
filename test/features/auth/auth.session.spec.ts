@@ -27,8 +27,13 @@ describe('AuthController sessions (refresh cookie, logout)', () => {
   it('login sets the refresh token as an httpOnly cookie and omits it from the body', async () => {
     const { send, res, res_, controller } = setup();
     send.mockResolvedValue({ accessToken: 'AT', refreshToken: 'RT', user: { id: 'u' } });
-    const body = await controller.login({ email: 'a@b.c', password: 'x' }, res_);
-    expect(send).toHaveBeenCalledWith('auth.login', { email: 'a@b.c', password: 'x' });
+    const body = await controller.login({ email: 'a@b.c', password: 'x' }, res_, '203.0.113.7');
+    // The client IP travels with the login so user-service can key the per-IP lockout (signed by the producer).
+    expect(send).toHaveBeenCalledWith('auth.login', {
+      email: 'a@b.c',
+      password: 'x',
+      clientIp: '203.0.113.7',
+    });
     expect(body).toEqual({ accessToken: 'AT', user: { id: 'u' } });
     expect(res.cookie).toHaveBeenCalledWith(
       'refresh_token',
@@ -62,7 +67,12 @@ describe('AuthController sessions (refresh cookie, logout)', () => {
       { id: 'u1', email: 'e', typ: 'access', role: 'TUTOR', sid: 's1' },
       res_,
     );
-    expect(send).toHaveBeenCalledWith('auth.logout', { userId: 'u1', sid: 's1' });
+    expect(send).toHaveBeenCalledWith('auth.logout', {
+      userId: 'u1',
+      sid: 's1',
+      actorId: 'u1',
+      actorRole: 'TUTOR',
+    });
     expect(result).toEqual({ message: 'Logged out' });
     expect(res.clearCookie).toHaveBeenCalledWith(
       'refresh_token',

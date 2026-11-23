@@ -10,8 +10,11 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -47,6 +50,7 @@ import { ERROR_MESSAGES } from 'src/data/constants';
 import { USER_SWAGGER_MESSAGES } from 'src/data/swaggers/messages';
 import { USER_SWAGGERS_DATA } from 'src/data/swaggers/data/user.swagger';
 import { RmqProducer } from '../rabbitmq/rmq.producer';
+import { setRefreshCookie } from '@packages/helpers/refresh-cookie.helper';
 
 /**
  * Gateway is a thin HTTP edge here: validation/guards/Swagger stay, every handler forwards to
@@ -56,7 +60,10 @@ import { RmqProducer } from '../rabbitmq/rmq.producer';
 @ApiBearerAuth('access-token')
 @Controller('users')
 export class UserController {
-  constructor(private readonly rmqProducer: RmqProducer) {}
+  constructor(
+    private readonly rmqProducer: RmqProducer,
+    private readonly configService: ConfigService,
+  ) {}
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
@@ -286,14 +293,30 @@ export class UserController {
     status: StatusCodes.BAD_REQUEST,
     description: 'Current password is incorrect (400, not 401: the session stays valid)',
   })
-  changePasswordController(
+  async changePasswordController(
     @CurrentUser() user: Record<string, string>,
     @Body(new ZodValidationPipe(changePasswordSchema))
     changePasswordDto: ChangePasswordValues,
-  ) {
-    return this.rmqProducer.send('user.changePassword', {
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
+    // Other devices are signed out; this device keeps its session and gets a fresh refresh token,
+    // which goes into the httpOnly cookie (never into the JSON body).
+    const { refreshToken, message } = await this.rmqProducer.send<
+      { message: string; refreshToken: string },
+      ChangePasswordValues & {
+        userId: string;
+        actorId: string;
+        actorRole: string;
+        actorSid: string;
+      }
+    >('user.changePassword', {
       ...changePasswordDto,
       userId: user.id,
+      actorId: user.id,
+      actorRole: user.role,
+      actorSid: user.sid,
     });
+    setRefreshCookie(res, refreshToken, this.configService);
+    return { message };
   }
 }

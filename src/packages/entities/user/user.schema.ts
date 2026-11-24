@@ -244,7 +244,8 @@ export const createUserSchema = z
     password: z
       .string({ message: 'Password is required' })
       .min(8, { message: 'Password must be at least 8 characters' })
-      .max(100, { message: 'Password must be at most 100 characters' }),
+      .max(100, { message: 'Password must be at most 100 characters' })
+      .optional(),
     avatar: z
       .string({ message: 'Avatar must be string ...' })
       .url({ message: 'Avatar must be url ...' })
@@ -291,6 +292,7 @@ export const createUserSchema = z
   })
   .superRefine((data, ctx) => {
     const { password } = data;
+    if (password === undefined) return; // omitted → BE generates a random password
     if (!/[a-z]/.test(password)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

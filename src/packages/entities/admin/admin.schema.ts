@@ -47,18 +47,20 @@ export const createManagedUserSchema = z
       .trim()
       .min(2, { message: 'Last name must be at least 2 characters' })
       .max(100, { message: 'Last name must be at most 100 characters' }),
+    // Optional: omitted → the user service generates a random password.
     password: z
       .string({ message: ERROR_MESSAGES.AUTH_PASSWORD_REQUIRED })
       .min(8, { message: ERROR_MESSAGES.AUTH_PASSWORD_MIN })
-      .max(MANAGED_PASSWORD_MAX_LENGTH, { message: ERROR_MESSAGES.MANAGED_PASSWORD_MAX }),
+      .max(MANAGED_PASSWORD_MAX_LENGTH, { message: ERROR_MESSAGES.MANAGED_PASSWORD_MAX })
+      .optional(),
     phone: z.string().trim().max(20, { message: 'Phone must be at most 20 characters' }).optional(),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
     dateOfBirth: z.coerce.date().optional(),
     school: z.string().max(255, { message: 'School must be at most 255 characters' }).optional(),
     subjects: z
       .array(z.string().trim().min(1, { message: 'Subject must not be empty' }))
-      .max(20, { message: 'At most 20 subjects allowed' })
-      .optional(),
+      .min(1, { message: 'At least one subject is required' })
+      .max(20, { message: 'At most 20 subjects allowed' }),
     description: z
       .string()
       .max(5000, { message: 'Description must be at most 5000 characters' })
@@ -66,7 +68,9 @@ export const createManagedUserSchema = z
     isActive: z.boolean().optional().default(true),
   })
   .strict()
-  .superRefine((data, ctx) => refinePassword(data.password, ctx));
+  .superRefine((data, ctx) => {
+    if (data.password !== undefined) refinePassword(data.password, ctx);
+  });
 
 /** Update a tutor or student account — every field optional, no password here. */
 export const updateManagedUserSchema = z

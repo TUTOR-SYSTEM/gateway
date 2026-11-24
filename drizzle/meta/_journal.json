@@ -71,6 +71,13 @@
       "when": 1794646169157,
       "tag": "0009_api_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795519369018,
+      "tag": "0010_must_change_password",
+      "breakpoints": true
     }
   ]
 }

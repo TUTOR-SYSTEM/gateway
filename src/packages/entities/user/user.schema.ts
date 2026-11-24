@@ -123,7 +123,14 @@ export const updateUserSchema = z
       .min(2, { message: 'Last name must be at least 2 characters' })
       .max(100, { message: 'Last name must be at most 100 characters' })
       .optional(),
-    avatar: z.string().url({ message: 'Avatar must be a url ...' }).regex(/\.(jpe?g|png|webp|gif)(\?.*)?$/i, { message: 'Avatar must be an image (jpg, png, webp, gif)' }).nullable().optional(),
+    avatar: z
+      .string()
+      .url({ message: 'Avatar must be a url ...' })
+      .regex(/\.(jpe?g|png|webp|gif)(\?.*)?$/i, {
+        message: 'Avatar must be an image (jpg, png, webp, gif)',
+      })
+      .nullable()
+      .optional(),
     phone: z
       .string()
       .trim()
@@ -192,19 +199,24 @@ export const updateUserSchema = z
  * (`role`, `isActive`, `userCode`, `googleId`, `facebookId`) so a caller cannot escalate
  * privileges or relink accounts. Admin updates keep using `updateUserSchema`.
  */
-export const updateSelfSchema = updateUserSchema.omit({
-  role: true,
-  isActive: true,
-  userCode: true,
-  googleId: true,
-  facebookId: true,
-  // Class and grade membership are assigned by an admin/tutor, never by the user.
-  classId: true,
-  gradesId: true,
-  // Parent and tutor links are set by admin only (the user service rejects them on self update).
-  parentId: true,
-  tutorId: true,
-});
+export const updateSelfSchema = updateUserSchema
+  .omit({
+    role: true,
+    isActive: true,
+    userCode: true,
+    googleId: true,
+    facebookId: true,
+    // Class and grade membership are assigned by an admin/tutor, never by the user.
+    classId: true,
+    gradesId: true,
+    // Parent and tutor links are set by admin only (the user service rejects them on self update).
+    parentId: true,
+    tutorId: true,
+  })
+  .extend({
+    // Required by user-service when the caller changes their OWN email; never stored.
+    currentPassword: z.string().min(1).max(100).optional(),
+  });
 
 export const createUserSchema = z
   .object({
@@ -235,7 +247,10 @@ export const createUserSchema = z
       .max(100, { message: 'Password must be at most 100 characters' }),
     avatar: z
       .string({ message: 'Avatar must be string ...' })
-      .url({ message: 'Avatar must be url ...' }).regex(/\.(jpe?g|png|webp|gif)(\?.*)?$/i, { message: 'Avatar must be an image (jpg, png, webp, gif)' })
+      .url({ message: 'Avatar must be url ...' })
+      .regex(/\.(jpe?g|png|webp|gif)(\?.*)?$/i, {
+        message: 'Avatar must be an image (jpg, png, webp, gif)',
+      })
       .optional(),
     isActive: z.boolean({ message: 'isActive must be true or false ...' }).default(true),
     description: z.string().default(''),

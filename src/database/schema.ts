@@ -96,6 +96,9 @@ export const users = pgTable('users', {
   phone: varchar('phone', { length: 20 }),
   isActive: boolean('is_active').default(true),
   emailVerified: boolean('email_verified').notNull().default(false),
+  // Set when an admin/tutor creates a STUDENT/TUTOR account (or a PARENT with a generated password);
+  // cleared by the user's own password change or a reset. The FE forces a change while it is true.
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
   role: userRoleEnum('role').default('STUDENT'),
   description: varchar('description', { length: 5000 }),
   userCode: varchar('userCode', { length: 6 }),

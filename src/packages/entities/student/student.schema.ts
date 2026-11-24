@@ -11,7 +11,8 @@ export const studentPasswordSchema = z
   .regex(/[^A-Za-z0-9]/, { message: 'Password must contain a special character' });
 
 export const createStudentSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Invalid email').optional(),
+  // Bắt buộc: học sinh cần email để nhận thông tin đăng nhập/đặt lại mật khẩu.
+  email: z.string({ message: 'Email is required' }).trim().toLowerCase().email('Invalid email'),
   // Tùy chọn: không gửi thì BE sinh mật khẩu ngẫu nhiên (không trả về).
   password: studentPasswordSchema.optional(),
   // Mật khẩu cho phụ huynh MỚI được tạo cùng học sinh (không áp dụng khi liên kết parentId có sẵn).

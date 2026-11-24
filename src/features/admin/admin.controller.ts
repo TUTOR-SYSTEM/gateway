@@ -219,6 +219,52 @@ export class AdminController {
     });
   }
 
+  // ─── Parents ───────────────────────────────────────────────────────
+  @Get('parents')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'List parents', description: 'Paginated list of parent accounts (admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search name/email/phone' })
+  @ApiQuery({ name: 'isActive', required: false, enum: ['true', 'false'] })
+  @SwaggerResponse({ status: 200, description: 'Parents fetched' })
+  listParents(
+    @Query(new ZodValidationPipe<ListManagedUsersQueryDto>(listManagedUsersQuerySchema))
+    query: ListManagedUsersQueryDto,
+    @CurrentUser() currentUser: JwtGuardUser,
+  ) {
+    return this.rmqProducer.send('admin.listParents', {
+      ...query,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
+  @Put('parents/:id/password')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Set parent password (admin)' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['password'],
+      properties: { password: { type: 'string', minLength: 8, maxLength: 20 } },
+    },
+  })
+  @SwaggerResponse({ status: 200, description: 'Parent password updated' })
+  setParentPassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: JwtGuardUser,
+    @Body(new ZodValidationPipe(setManagedPasswordSchema)) dto: SetManagedPasswordDto,
+  ) {
+    return this.rmqProducer.send('admin.setParentPassword', {
+      password: dto.password,
+      id: id,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
   @Delete('tutors/:id')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Delete tutor' })

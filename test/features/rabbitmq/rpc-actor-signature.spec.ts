@@ -1,6 +1,7 @@
 import { withActorSignature } from 'src/features/rabbitmq/rmq.producer';
 import {
   computeClientIpSignature,
+  verifyOAuthProfileSignature,
   computeRpcActorSignature,
   RPC_ACTOR_MAX_AGE_MS,
   verifyClientIpSignature,
@@ -123,5 +124,63 @@ describe('producer signing (withActorSignature)', () => {
     expect(() => withActorSignature({ actorId: 'user-1', actorRole: 'ADMIN' })).toThrow(
       'RPC_ACTOR_SECRET',
     );
+  });
+});
+
+describe('producer signing of OAuth profiles', () => {
+  const previous = process.env.RPC_ACTOR_SECRET;
+  beforeAll(() => {
+    process.env.RPC_ACTOR_SECRET = SECRET;
+  });
+  afterAll(() => {
+    process.env.RPC_ACTOR_SECRET = previous;
+  });
+
+  it('signs a Google profile so user-service can verify it', () => {
+    const signed = withActorSignature({
+      googleId: 'g-1',
+      email: 'ann@example.com',
+      firstName: 'Ann',
+      lastName: 'Lee',
+    }) as Record<string, unknown>;
+    expect(
+      verifyOAuthProfileSignature(
+        'google',
+        { providerId: 'g-1', email: 'ann@example.com', ...signed },
+        SECRET,
+      ),
+    ).toBe(true);
+    // The Google signature is not valid for the Facebook pattern.
+    expect(
+      verifyOAuthProfileSignature(
+        'facebook',
+        { providerId: 'g-1', email: 'ann@example.com', ...signed },
+        SECRET,
+      ),
+    ).toBe(false);
+  });
+
+  it('signs a Facebook profile', () => {
+    const signed = withActorSignature({ facebookId: 'f-1', email: 'ann@example.com' }) as Record<
+      string,
+      unknown
+    >;
+    expect(typeof signed.oauthProfileSig).toBe('string');
+  });
+
+  it('leaves payloads that are not OAuth profiles untouched', () => {
+    const plain = { email: 'ann@example.com', password: 'x' };
+    expect(withActorSignature(plain)).toBe(plain);
+  });
+
+  it('does not treat an actor-signed user update as an OAuth profile', () => {
+    const signed = withActorSignature({
+      actorId: 'u-1',
+      actorRole: 'ADMIN',
+      email: 'a@b.test',
+      googleId: 'g-1',
+    }) as Record<string, unknown>;
+    expect(signed.oauthProfileSig).toBeUndefined();
+    expect(typeof signed.actorSig).toBe('string');
   });
 });

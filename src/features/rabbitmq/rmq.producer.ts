@@ -9,7 +9,11 @@ import {
 import { ClientProxy, RmqRecord } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { randomUUID } from 'node:crypto';
-import { computeClientIpSignature, computeRpcActorSignature } from './rpc-actor-signature.helper';
+import {
+  computeClientIpSignature,
+  computeOAuthProfileSignature,
+  computeRpcActorSignature,
+} from './rpc-actor-signature.helper';
 import {
   CORRELATION_ID_HEADER,
   getRequestContext,
@@ -40,7 +44,9 @@ export function redactConnectionSecrets(text: string): string {
 /**
  * Signs what user-service must trust from this gateway hop, with `RPC_ACTOR_SECRET`:
  *  - the caller identity of a user-acting RPC (`actorId`/`actorRole`/`actorSid`), and
- *  - the client IP of a login (`clientIp`, the lockout key).
+ *  - the client IP of a login (`clientIp`, the lockout key), and
+ *  - the OAuth profile forwarded after a Google/Facebook callback (`googleId`/`facebookId` + `email`),
+ *    so user-service only issues tokens for a profile this gateway really received from the provider.
  * Messages with neither pass through unchanged. Fails loudly when the secret is unset: an unsigned
  * actor would be refused downstream anyway, so this surfaces the misconfiguration here instead.
  */
@@ -51,10 +57,22 @@ export function withActorSignature<T>(message: T): T {
     actorRole?: string;
     actorSid?: string;
     clientIp?: unknown;
+    email?: unknown;
+    googleId?: unknown;
+    facebookId?: unknown;
   };
   const signsActor = typeof fields.actorId === 'string';
   const signsIp = typeof fields.clientIp === 'string';
-  if (!signsActor && !signsIp) return message;
+  // An actor-less payload carrying a provider id and an email is an OAuth profile.
+  const oauthProvider =
+    signsActor || typeof fields.email !== 'string'
+      ? undefined
+      : typeof fields.googleId === 'string' && fields.googleId
+        ? ('google' as const)
+        : typeof fields.facebookId === 'string' && fields.facebookId
+          ? ('facebook' as const)
+          : undefined;
+  if (!signsActor && !signsIp && !oauthProvider) return message;
 
   const secret = process.env.RPC_ACTOR_SECRET?.trim();
   if (!secret) {
@@ -78,6 +96,18 @@ export function withActorSignature<T>(message: T): T {
   if (signsIp) {
     signed.clientIpSigTs = sigTs;
     signed.clientIpSig = computeClientIpSignature(fields.clientIp as string, sigTs, secret);
+  }
+  if (oauthProvider) {
+    signed.oauthProfileSigTs = sigTs;
+    signed.oauthProfileSig = computeOAuthProfileSignature(
+      {
+        provider: oauthProvider,
+        providerId: (oauthProvider === 'google' ? fields.googleId : fields.facebookId) as string,
+        email: fields.email as string,
+      },
+      sigTs,
+      secret,
+    );
   }
   return signed as T;
 }

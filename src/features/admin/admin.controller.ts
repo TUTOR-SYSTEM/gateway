@@ -240,6 +240,39 @@ export class AdminController {
     });
   }
 
+  @Put('parents/:id')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Update parent (admin)' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @ApiBody({ schema: UPDATE_ACCOUNT_BODY_SCHEMA })
+  @SwaggerResponse({ status: 200, description: 'Parent updated' })
+  updateParent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: JwtGuardUser,
+    @Body(new ZodValidationPipe(updateManagedUserSchema)) dto: UpdateManagedUserDto,
+  ) {
+    return this.rmqProducer.send('admin.updateParent', {
+      ...dto,
+      id: id,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
+  @Delete('parents/:id')
+  @HttpCode(StatusCodes.OK)
+  @ApiOperation({ summary: 'Delete parent (admin). Refused while students are linked.' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid' })
+  @SwaggerResponse({ status: 200, description: 'Parent deleted' })
+  @SwaggerResponse({ status: 409, description: 'Parent still linked to students' })
+  deleteParent(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('admin.deleteParent', {
+      id: id,
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
+  }
+
   @Put('parents/:id/password')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({ summary: 'Set parent password (admin)' })

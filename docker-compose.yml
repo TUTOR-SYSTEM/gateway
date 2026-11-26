@@ -1,5 +1,10 @@
 name: tutor
 
+# Commit shown on each built image (docker inspect label org.opencontainers.image.revision / env GIT_COMMIT).
+# Export the sibling repos' HEADs before building, or run:
+#   eval "$(scripts/git-commits.sh)" && docker compose up -d --build
+# Each <SERVICE>_GIT_COMMIT falls back to "unknown" when unset.
+
 x-infra-env: &infra-env
   POSTGRES_HOST: postgres
   POSTGRES_PORT: '5432'
@@ -95,7 +100,10 @@ services:
 
   gateway:
     networks: [app-network]
-    build: .
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GATEWAY_GIT_COMMIT:-unknown}
     restart: unless-stopped
     env_file: ./docker.env
     environment:
@@ -115,7 +123,10 @@ services:
 
   user:
     networks: [app-network]
-    build: ../user
+    build:
+      context: ../user
+      args:
+        GIT_COMMIT: ${USER_GIT_COMMIT:-unknown}
     restart: unless-stopped
     env_file: ../user/docker.env
     environment:
@@ -126,7 +137,10 @@ services:
 
   tutor-service:
     networks: [app-network]
-    build: ../tutor
+    build:
+      context: ../tutor
+      args:
+        GIT_COMMIT: ${TUTOR_GIT_COMMIT:-unknown}
     restart: unless-stopped
     env_file: ../tutor/docker.env
     environment:
@@ -137,7 +151,10 @@ services:
 
   third:
     networks: [app-network]
-    build: ../third
+    build:
+      context: ../third
+      args:
+        GIT_COMMIT: ${THIRD_GIT_COMMIT:-unknown}
     restart: unless-stopped
     env_file: ../third/docker.env
     environment:
@@ -155,6 +172,7 @@ services:
         # Baked at build time and used by the browser, so they must be host-reachable URLs.
         NEXT_PUBLIC_API_URL: https://api-tutor.haiphan.org
         NEXT_PUBLIC_THIRD_SERVICE_URL: ${PUBLIC_THIRD_SERVICE_URL:-http://localhost:4001}
+        GIT_COMMIT: ${UI_GIT_COMMIT:-unknown}
     restart: unless-stopped
     ports: ['127.0.0.1:3000:3000']
     env_file: ../ui/docker.env

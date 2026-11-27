@@ -154,24 +154,6 @@ export class AppController {
   @ApiBearerAuth('access-token')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Get('kafka/tutor/error')
-  @ApiOperation({
-    summary: 'RabbitMQ emit health check',
-    description: 'Fire-and-forget ping to the user service over RabbitMQ — no reply is awaited',
-  })
-  @SwaggerResponse({
-    status: 200,
-    description: 'Ping emitted',
-    schema: { type: 'string', example: 'Hello World!' },
-  })
-  async testError(): Promise<unknown> {
-    this.logger.log(`[SEND] kafka.emit -> user, payload=123`);
-    return await this.rmqProducer.send<unknown, number>('kafka.user', 123);
-  }
-
-  @ApiBearerAuth('access-token')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
   @Get('health/postgres')
   @ApiOperation({
     summary: 'Check PostgreSQL connection',

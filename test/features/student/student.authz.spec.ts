@@ -28,8 +28,13 @@ describe('GW3-02 / GW3-06 / GW3-07 student routes', () => {
   it('get-student-code forwards to student.generateCode on the user service', async () => {
     const send = jest.fn().mockResolvedValue('STU-0001');
     const controller = new StudentController({ send } as unknown as RmqProducer);
-    await expect(controller.generateStudentCodeController()).resolves.toBe('STU-0001');
-    expect(send).toHaveBeenCalledWith('student.generateCode', {});
+    await expect(
+      controller.generateStudentCodeController({ id: 'tutor-1', role: 'TUTOR' } as never),
+    ).resolves.toBe('STU-0001');
+    expect(send).toHaveBeenCalledWith('student.generateCode', {
+      actorId: 'tutor-1',
+      actorRole: 'TUTOR',
+    });
   });
 
   it('findById and update forward the verified actor (id and role) to the user service', () => {

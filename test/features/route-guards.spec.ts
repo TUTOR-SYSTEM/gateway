@@ -28,7 +28,7 @@ describe('route guards (RolesGuard + @Roles)', () => {
     [
       'AppController',
       AppController,
-      ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError', 'testError'],
+      ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError'],
     ],
     [
       'UserController',
@@ -101,12 +101,7 @@ describe('@Public metadata', () => {
   });
 
   it('kafka debug routes are not public', () => {
-    for (const m of [
-      'pingMsgFromKafkaController',
-      'sendMsgFromKafkaController',
-      'testMsgError',
-      'testError',
-    ]) {
+    for (const m of ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError']) {
       expect(isPublic(AppController, m)).toBe(false);
     }
   });

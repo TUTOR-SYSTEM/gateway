@@ -13,6 +13,8 @@ import {
   computeClientIpSignature,
   computeOAuthProfileSignature,
   computeRpcActorSignature,
+  computeRpcBindSignature,
+  hashRpcPayload,
 } from './rpc-actor-signature.helper';
 import {
   CORRELATION_ID_HEADER,
@@ -47,10 +49,12 @@ export function redactConnectionSecrets(text: string): string {
  *  - the client IP of a login (`clientIp`, the lockout key), and
  *  - the OAuth profile forwarded after a Google/Facebook callback (`googleId`/`facebookId` + `email`),
  *    so user-service only issues tokens for a profile this gateway really received from the provider.
+ * A signed actor is also bound to the RPC `pattern` and the payload (`actorBind`), so a captured
+ * envelope cannot be re-sent with other data or on another pattern.
  * Messages with neither pass through unchanged. Fails loudly when the secret is unset: an unsigned
  * actor would be refused downstream anyway, so this surfaces the misconfiguration here instead.
  */
-export function withActorSignature<T>(message: T): T {
+export function withActorSignature<T>(message: T, pattern?: string): T {
   if (typeof message !== 'object' || message === null) return message;
   const fields = message as unknown as {
     actorId?: unknown;
@@ -92,6 +96,17 @@ export function withActorSignature<T>(message: T): T {
       { actorId: fields.actorId as string, actorRole, actorSid, actorSigTs: sigTs },
       secret,
     );
+    if (pattern) {
+      signed.actorBind = computeRpcBindSignature(
+        {
+          pattern,
+          payloadHash: hashRpcPayload(signed),
+          actorSig: signed.actorSig as string,
+          actorSigTs: sigTs,
+        },
+        secret,
+      );
+    }
   }
   if (signsIp) {
     signed.clientIpSigTs = sigTs;
@@ -190,7 +205,7 @@ export class RmqProducer implements OnModuleDestroy {
 
   emit<TResult = unknown, TInput = unknown>(pattern: string, message: TInput): Promise<TResult> {
     const client = this.clients[resolveRmqTarget(pattern)];
-    const { record, headers } = withTraceHeaders(withActorSignature(message));
+    const { record, headers } = withTraceHeaders(withActorSignature(message, pattern));
     this.logger.log(
       `[EMIT] ${pattern} correlationId=${headers[CORRELATION_ID_HEADER]} traceId=${headers[TRACE_ID_HEADER]}`,
     );
@@ -227,7 +242,7 @@ export class RmqProducer implements OnModuleDestroy {
 
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       const attemptStartTime = Date.now();
-      const record = new RmqRecord<TRequest>(withActorSignature(message), recordOptions);
+      const record = new RmqRecord<TRequest>(withActorSignature(message, pattern), recordOptions);
 
       this.logger.log(
         `[SEND-START] ${pattern} attempt=${attempt}/${maxRetries + 1} correlationId=${correlationId} traceId=${traceId} timeoutMs=${finalTimeoutMs}`,

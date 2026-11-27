@@ -57,8 +57,11 @@ export class StudentController {
     description: 'Generate student code ...',
   })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Student code generated' })
-  generateStudentCodeController() {
-    return this.rmqProducer.send('student.generateCode', {});
+  generateStudentCodeController(@CurrentUser() currentUser: JwtGuardUser) {
+    return this.rmqProducer.send('student.generateCode', {
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+    });
   }
 
   @Post()

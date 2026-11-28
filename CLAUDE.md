@@ -204,7 +204,7 @@ Entities live in `src/packages/entities/{domain}/` — unchanged despite gateway
 | `RPC_ACTOR_SECRET`            | HMAC key that signs actor/client-IP fields on RPC calls to `user` | Required, must be identical in `user`'s `.env`; gateway refuses to boot without it |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` / `GOOGLE_OAUTH_REDIRECT_URL` | Google OAuth (lives in gateway) | Required for Google login |
 | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` / `BACKEND_URL` | Facebook OAuth (lives in gateway) | Required for Facebook login |
-| `RABBITMQ_URL`                | RabbitMQ connection URL (on Railway: reference the RabbitMQ service's private URL) | `amqp://guest:guest@localhost:5672` |
+| `RABBITMQ_URL`                | RabbitMQ connection URL (local `amqp://admin:admin@localhost:5672`; Railway: RabbitMQ service private URL). Optional if `RABBITMQ_HOST` is set: then built from `RABBITMQ_HOST`, `RABBITMQ_PORT` (5672), `RABBITMQ_USER`/`RABBITMQ_DEFAULT_USER`, `RABBITMQ_PASSWORD`/`RABBITMQ_DEFAULT_PASS`, `RABBITMQ_VHOST` (`/`), `RABBITMQ_TLS=true` (amqps) | `amqp://guest:guest@localhost:5672` |
 | `USER_QUEUE` / `TUTOR_QUEUE` / `THIRD_QUEUE` | Override the RMQ queue name for each downstream client | `user_queue` / `tutor_queue` / `third_queue` |
 | `DATABASE_URL` or `POSTGRES_*`| Postgres connection — read only by `drizzle.config.ts` for the `db:*` CLI scripts (`resolveDatabaseUrl()`, same resolution as the other 3 services). Not read by any runtime app code — gateway's NestJS process never opens this connection. | none (required to run `db:generate`/`db:push`/`db:migrate`) |
 

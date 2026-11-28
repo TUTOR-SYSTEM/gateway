@@ -1,12 +1,14 @@
+import { resolveRabbitMqUrl } from './rmq-url';
+
 export const USER_SERVICE = 'USER_SERVICE';
 export const TUTOR_SERVICE = 'TUTOR_SERVICE';
 export const THIRD_SERVICE = 'THIRD_SERVICE';
 
 export type RmqTarget = typeof USER_SERVICE | typeof TUTOR_SERVICE | typeof THIRD_SERVICE;
 
-const configuredRabbitUrl = process.env.RABBITMQ_URL?.trim();
+const configuredRabbitUrl = resolveRabbitMqUrl();
 if (!configuredRabbitUrl && process.env.NODE_ENV === 'production') {
-  throw new Error('RABBITMQ_URL must be set when NODE_ENV=production');
+  throw new Error('RABBITMQ_URL or RABBITMQ_HOST must be set when NODE_ENV=production');
 }
 /** The localhost default uses the broker's guest account: development only. */
 export const RABBITMQ_URL = configuredRabbitUrl || 'amqp://guest:guest@localhost:5672';

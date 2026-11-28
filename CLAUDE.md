@@ -115,7 +115,6 @@ RabbitMQ reachable — it has nothing to serve on its own. Each service's `PORT`
 Gotchas (the rest of the layout is derivable with `ls`):
 - Every feature under `src/features/` is a thin proxy controller (no service/repository) that forwards to its owning service over RMQ. Exception: `auth`'s OAuth routes and the Passport strategies (`packages/strategy`) stay here.
 - `/kafka/*` paths in `app.controller.ts` are kept for compatibility.
-- `test-scenario` proxies `testscenario.*`; `POST /:id/run` also forwards the caller's bearer token and `?async=true` (sent as `wait: false`).
 - `RmqProducer` routes each pattern to a queue by prefix (`rmq.constants.ts`); one RMQ client per downstream queue.
 - `JwtAuthGuard` verifies the JWT locally but confirms the user still exists via RPC (no local DB).
 
@@ -246,8 +245,7 @@ The following rule files are loaded as part of these instructions and must be fo
 
 Configured in `.claude/settings.json` (scripts in `.claude/hooks/`):
 
-- **PreToolUse (Write|Edit)** → `guard-paths.mjs` blocks edits to `.env*` and generated
-  `drizzle/**` files (gateway owns the canonical migration history since 2026-09-28).
+- **PreToolUse (Write|Edit)** → `guard-paths.mjs` gates no paths: `drizzle/**` is editable (user decision 2026-11-28; gateway still owns the migration history since 2026-09-28).
 - **PostToolUse (Write|Edit)** → `format-ts.mjs` runs prettier + eslint `--fix` on the
   touched `.ts/.js` file.
 - **Stop** → `review-skills.mjs` runs after each task that changed `src/`, and asks Claude to

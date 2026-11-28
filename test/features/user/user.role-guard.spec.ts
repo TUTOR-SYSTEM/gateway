@@ -21,10 +21,16 @@ describe('gateway user/student admin routes require ADMIN', () => {
     ['UserController', UserController, 'updateUserByAdminController'],
     ['UserController', UserController, 'updateStatusUserController'],
     ['UserController', UserController, 'deleteUserByAdminController'],
-    ['StudentController', StudentController, 'getAllStudents'],
   ])('%s.%s is restricted to ADMIN with RolesGuard', (_name, ctrl, method) => {
     const { roles, guards } = adminOnly(ctrl, method);
     expect(roles).toEqual(['ADMIN']);
+    expect(guards).toContain(RolesGuard);
+  });
+
+  // Student list is shared with TUTOR, which the user service scopes to the tutor's own students.
+  it('StudentController.getAllStudents is ADMIN or TUTOR with RolesGuard', () => {
+    const { roles, guards } = adminOnly(StudentController, 'getAllStudents');
+    expect(roles).toEqual(['ADMIN', 'TUTOR']);
     expect(guards).toContain(RolesGuard);
   });
 

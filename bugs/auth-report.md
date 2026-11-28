@@ -130,3 +130,11 @@ Không còn bug mở.
 3. **M-USER-3 + M-GW-3** (cooldown theo tài khoản cho forgot-password/register/refresh).
 4. **M-USR-3** (xác nhận UI).
 5. Chạy e2e toàn flow auth mới; dọn Minor 5.4 và HTTP controller trùng (5.1 #1).
+
+---
+
+## Cập nhật 2026-11-28
+
+- **H-TUT-2 + M-USER-1 (trust boundary RMQ): đã sửa ở mức identity.** Gateway seal `userId`/`role` cho mọi message không gửi tới user-service; tutor-service và third-service verify seal và trả 403 nếu sai. Xem `report.md` (GW-02). Còn lại: ACL broker theo queue (hạ tầng) và replay guard ở tutor/third.
+- **M-GW-3 (rate limit IP):** route đã xác thực được đếm theo user (`AppThrottlerGuard.getTracker`). Route chưa xác thực vẫn theo IP. Cooldown theo tài khoản (M-USER-3) vẫn mở.
+- **L-GW-7 (timeout ghi):** `auth.verifyEmail` không còn được retry (`NON_IDEMPOTENT_PATTERNS`). Các pattern ghi khác đã không retry trước đó. Idempotency key vẫn mở.

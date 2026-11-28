@@ -32,7 +32,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponseInt
           data,
           timestamp: new Date(),
           method: request.method,
-          path: request.url,
+          path: request.url.split('?')[0],
           correlationId: getRequestContext()?.correlationId,
         };
       }),

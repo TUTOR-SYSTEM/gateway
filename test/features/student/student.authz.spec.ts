@@ -17,13 +17,16 @@ describe('GW3-02 / GW3-06 / GW3-07 student routes', () => {
     expect(guards(m)).toContain(RolesGuard);
   });
 
-  it.each(['update', 'delete'])(
-    '%s is ADMIN only (user service allows only self or ADMIN)',
-    (m) => {
-      expect(roles(m)).toEqual(['ADMIN']);
-      expect(guards(m)).toContain(RolesGuard);
-    },
-  );
+  it('delete is ADMIN only (user service allows only self or ADMIN)', () => {
+    expect(roles('delete')).toEqual(['ADMIN']);
+    expect(guards('delete')).toContain(RolesGuard);
+  });
+
+  // user-service StudentService.update runs assertCanManage: a TUTOR edits only students it manages.
+  it('update is ADMIN or TUTOR (scoped by the user service)', () => {
+    expect(roles('update')).toEqual(['ADMIN', 'TUTOR']);
+    expect(guards('update')).toContain(RolesGuard);
+  });
 
   it('get-student-code forwards to student.generateCode on the user service', async () => {
     const send = jest.fn().mockResolvedValue('STU-0001');

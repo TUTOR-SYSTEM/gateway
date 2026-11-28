@@ -20,6 +20,6 @@ smoke **350/353**, regression **309/309**. Các case dưới đây còn FAIL và
 
 ## Đã sửa trong lượt này (để đối chiếu)
 
-- Gateway: contract query/body cho class, session, schedule, notification, exercise, curriculum, attendance; tuition thiếu `userId`; upload download thiếu key (400); `admin/students/:id` và `admin/tutors/:id` dùng `user.getDetailUser`; `student` detail; `classes/:id/students|materials|watches` gửi `id`; `notification.create` gửi `senderId`; `isRead` chỉ nhận `true|false`; `LessonModule` đăng ký trước `CurriculumModule` (fix route `/curriculum/lessons` bị `/curriculum/:id` che); `TestScenarioModule` chỉ đăng ký khi `NODE_ENV !== 'production'`.
+- Gateway: contract query/body cho class, session, schedule, notification, exercise, curriculum, attendance; tuition thiếu `userId`; upload download thiếu key (400); `admin/students/:id` và `admin/tutors/:id` dùng `user.getDetailUser`; `student` detail; `classes/:id/students|materials|watches` gửi `id`; `notification.create` gửi `senderId`; `isRead` chỉ nhận `true|false`; `LessonModule` đăng ký trước `CurriculumModule` (fix route `/curriculum/lessons` bị `/curriculum/:id` che).
 - tutor-service: `toDate` helper áp dụng cho các cột timestamp của class, session, tuition (fix lỗi `value.toISOString is not a function`).
 - Scenario: expectation của `/kafka/error` và `/kafka/tutor/error` đổi thành 400 (route cố ý ném lỗi), `generate-code` đổi thành 201, một số path thêm query hợp lệ.

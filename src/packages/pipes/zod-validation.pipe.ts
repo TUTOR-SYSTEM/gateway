@@ -9,12 +9,21 @@ export type ZodValidationErrorItem = {
   code: ZodIssue['code'];
 };
 
+export type ZodValidationPipeOptions = {
+  /** Query/body strings may carry JSON; path params are plain strings and must not be JSON-parsed. */
+  parseJsonStrings?: boolean;
+};
+
 @Injectable()
 export class ZodValidationPipe<TOutput = unknown> implements PipeTransform<unknown, TOutput> {
-  constructor(private readonly schema: ZodType<TOutput>) {}
+  constructor(
+    private readonly schema: ZodType<TOutput>,
+    private readonly options: ZodValidationPipeOptions = {},
+  ) {}
 
   transform(value: unknown): TOutput {
-    const normalizedValue = this.parseJsonString(value);
+    const normalizedValue =
+      this.options.parseJsonStrings === false ? value : this.parseJsonString(value);
     const result = this.schema.safeParse(normalizedValue);
 
     if (!result.success) {

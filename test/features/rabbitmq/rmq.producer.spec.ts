@@ -143,10 +143,12 @@ describe('RmqProducer', () => {
     });
 
     it('routes the request to the owning client', async () => {
+      process.env.RPC_ACTOR_SECRET = 'x'.repeat(40);
       third.send.mockReturnValue(of('sent'));
       await expect(producer.send('email.send', {})).resolves.toBe('sent');
       expect(third.send).toHaveBeenCalledTimes(1);
       expect(user.send).not.toHaveBeenCalled();
+      delete process.env.RPC_ACTOR_SECRET;
     });
 
     it('retries after a failure and succeeds on a later attempt', async () => {

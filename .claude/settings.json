@@ -59,15 +59,6 @@
             "statusMessage": "Checking if skills/rules need updating..."
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/jev-router/scripts/stop-report.mjs\"",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [

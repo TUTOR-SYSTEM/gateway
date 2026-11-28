@@ -7,7 +7,10 @@
   Pagination query schemas use plain `z.coerce.number()` fields (`page`/`limit`), not `z.preprocess`.
   Use `z.coerce` only for query strings. Body numbers use plain `z.number()` — JSON is already typed,
   and coerce turns `""`/`null` into `0` (see `gradeExerciseSchema`).
-- **Secrets**: never read, print, or edit `.env*` files (a PreToolUse hook blocks edits).
+  `ZodValidationPipe` JSON-parses string values by default (so `?filter={...}` works); **path params
+  must pass `{ parseJsonStrings: false }`**, otherwise `/:id` values like `12345` become numbers and
+  fail `z.string()` with a 422.
+- **Secrets**: `.env*` files may be read and edited (no hook gate; user decision 2026-11-28). Never print secret values into chat or commit them.
   Reference config via `process.env` / `ConfigModule`.
 - **Style**: single quotes, trailing commas, 100-char width, semicolons. Formatting/lint is
   auto-applied by a PostToolUse hook, so match surrounding code and let the hook normalize it.
@@ -26,16 +29,15 @@
   `[[gateway-rmq-refactor]]`); list/pagination filtering happens inside the owning service.
 - **Messages**: error strings in `ERROR_MESSAGES` (`src/data/constants`); success strings in
   `SUCCESS_MESSAGES` (same barrel). Never hardcode message text in services.
+- **Production-only gates** (2026-11-28): `RABBITMQ_URL` is required when `NODE_ENV=production`
+  (no `guest:guest` fallback); Swagger `/api-docs` is off in production unless `SWAGGER_ENABLED=true`;
+  `/kafka/*` and `/health/postgres` debug routes 404 in production unless `ENABLE_DEBUG_ROUTES=true`;
+  `GET /redis` blocks sensitive prefixes including `verify-email:`. Keep new debug/stub routes behind
+  the same gate.
 - **Swagger**: body/query schemas in `src/data/swaggers/data/{name}.swagger.ts`, response
   messages in `src/data/swaggers/messages/{name}.msg.ts`. Use `@ApiResponse()` decorator from
   `@packages/decorators` for success messages.
-- **Request logging**: the global `LoggerInterceptor` (`@packages/interceptor`, wired in
-  `main.ts`) logs `[Request]`/`[Response]`/`[Error]`/`[Timing]` lines including the request body
-  and response data (prefixed with `correlationId=... traceId=...` when present — see the
-  tracing bullet below), redacting any key in its `SENSITIVE_KEYS` list (`password`, `token`,
-  `accessToken`, `refreshToken`, etc.) and truncating logged JSON at 1000 chars. If a new field
-  name carrying a secret is introduced (e.g. a new `*Secret`/`*Key` DTO field), add it to
-  `SENSITIVE_KEYS` rather than relying on truncation to hide it.
+- **Request logging (removed 2026-11-28)**: the request/response logging interceptor, the `log-sink` pipeline and the `request_logs` writes were deleted. Do not add request logging back. Error responses still go through `ErrorInterceptor` and `HttpExceptionFilter`, and boot/error messages still use the Nest `Logger`. Correlation ids and `RequestContext` still propagate as described in the tracing bullet.
 - **Distributed tracing** (added 2026-09-19): `@packages/context/request-context.ts` holds an
   `AsyncLocalStorage`-based `RequestContext` (`correlationId`/`traceId`/`parentTraceId`/
   `serviceName`), opened per-HTTP-request by `requestContextMiddleware`
@@ -49,12 +51,16 @@
   — when the RPC error payload carried one through. See `[[rmq-rpc-plumbing]]` memory for the
   full mechanism (`RmqRecord` headers, the sibling repos' matching `TraceContextInterceptor`
   reading `RmqContext.getMessage().properties.headers`).
+- **RPC identity seal** (2026-11-28): any RPC message carrying `userId` or `role` is sealed with `RPC_ACTOR_SECRET` (`src/features/rabbitmq/rpc-identity.helper.ts`; identical copies in tutor/third `src/packages/helpers/`). The gateway and tutor-service seal in `RmqProducer` (not for `user_queue`, not for `log.*`); tutor-service and third-service verify in `RpcIdentityInterceptor` and reject with 403 otherwise. Any new cross-service call that names a user or role must go through `RmqProducer`, or the receiver rejects it. Deploy order: gateway first, then tutor/third.
 - **RPC timeouts**: `RmqProducer.send()` accepts an optional `timeoutMs` parameter (3rd
   argument, default 10000) applied per attempt via RxJS `timeout()`, plus `maxRetries` (4th,
   default 2). Pass it for
   operations that should fail fast if the responder doesn't reply within a deadline:
   `await this.rmqProducer.send('<pattern>', payload, 15000)` for a 15-second timeout. Omit it
   to use the default. After the last attempt times out the caller gets a 504.
+  Retries are only for idempotent patterns (`isIdempotentPattern` in `rmq.constants.ts`: read-only
+  method prefixes). Add single-use-token or other state-consuming reads to `NON_IDEMPOTENT_PATTERNS`
+  there even when their name starts with `verify`/`get` (e.g. `auth.verifyEmail`).
 - **RPC request tracking for debugging** (added 2026-09-26): Controller endpoints making RPC
   calls should track requests with a unique `requestId` and log start/success/failure for
   production diagnostics:

@@ -23,6 +23,8 @@ const SENSITIVE_KEY_PREFIXES = [
   'reset-password-otp',
   'refresh:',
   'refresh-token:',
+  // Single-use email verification tokens ({userId, email}).
+  'verify-email:',
 ];
 
 /**

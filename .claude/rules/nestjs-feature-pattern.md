@@ -24,7 +24,9 @@ on 2026-09-27.
   error payload back into the matching `HttpException`. For user-acting calls (payload carries
   `actorId`/`actorRole`/`actorSid`) or login calls (`clientIp`) it also HMAC-signs those fields with
   `RPC_ACTOR_SECRET` (`withActorSignature` in `rmq.producer.ts`); the secret must match `user`'s,
-  and the app refuses to boot without it (`src/main.ts`). Never inject a raw `ClientProxy` or call
+  and every message that names a `userId` or `role` for a non-user queue is also sealed by
+  `sealIdentityForTarget` (`rpc-identity.helper.ts`, see conventions.md), which tutor-service and
+  third-service verify. The app refuses to boot without the secret (`src/main.ts`). Never inject a raw `ClientProxy` or call
   `client.send(...)` directly from a controller. Use `.emit()` only for fire-and-forget calls
   whose result nobody needs.
 - **Routing**: `RmqProducer` picks the target queue from the pattern's first segment via

@@ -24,7 +24,7 @@ export const FEATURES: { key: string; label: string; modules: string[] }[] = [
   {
     key: 'system',
     label: 'Hệ thống · upload, log, redis, health',
-    modules: ['upload', 'log', 'redis', 'kafka', 'health', 'app', 'apiroutes', 'testscenario'],
+    modules: ['upload', 'redis', 'kafka', 'health', 'app', 'apiroutes'],
   },
 ];
 

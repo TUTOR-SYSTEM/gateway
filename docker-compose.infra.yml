@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - '${REDIS_PORT:-6380}:6379'
+      - '127.0.0.1:${REDIS_PORT:-6380}:6379'
 
   rabbitmq:
     image: docker.io/library/rabbitmq:3-management-alpine

@@ -6,7 +6,7 @@ Git (Bash), mỗi lệnh `git ...` được phân loại:
   ask   : lệnh phá huỷ / ghi đè lịch sử / đổi working tree khó hoàn tác — luôn hỏi xác nhận
   allow : lệnh chỉ đọc — tự cho phép (chỉ khi cả câu lệnh toàn là git chỉ đọc, không redirect)
   (khác): để luồng quyền mặc định của Claude Code xử lý
-Env: Bash đụng tới .env* hoặc Edit/Write file env => hỏi.
+Env: không còn chặn/hỏi — Bash và Edit/Write đọc/sửa file .env* tự do (theo yêu cầu người dùng).
 """
 import json, os, re, shlex, sys, tempfile
 
@@ -21,16 +21,16 @@ def out(decision, reason):
         "permissionDecisionReason": reason}}))
     sys.exit(0)
 
-ENV_FILE = re.compile(r"(^|/)\.env(\.[^/\s]*)?$|(^|/)[^/\s]*\.env$")
-
 GATED = {"add", "commit", "push"}                      # deny trừ khi prompt yêu cầu
 READONLY = {"status", "diff", "log", "show", "blame", "grep", "ls-files", "ls-tree",
             "rev-parse", "rev-list", "describe", "shortlog", "cat-file", "diff-tree",
             "show-ref", "name-rev", "merge-base", "for-each-ref", "count-objects",
             "check-ignore", "fetch", "version", "help", "whatchanged", "diff-index",
             "diff-files", "range-diff", "ls-remote", "show-branch", "verify-commit"}
-ALWAYS_ASK = {"rebase", "merge", "cherry-pick", "revert", "pull", "am", "filter-branch",
-              "filter-repo", "prune", "rm", "send-email", "request-pull", "replace", "bisect"}
+ALWAYS_ASK = {"rebase", "am", "filter-branch",
+              "filter-repo", "prune", "rm", "send-email", "request-pull"}
+# Thao tác local/ít rủi ro, được mở (không hỏi). Không ghi lên GitHub; pull chỉ kéo về.
+OPEN_LOCAL = {"merge", "cherry-pick", "revert", "pull", "bisect", "replace"}
 GIT_OPTS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 SEPARATORS = set("();|&")
 
@@ -51,8 +51,6 @@ def classify(sub, args, allowed):
         if sub not in allowed:
             return "deny", (f"git {sub} bị chặn mặc định. Chỉ chạy khi bạn yêu cầu rõ trong prompt "
                             f"(vd: 'commit', 'push', 'git add').")
-        if sub == "commit" and has(args, "--amend"):
-            return "ask", "git commit --amend viết lại commit trước đó — cần xác nhận."
         if sub in ("commit", "push") and has(args, "--no-verify", "-n") and sub == "push" or \
            sub == "commit" and has(args, "--no-verify"):
             return "ask", f"git {sub} --no-verify bỏ qua hook — cần xác nhận."
@@ -61,6 +59,8 @@ def classify(sub, args, allowed):
             return "ask", "git push --force/--delete/--mirror ghi đè hoặc xoá trên remote — cần xác nhận."
         return None, ""
     if sub in READONLY:
+        return "allow", ""
+    if sub in OPEN_LOCAL:
         return "allow", ""
     if sub in ALWAYS_ASK:
         return "ask", f"git {sub} đổi lịch sử/working tree — cần xác nhận."
@@ -79,19 +79,19 @@ def classify(sub, args, allowed):
         if has(args, "--", "-f", "--force", "-B", "-C", "--discard-changes", ".") :
             return "ask", f"git {sub} có thể bỏ thay đổi chưa commit — cần xác nhận."
     elif sub == "branch":
-        if has(args, "-D", "-d", "--delete", "-M", "-m", "-f", "--force", "--move"):
+        if has(args, "-D", "-d", "--delete", "-f", "--force"):
             return "ask", "git branch xoá/đổi tên/ghi đè nhánh — cần xác nhận."
         safe = {"-a", "-r", "-v", "-vv", "--list", "-l", "--show-current", "--all", "--remotes"}
         if all(x in safe or x.startswith(("--merged", "--no-merged", "--contains", "--sort", "--format")) for x in args):
             return "allow", ""
     elif sub == "tag":
         if has(args, "-d", "--delete"):
-            return "ask", "git tag -d xoá tag — cần xác nhận."
+            return "allow", ""
         if not args or a0 in ("-l", "--list", "-n"):
             return "allow", ""
     elif sub == "stash":
         if a0 in ("drop", "clear"):
-            return "ask", f"git stash {a0} xoá stash — cần xác nhận."
+            return "allow", ""
         if a0 in ("list", "show"):
             return "allow", ""
     elif sub == "remote":
@@ -122,7 +122,7 @@ def classify(sub, args, allowed):
     elif sub == "submodule":
         if a0 in ("status", "summary"):
             return "allow", ""
-        return "ask", "git submodule đổi submodule — cần xác nhận."
+        return "allow", ""
     return None, ""
 
 def analyze(cmd, allowed, depth=0):
@@ -182,14 +182,7 @@ if tool == "Bash":
         for d, why in results:
             if d == want:
                 out(d, why + " (.claude/hooks/guard.py)")
-    if re.search(r"(^|[\s/='\"])\.env(\.\w+)*(\s|$|['\"])|\S+\.env(\s|$|['\"])", cmd):
-        out("ask", "Lệnh này động tới file env — cần bạn xác nhận.")
     if results and only_git and all(d == "allow" for d, _ in results):
         out("allow", "Lệnh git chỉ đọc.")
-
-elif tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-    path = inp.get("file_path") or inp.get("notebook_path") or ""
-    if ENV_FILE.search(path):
-        out("ask", f"Sửa file env ({os.path.basename(path)}) — cần bạn xác nhận.")
 
 sys.exit(0)

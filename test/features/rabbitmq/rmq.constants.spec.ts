@@ -16,8 +16,6 @@ describe('resolveRmqTarget', () => {
     ['email.send', THIRD_SERVICE],
     ['notification.list', THIRD_SERVICE],
     ['upload.file', THIRD_SERVICE],
-    ['log.write', THIRD_SERVICE],
-    ['testscenario.run', THIRD_SERVICE],
     ['tutor.list', TUTOR_SERVICE],
     ['class.create', TUTOR_SERVICE],
     ['schedule.update', TUTOR_SERVICE],
@@ -66,8 +64,6 @@ import { isIdempotentPattern, resolveRmqCallPolicy } from 'src/features/rabbitmq
 describe('resolveRmqCallPolicy (GW-07)', () => {
   it.each([
     ['ai.chat', 60000, 0],
-    ['testscenario.run', 120000, 0],
-    ['testscenario.generate', 120000, 0],
     ['upload.upload', 60000, 0],
     ['upload.download', 60000, 0],
   ])('%s -> timeout %i, retries %i', (pattern, timeoutMs, maxRetries) => {
@@ -83,5 +79,9 @@ describe('resolveRmqCallPolicy (GW-07)', () => {
     expect(isIdempotentPattern('redis.get')).toBe(true);
     expect(isIdempotentPattern('user.createUser')).toBe(false);
     expect(isIdempotentPattern('notification.markAsRead')).toBe(false);
+  });
+
+  it('never retries auth.verifyEmail, which consumes a single-use token', () => {
+    expect(isIdempotentPattern('auth.verifyEmail')).toBe(false);
   });
 });

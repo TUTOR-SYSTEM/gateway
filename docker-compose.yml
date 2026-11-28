@@ -10,8 +10,8 @@ x-infra-env: &infra-env
   POSTGRES_PORT: '5432'
   REDIS_HOST: redis
   REDIS_PORT: '6379'
-  REDIS_URL: redis://redis:6379
-  RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
   USER_QUEUE: user_queue
   TUTOR_QUEUE: tutor_queue
   THIRD_QUEUE: third_queue
@@ -73,7 +73,12 @@ services:
     networks: [app-network]
     image: redis:7-alpine
     restart: unless-stopped
-    ports: ['6379:6379']
+    # Loopback only: other services reach redis over app-network; never publish it to the LAN.
+    # requirepass: without it any container or host process on the network reads session/OTP keys.
+    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    ports: ['127.0.0.1:6379:6379']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -98,6 +103,24 @@ services:
       retries: 10
       start_period: 90s
 
+  rabbitmq-acl:
+    image: node:22-alpine
+    restart: 'no'
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    environment:
+      RABBITMQ_MGMT_URL: http://rabbitmq:15672
+      RABBITMQ_USER: ${RABBITMQ_USER:?set RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}
+      RABBITMQ_GATEWAY_PASSWORD: ${RABBITMQ_GATEWAY_PASSWORD:?set RABBITMQ_GATEWAY_PASSWORD}
+      RABBITMQ_USER_SERVICE_PASSWORD: ${RABBITMQ_USER_SERVICE_PASSWORD:?set RABBITMQ_USER_SERVICE_PASSWORD}
+      RABBITMQ_TUTOR_PASSWORD: ${RABBITMQ_TUTOR_PASSWORD:?set RABBITMQ_TUTOR_PASSWORD}
+      RABBITMQ_THIRD_PASSWORD: ${RABBITMQ_THIRD_PASSWORD:?set RABBITMQ_THIRD_PASSWORD}
+    volumes:
+      - ./docker/rabbitmq/init-acl.mjs:/init-acl.mjs:ro
+    command: ['node', '/init-acl.mjs']
+    networks: [app-network]
+
   gateway:
     networks: [app-network]
     build:
@@ -108,6 +131,7 @@ services:
     env_file: ./docker.env
     environment:
       <<: *infra-env
+      RABBITMQ_URL: amqp://gateway_svc:${RABBITMQ_GATEWAY_PASSWORD:?set RABBITMQ_GATEWAY_PASSWORD}@rabbitmq:5672
       PORT: '8888'
       NODE_ENV: production
       # Session check (JWT -> third redis): fail closed unless explicitly opened.
@@ -131,6 +155,7 @@ services:
     env_file: ../user/docker.env
     environment:
       <<: [*infra-env, *db-env]
+      RABBITMQ_URL: amqp://user_svc:${RABBITMQ_USER_SERVICE_PASSWORD:?set RABBITMQ_USER_SERVICE_PASSWORD}@rabbitmq:5672
       PORT: '4001'
       NODE_ENV: production
     depends_on: *service-deps
@@ -145,7 +170,8 @@ services:
     env_file: ../tutor/docker.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: '4003'
+      RABBITMQ_URL: amqp://tutor_svc:${RABBITMQ_TUTOR_PASSWORD:?set RABBITMQ_TUTOR_PASSWORD}@rabbitmq:5672
+      PORT: '4002'
       NODE_ENV: production
     depends_on: *service-deps
 
@@ -159,9 +185,9 @@ services:
     env_file: ../third/docker.env
     environment:
       <<: [*infra-env, *db-env]
-      PORT: '4002'
+      RABBITMQ_URL: amqp://third_svc:${RABBITMQ_THIRD_PASSWORD:?set RABBITMQ_THIRD_PASSWORD}@rabbitmq:5672
+      PORT: '4003'
       NODE_ENV: production
-      GATEWAY_BASE_URL: http://gateway:8888
     depends_on: *service-deps
 
   ui:

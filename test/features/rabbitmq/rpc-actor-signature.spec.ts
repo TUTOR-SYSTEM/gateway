@@ -6,6 +6,7 @@ import {
   RPC_ACTOR_MAX_AGE_MS,
   verifyClientIpSignature,
   verifyRpcActorSignature,
+  verifyRpcBindSignature,
 } from 'src/features/rabbitmq/rpc-actor-signature.helper';
 
 const SECRET = 'test-rpc-actor-secret';
@@ -182,5 +183,36 @@ describe('producer signing of OAuth profiles', () => {
     }) as Record<string, unknown>;
     expect(signed.oauthProfileSig).toBeUndefined();
     expect(typeof signed.actorSig).toBe('string');
+  });
+});
+
+describe('producer actor binding', () => {
+  const original = process.env.RPC_ACTOR_SECRET;
+  beforeEach(() => {
+    process.env.RPC_ACTOR_SECRET = 'test-secret-test-secret-test-secret-1234';
+  });
+  afterAll(() => {
+    process.env.RPC_ACTOR_SECRET = original;
+  });
+
+  it('adds an actorBind that verifies for this pattern and payload only', () => {
+    const out = withActorSignature(
+      { actorId: 'user-1', actorRole: 'ADMIN', id: 'student-1' },
+      'admin.deleteStudent',
+    ) as Record<string, unknown>;
+    const secret = process.env.RPC_ACTOR_SECRET;
+    expect(verifyRpcBindSignature('admin.deleteStudent', out, secret)).toBe(true);
+    expect(verifyRpcBindSignature('admin.getStudent', out, secret)).toBe(false);
+    expect(verifyRpcBindSignature('admin.deleteStudent', { ...out, id: 'other' }, secret)).toBe(
+      false,
+    );
+  });
+
+  it('adds no bind when the caller gives no pattern', () => {
+    const out = withActorSignature({ actorId: 'user-1', actorRole: 'ADMIN' }) as Record<
+      string,
+      unknown
+    >;
+    expect(out.actorBind).toBeUndefined();
   });
 });

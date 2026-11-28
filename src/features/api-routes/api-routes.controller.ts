@@ -55,12 +55,12 @@ export class ApiRoutesController {
   @ApiOperation({ summary: 'Save check result of one API route' })
   @SwaggerResponse({ status: StatusCodes.OK, description: 'Result saved' })
   saveResult(
-    @Param('id') id: string,
+    @Param('id', new ZodValidationPipe(apiRouteIdSchema, { parseJsonStrings: false }))
+    routeId: string,
     @Body(new ZodValidationPipe<SaveApiRouteResultDto>(saveApiRouteResultSchema))
     body: SaveApiRouteResultDto,
     @CurrentUser() user: JwtGuardUser,
   ) {
-    const routeId = apiRouteIdSchema.parse(id);
     return this.apiRoutesService.saveResultService(user.id, routeId, body);
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, NotFoundException, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -9,6 +9,13 @@ import { AppService } from './app.service';
 import { Public, Roles } from '@packages/decorators';
 import { RolesGuard } from '@packages/guards';
 import { RmqProducer } from './features/rabbitmq/rmq.producer';
+
+/** Debug/stub routes (RabbitMQ pings, DB probe) 404 in production unless ENABLE_DEBUG_ROUTES=true. */
+function assertDebugRoutesEnabled(): void {
+  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEBUG_ROUTES !== 'true') {
+    throw new NotFoundException();
+  }
+}
 
 @ApiTags('Health')
 @Controller()
@@ -45,6 +52,7 @@ export class AppController {
     schema: { type: 'string', example: 'Hello World!' },
   })
   async pingMsgFromKafkaController(): Promise<unknown> {
+    assertDebugRoutesEnabled();
     this.logger.log(`[EMIT] kafka.emit -> user, payload=123`);
     return await this.rmqProducer.emit<unknown, number>('kafka.ping', 123);
   }
@@ -81,6 +89,7 @@ export class AppController {
     },
   })
   async sendMsgFromKafkaController(): Promise<unknown> {
+    assertDebugRoutesEnabled();
     const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const startTime = Date.now();
     const payload = {
@@ -147,26 +156,9 @@ export class AppController {
     schema: { type: 'string', example: 'Hello World!' },
   })
   async testMsgError(): Promise<unknown> {
+    assertDebugRoutesEnabled();
     this.logger.log(`[EMIT] kafka.emit -> user, payload=123`);
     return await this.rmqProducer.send<unknown, number>('kafka.user.error', 123);
-  }
-
-  @ApiBearerAuth('access-token')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @Get('kafka/tutor/error')
-  @ApiOperation({
-    summary: 'RabbitMQ emit health check',
-    description: 'Fire-and-forget ping to the user service over RabbitMQ — no reply is awaited',
-  })
-  @SwaggerResponse({
-    status: 200,
-    description: 'Ping emitted',
-    schema: { type: 'string', example: 'Hello World!' },
-  })
-  async testError(): Promise<unknown> {
-    this.logger.log(`[SEND] kafka.emit -> user, payload=123`);
-    return await this.rmqProducer.send<unknown, number>('kafka.user', 123);
   }
 
   @ApiBearerAuth('access-token')
@@ -198,6 +190,7 @@ export class AppController {
     },
   })
   async checkPostgresConnection(): Promise<unknown> {
+    assertDebugRoutesEnabled();
     this.logger.log('[HEALTH] Checking PostgreSQL connection and fetching user data');
     try {
       // No `fetchData` flag: the user service only attaches sample user rows when it is set,

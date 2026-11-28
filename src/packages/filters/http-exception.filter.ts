@@ -64,7 +64,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       errors,
-      path: request.url,
+      path: request.url.split('?')[0],
       correlationId: getRequestContext()?.correlationId,
       ...(serviceName && { serviceName }),
       ...(status >= 500 && process.env.NODE_ENV === 'development' && { trace: exception.stack }),

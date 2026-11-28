@@ -4,7 +4,12 @@ export const THIRD_SERVICE = 'THIRD_SERVICE';
 
 export type RmqTarget = typeof USER_SERVICE | typeof TUTOR_SERVICE | typeof THIRD_SERVICE;
 
-export const RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672';
+const configuredRabbitUrl = process.env.RABBITMQ_URL?.trim();
+if (!configuredRabbitUrl && process.env.NODE_ENV === 'production') {
+  throw new Error('RABBITMQ_URL must be set when NODE_ENV=production');
+}
+/** The localhost default uses the broker's guest account: development only. */
+export const RABBITMQ_URL = configuredRabbitUrl || 'amqp://guest:guest@localhost:5672';
 
 export const RMQ_QUEUES: Record<RmqTarget, string> = {
   [USER_SERVICE]: process.env.USER_QUEUE ?? 'user_queue',
@@ -30,8 +35,6 @@ export const RMQ_PREFIX_ROUTES: Record<string, RmqTarget> = {
   email: THIRD_SERVICE,
   notification: THIRD_SERVICE,
   upload: THIRD_SERVICE,
-  log: THIRD_SERVICE,
-  testscenario: THIRD_SERVICE,
 
   tutor: TUTOR_SERVICE,
   settings: TUTOR_SERVICE,
@@ -75,8 +78,6 @@ const RMQ_FAST_PATTERN_POLICIES: Record<string, RmqCallPolicy> = {
 /** Slow operations: longer per-call timeout and no retry (LLM, test runs, file transfer). */
 const RMQ_SLOW_PATTERN_POLICIES: Record<string, RmqCallPolicy> = {
   'ai.chat': { timeoutMs: 60000, maxRetries: 0 },
-  'testscenario.run': { timeoutMs: 120000, maxRetries: 0 },
-  'testscenario.generate': { timeoutMs: 120000, maxRetries: 0 },
 };
 const RMQ_SLOW_PREFIX_POLICIES: Record<string, RmqCallPolicy> = {
   upload: { timeoutMs: 60000, maxRetries: 0 },
@@ -92,9 +93,11 @@ export function resolveRmqCallPolicy(pattern: string): RmqCallPolicy {
 }
 
 /** Read-only method names are safe to retry after a timeout; everything else is a write. */
+/** Patterns that match a read-only prefix but consume single-use state, so a retry is unsafe. */
+const NON_IDEMPOTENT_PATTERNS = new Set(['auth.verifyEmail']);
+
 export function isIdempotentPattern(pattern: string): boolean {
+  if (NON_IDEMPOTENT_PATTERNS.has(pattern)) return false;
   const method = pattern.split('.').slice(1).join('.');
-  return /^(get|find|list|history|stats|runs|authprofiles|fixtures\.list|fixtures\.resolve|check|verify)/i.test(
-    method,
-  );
+  return /^(get|find|list|history|stats|check|verify)/i.test(method);
 }

@@ -45,7 +45,10 @@ export const createNotificationSchema = z.object({
     .optional(),
   actionLabel: z.string().max(100).optional(),
   actionType: notificationActionEnum.optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z
+    .record(z.string(), z.unknown())
+    .refine((m) => JSON.stringify(m).length <= 10_000, { message: 'Metadata quá lớn' })
+    .optional(),
 });
 
 export const getNotificationsQuerySchema = z.object({

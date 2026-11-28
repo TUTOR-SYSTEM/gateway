@@ -62,6 +62,8 @@ export class TuitionController {
     return this.rmqProducer.send('tuition.create', { userId: user.id, role: user.role, data: dto });
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'TUTOR')
   @Get('summary')
   @HttpCode(StatusCodes.OK)
   @ApiOperation({

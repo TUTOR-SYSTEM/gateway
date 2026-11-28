@@ -26,8 +26,6 @@ import { TutorSettingsModule } from './features/tutor-settings/tutor-settings.mo
 import { RedisModule } from './features/redis/redis.module';
 import { UploadModule } from './features/upload/upload.module';
 import { EmailModule } from './features/email/email.module';
-import { LogModule } from './features/log/log.module';
-import { TestScenarioModule } from './features/test-scenario/test-scenario.module';
 // Relative on purpose: JwtAuthGuard injects RmqProducer, and an alias import can load a second copy
 // of that class (src vs dist under Bun), which Nest then can't match to RmqModule's provider.
 import { JwtAuthGuard, LanguageGuard } from './packages/guards';
@@ -66,9 +64,6 @@ import { ThrottleModule } from './features/throttler/throttler.module';
     RedisModule,
     UploadModule,
     EmailModule,
-    LogModule,
-    // Test-monitor is a dev/QA tool: its routes are not registered in production at all.
-    ...(process.env.NODE_ENV === 'production' ? [] : [TestScenarioModule]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => getJwtModuleOptionsFromConfig(configService),

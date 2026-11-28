@@ -12,6 +12,7 @@ import { EmailController } from 'src/features/email/email.controller';
 import { RedisController } from 'src/features/redis/redis.controller';
 import { UploadController } from 'src/features/upload/upload.controller';
 import { AuthController } from 'src/features/auth/auth.controller';
+import { TuitionController } from 'src/features/tuition/tuition.controller';
 
 type Ctor = { prototype: Record<string, unknown> };
 
@@ -28,7 +29,7 @@ describe('route guards (RolesGuard + @Roles)', () => {
     [
       'AppController',
       AppController,
-      ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError', 'testError'],
+      ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError'],
     ],
     [
       'UserController',
@@ -45,7 +46,7 @@ describe('route guards (RolesGuard + @Roles)', () => {
     ['EmailController', EmailController, ['testSendEmail']],
     ['RedisController', RedisController, ['get']],
     // Tutors may read a student but only ADMIN may change or delete one (see student.authz.spec).
-    ['StudentController', StudentController, ['update', 'delete']],
+    ['StudentController', StudentController, ['delete']],
   ];
 
   describe.each(adminOnly)('%s admin-only routes', (_n, ctor, methods) => {
@@ -57,10 +58,14 @@ describe('route guards (RolesGuard + @Roles)', () => {
   });
 
   const adminOrTutor: Array<[string, Ctor, string[]]> = [
-    ['StudentController', StudentController, ['findById']],
+    // PUT /students/:id: user service scopes a TUTOR to the students it manages (assertCanManage).
+    ['StudentController', StudentController, ['findById', 'update']],
     ['ChapterController', ChapterController, ['create', 'update', 'delete']],
     ['LessonController', LessonController, ['create', 'update', 'delete']],
     ['NotificationController', NotificationController, ['create']],
+    // GW-14: summary aggregates revenue over classes the tutor owns (repo.getSummary); a student
+    // or parent would only get zeros.
+    ['TuitionController', TuitionController, ['getSummary']],
   ];
 
   describe.each(adminOrTutor)('%s ADMIN/TUTOR routes', (_n, ctor, methods) => {
@@ -101,12 +106,7 @@ describe('@Public metadata', () => {
   });
 
   it('kafka debug routes are not public', () => {
-    for (const m of [
-      'pingMsgFromKafkaController',
-      'sendMsgFromKafkaController',
-      'testMsgError',
-      'testError',
-    ]) {
+    for (const m of ['pingMsgFromKafkaController', 'sendMsgFromKafkaController', 'testMsgError']) {
       expect(isPublic(AppController, m)).toBe(false);
     }
   });
